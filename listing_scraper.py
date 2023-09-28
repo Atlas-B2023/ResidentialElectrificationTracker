@@ -1,22 +1,22 @@
-import helper
 from bs4 import BeautifulSoup as btfs
 from bs4 import element
 import requests
 import re
+import helper
 
 
 def amenity_item_to_dict(tag: element.Tag) -> dict | str:
-    """Amenity groups have amenities listed in them with <li> tags. Furthermore, 
-    amenities come in two types, key: value, and value. This function returns the 
-    string, or a dict of the key: value pair. 
+    """Amenity groups have amenities listed in them with <li> tags. Furthermore,
+    amenities come in two types, key: value, and value. This function returns the
+    string, or a dict of the key: value pair.
 
     Args:
         tag (element.Tag): The <li> tag
 
     Returns:
-        amenity: dictionary or string representation of amenity 
+        amenity: dictionary or string representation of amenity
     """
-
+    
     span_split_text = re.sub(r"\s+", " ", tag.find("span").text)
     if ":" in span_split_text:
         span_split_text = span_split_text.split(": ")
@@ -54,6 +54,7 @@ def heating_amenities_scraper(url: str) -> dict:
     Returns:
         amenities: dict representation of all amenities
     """
+    helper.rate_limiter()
     html = requests.get(url).text
     soup = btfs(html, "html.parser")
     cur_elem = soup.find("div", string=re.compile(r"heating\b", re.I))

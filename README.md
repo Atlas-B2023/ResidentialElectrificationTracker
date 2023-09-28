@@ -95,6 +95,12 @@ fireplace
 
 Some filters only work in combination with certain search modes. These are "For Sale" and "Sold". These will be correctly implemented in code, and will have feature parity with the redfin website.  
 
+## Rate Limiting
+
+Since searches can contain a high amount of houses, and therefore potentially requests, there is a rate limit. This can be adjusted if desired. I timed myself looking up and searching for heating information and came up with about 3 seconds per listing. 
+
+Currently respects robots.txt. Looking into what /*/amp? is
+
 ## HAR Files
 
 In order to get sold listings, you must zoom in on the map and save a har file of the network.

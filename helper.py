@@ -2,7 +2,8 @@ import polars as pl
 from redfin import Redfin
 from enum import StrEnum
 import requests
-from time import time
+import time
+import random
 
 
 def state_county_to_zip_df(state: str, county: str) -> pl.dataframe.DataFrame:
@@ -52,6 +53,12 @@ def get_redfin_url_path(address: str) -> str:
     client = Redfin()
     response = client.search(address)
     return response["payload"]["sections"][0]["rows"][0]["url"]
+
+def rate_limiter():
+    #this will freeze the whole thread. make sure GUI is on a different thread, or use something like 
+    # import asyncio; async def...; await asyncio.sleep()
+    # or singleshot, qWait, et
+    time.sleep(random.uniform(1.5,3.5))
 
 
 # enums
@@ -114,25 +121,3 @@ def req_get_to_file(get_request: requests.Response) -> int:
 
 def df_to_file(df: pl.dataframe.frame.DataFrame):
     df.write_csv(f"{time()}_data_frame.csv", has_header=True)
-
-
-# if __name__ == "__main__":
-# print(
-#     (get_state_abbreviations("California") == "CA")
-#     and (len(state_abbreviations) == 50)
-# )
-# print(state_county_to_zip_df("Texas", "Dallas").shape == (83, 1))
-# print(state_city_to_zip_df("Texas", "Dallas").shape == (44, 1))
-# print(
-#     get_redfin_url_path("Worcester, Massachusetts")
-#     == "/city/20420/MA/Worcester"
-# )
-# print(
-#     generate_url_filters(
-#         sort=Sort.LOW_HIGH_PRICE,
-#         property_type=[PropertyType.HOUSE, PropertyType.TOWNHOUSE],
-#         min_year_built=2021,
-#         include=Include.LAST_3_YEAR,
-#     )
-#     == "/filter/sort=lo-price,property-type=house+townhouse,min-year-built=2021,include=sold-3yr"
-# )
