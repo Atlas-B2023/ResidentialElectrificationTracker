@@ -1,0 +1,26 @@
+# generate search
+# grab listings from search
+# scrape each listing
+#   save data
+import searcher
+from helper import *
+import listing_scraper
+import polars as pl
+
+base_url = 'https://redfin.com'
+area_url = searcher.generate_area_url('04103')
+filter_url = searcher.generate_filter_url(
+    sort=Sort.MOST_RECENT_SOLD,
+    property_type=PropertyType.HOUSE,
+    min_year_built=2022,
+    include=Include.LAST_3_YEAR,
+)
+search_page_url = base_url + area_url + filter_url
+
+df = searcher.csv_from_search_page_url_polars(search_page_url)
+
+listings = df['URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)'].map_elements(listing_scraper.heating_amenities_scraper)
+
+for listing in listings:
+  print(listing)
+  # print(listing_scraper.heating_amenities_scraper(listing[0]))
