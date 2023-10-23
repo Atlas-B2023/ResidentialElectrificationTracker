@@ -16,13 +16,5 @@ search_page_url = base_url + area_path + filters_path
 
 df = searcher.csv_from_search_page_url(search_page_url)
 
-# listings = df[
-#     "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
-# ]
-#.map_elements(listing_scraper.heating_amenities_scraper)
-
-# for listing in listings:
-#     print(listing_scraper.heating_amenities_scraper(listing))
-
 for listing in df.rows(named=True):
-    print(f"{listing["LATITUDE"]}, {listing["LONGITUDE"]}, {listing["ADDRESS"]}, {listing["STATE OR PROVINCE"]}, {listing["ZIP OR POSTAL CODE"]}, {listing["PRICE"]}, {listing["YEAR BUILT"]}, {listing_scraper.heating_amenities_scraper(listing["URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"])}")
+    print(f"{listing["LATITUDE"]}, {listing["LONGITUDE"]}, {listing["ADDRESS"]}, {listing["STATE OR PROVINCE"]}, {listing["ZIP OR POSTAL CODE"]}, {listing["PRICE"]}, {listing["YEAR BUILT"]}, {listing["SQUARE FEET"]}, {listing["LOT SIZE"]}, {listing_scraper.heating_amenities_scraper(listing["URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"])}")
