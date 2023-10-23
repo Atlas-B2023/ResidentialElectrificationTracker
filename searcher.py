@@ -53,7 +53,7 @@ def generate_filter_path(**kwargs) -> str:
     return f'/filter/{",".join(selected_filters)}'
 
 
-def csv_from_search_page_url(url: str) -> pl.dataframe.frame.DataFrame:
+def csv_from_search_page_url(url: str) -> pl.DataFrame | None:
     """Returns a dataframe schema data from the search results page.
 
     Args:
@@ -69,19 +69,20 @@ def csv_from_search_page_url(url: str) -> pl.dataframe.frame.DataFrame:
     download_link_tag = soup.find("a", id=download_button_id)
     if download_link_tag is None:
         # should be handled in caller
-        return pl.DataFrame(
-            columns=[
-                "ADDRESS",
-                "CITY",
-                "STATE OR PROVINCE",
-                "YEAR BUILT",
-                "ZIP OR POSTAL CODE",
-                "PRICE",
-                "SQUARE FEET",
-                "$/SQUARE FEET",
-                "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
-            ]
-        )
+        return None
+        # pl.DataFrame(
+        #     columns=[
+        #         "ADDRESS",
+        #         "CITY",
+        #         "STATE OR PROVINCE",
+        #         "YEAR BUILT",
+        #         "ZIP OR POSTAL CODE",
+        #         "PRICE",
+        #         "SQUARE FEET",
+        #         "$/SQUARE FEET",
+        #         "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
+        #     ]
+        # )
 
     download_link = download_link_tag.get("href")
     if download_link is None:
@@ -98,6 +99,7 @@ def csv_from_search_page_url(url: str) -> pl.dataframe.frame.DataFrame:
         "ZIP OR POSTAL CODE",
         "PRICE",
         "SQUARE FEET",
-        "$/SQUARE FEET",
         "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
+        "LATITUDE",
+        "LONGITUDE"
     )
