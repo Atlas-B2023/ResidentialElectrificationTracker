@@ -16,7 +16,7 @@ def amenity_item_to_dict(tag: element.Tag) -> dict | str:
     Returns:
         amenity: dictionary or string representation of amenity
     """
-    
+
     span_split_text = re.sub(r"\s+", " ", tag.find("span").text)
     if ":" in span_split_text:
         span_split_text = span_split_text.split(": ")
@@ -28,6 +28,26 @@ def amenity_item_to_dict(tag: element.Tag) -> dict | str:
         return {span_split_text[0]: span_split_text[1]}
     else:
         return {"amenity_item_to_dict_N/a", "N/a"}
+
+
+def clean_heating_info_dictionary(raw_heating_info_dict: dict) -> dict:
+    """Takes in a raw amenity heating info dictionary and only returns relevant heating information.
+
+    Args:
+        raw_heating_info_dict (dict): heating info dictionary from web scraping result
+
+    Returns:
+        dict: cleaned heating info dictionary
+    """
+    heating_info_dict = {}
+    heating_string = re.compile(r"heat", re.I)
+    fuel_string = re.compile(r"fuel", re.I)
+
+    for key, value in raw_heating_info_dict.items():
+        if re.search(heating_string, key) or re.search(fuel_string, key):
+            heating_info_dict[key] = value
+
+    return heating_info_dict
 
 
 # this will probably be inside of a func called scrape_housing_information
@@ -67,7 +87,6 @@ def heating_amenities_scraper(url: str) -> dict:
 
     # finding the heating amenity group.
     for sibling in cur_elem.next_siblings:
-        # only want li tags
         if sibling.name == "li":
             # if we have a string, the amenity stands alone in the html. we typically dont care about these, so they're
             # all grouped under a misc info list
@@ -104,4 +123,4 @@ def heating_amenities_scraper(url: str) -> dict:
                     heating_dict.update({"misc_heating_info": [item]})
             else:
                 heating_dict.update(item)
-    return heating_dict
+    return clean_heating_info_dictionary(heating_dict)
