@@ -158,6 +158,10 @@ You will not, directly or indirectly, display, post, disseminate, distribute, pu
 
 Zillow Group does not allow scraping nor storage of their listing data. This includes through their api, and only allows dynamic data
 
+Q: Can we store Zillow data through the Bridge API?
+
+A: No. You may use the API only to retrieve and display dynamic content from Zillow. You are not permitted to store information locally.
+
 # Homes.com
 
 Not allowed on /routes/ or /services/

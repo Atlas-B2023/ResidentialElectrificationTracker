@@ -1,6 +1,3 @@
-what we need to create
-~
-ZIP|CBSA|METRO|CITY|STATE
-~
-
-unique (zip),(city, state), non unique (cbsa), (metro)
+ZIP_CBSA_092023 -> zip cbsa
+uszips -> zips, county, city, state, lat, long
+cbsa-est2022 -> cbsa_name
