@@ -54,11 +54,12 @@ def get_redfin_url_path(address: str) -> str:
     response = client.search(address)
     return response["payload"]["sections"][0]["rows"][0]["url"]
 
+
 def rate_limiter():
-    #this will freeze the whole thread. make sure GUI is on a different thread, or use something like 
+    # this will freeze the whole thread. make sure GUI is on a different thread, or use something like
     # import asyncio; async def...; await asyncio.sleep()
     # or singleshot, qWait, et
-    time.sleep(random.uniform(1.5,3.5))
+    time.sleep(random.uniform(1.5, 3.5))
 
 
 # enums

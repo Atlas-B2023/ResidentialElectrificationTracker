@@ -91,7 +91,7 @@ def heating_amenities_scraper(url: str) -> dict:
             # all of the amenities have been added to the dict. now we're in no man's land
             return heating_dict
 
-    # we are now in the ul
+    # we are now in the <ul>
     for child in cur_elem.children:
         if child.name == "li":
             item = amenity_item_to_dict(child)

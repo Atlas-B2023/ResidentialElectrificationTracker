@@ -1,0 +1,6 @@
+what we need to create
+~
+ZIP|CBSA|METRO|CITY|STATE
+~
+
+unique (zip),(city, state), non unique (cbsa), (metro)

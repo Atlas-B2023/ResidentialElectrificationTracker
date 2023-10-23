@@ -3,15 +3,15 @@ from helper import *
 import listing_scraper
 
 base_url = "https://redfin.com"
-area_url = searcher.generate_area_path("75220")
-filter_url = searcher.generate_filter_path(
+area_path = searcher.generate_area_path("75220")
+filters_path = searcher.generate_filter_path(
     sort=Sort.MOST_RECENT_SOLD,
     property_type=PropertyType.HOUSE,
     min_year_built=2022,
     max_year_built=2022,
     include=Include.LAST_3_YEAR,
 )
-search_page_url = base_url + area_url + filter_url
+search_page_url = base_url + area_path + filters_path
 
 df = searcher.csv_from_search_page_url(search_page_url)
 
