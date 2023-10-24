@@ -110,8 +110,11 @@ class Sort(StrEnum):
     PRICE_PER_SQFT = "lo-dollarsqft"
 
 
-def is_valid_zipcode(zipcode: int) -> bool:
-    return True
+def is_valid_zipcode(zip: int) -> bool:
+    # going to treat zips as numbers here, reevaluate later
+    df = pl.read_csv("./augmenting_data/uszips.csv")
+
+    return zip in df["ZIP"]
 
 
 def req_get_to_file(get_request: requests.Response) -> int:
@@ -122,3 +125,33 @@ def req_get_to_file(get_request: requests.Response) -> int:
 
 def df_to_file(df: pl.dataframe.frame.DataFrame):
     df.write_csv(f"{time()}_data_frame.csv", has_header=True)
+
+
+# when making class, init the csv and have it open in memory. not too much and saves on making the df every call
+def metro_name_to_zip_list(name: str) -> list[int]:
+    df = pl.read_csv("./augmenting_data/master.csv")
+
+    result = df.filter(df["METRO_NAME"] == name)["ZIP"]
+
+    if len(result) > 0:
+        return result.to_list()
+    else:
+        return []
+
+
+def zip_to_metro(zip: int) -> str:
+    df = pl.read_csv("./augmenting_data/master.csv")
+
+    result = df.filter(df["ZIP"] == zip)["METRO_NAME"]
+
+    if len(result) > 0:
+        return result[0]
+    else:
+        return "NO METRO FOUND"
+
+
+# if __name__ == "__main__":
+# print(zip_to_metro(90001))
+# print(metro_name_to_zip_list("Los Angeles-Long Beach-Anaheim, CA"))
+# print(False == is_valid_zipcode(0))
+# print(True == is_valid_zipcode(90001))
