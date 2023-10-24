@@ -129,6 +129,14 @@ def df_to_file(df: pl.dataframe.frame.DataFrame):
 
 # when making class, init the csv and have it open in memory. not too much and saves on making the df every call
 def metro_name_to_zip_list(name: str) -> list[int]:
+    """Returns a list of zip codes in the given Metropolitan. Returns nothing if metropolitan name is invalid.
+
+    Args:
+        name (str): Name of the Metropolitan
+
+    Returns:
+        list[int]: List of zip codes found
+    """
     df = pl.read_csv("./augmenting_data/master.csv")
 
     result = df.filter(df["METRO_NAME"] == name)["ZIP"]
@@ -140,6 +148,14 @@ def metro_name_to_zip_list(name: str) -> list[int]:
 
 
 def zip_to_metro(zip: int) -> str:
+    """Finds the Metropolitan area name for the corresponding zipcode, or an empty string if it is not a part of a metropolitan
+
+    Args:
+        zip (int): Zip code to look up
+
+    Returns:
+        str: the Metropolitan name
+    """
     df = pl.read_csv("./augmenting_data/master.csv")
 
     result = df.filter(df["ZIP"] == zip)["METRO_NAME"]
@@ -147,7 +163,7 @@ def zip_to_metro(zip: int) -> str:
     if len(result) > 0:
         return result[0]
     else:
-        return "NO METRO FOUND"
+        return "    "
 
 
 # if __name__ == "__main__":

@@ -31,12 +31,29 @@ class EIADataRetriever:
         self.PROPANE_BTU_PER_GAL = 91452
         self.WOOD_BTU_PER_CORD = 20000000
 
-    def energy_source_price_per_btu(self, energy_source) -> float:
+    def energy_source_price_per_btu(self, energy_source) -> dict:
+        """Converts energy source's price per quantity to price per BTU.
+
+        Args:
+            energy_source (_type_): energy source json
+
+        Returns:
+            dict: new dictionary with btu centric pricing
+        """
         # https://portfoliomanager.energystar.gov/pdf/reference/Thermal%20Conversions.pdf
         # Natural gas: $13.86 per thousand cubic feet /1.036 million Btu per thousand cubic feet = $13.38 per million Btu
-        return 1
+        return {}
 
     def price_json_to_dict(self, eia_json) -> dict:
+        """Cleaner for raw json data returned by EIA's API.
+
+        Args:
+            eia_json (_type_): the dirty json
+
+        Returns:
+            dict: cleaned json
+        """
+        # modify to {type: x, data: {y,z,...}}, where type is electricity, propane, etc?
         if (
             eia_json is None
             or "response" not in eia_json
@@ -59,6 +76,16 @@ class EIADataRetriever:
     def monthly_energy_price_per_kwh(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> dict:
+        """Returns a dictionary for a given state's monthly energy price. Price is in cents per KWh 
+
+        Args:
+            state (str): the 2 character postal code of a state
+            start_date (datetime.date): the start date, inclusive
+            end_date (datetime.date): the end date, non inclusive
+
+        Returns:
+            dict: the dictionary in year-month: price form
+        """
         # cent/ kwh
         url = f"{self.eia_base_url}/electricity/retail-sales/data?data[]=price&facets[sectorid][]=RES&facets[stateid][]={state}&frequency=monthly&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
@@ -71,6 +98,15 @@ class EIADataRetriever:
     def monthly_heating_season_heating_oil_price_per_gal(
         self, start_date: datetime.date, end_date: datetime.date
     ) -> dict:
+        """Returns a dictionary of year-month to price of a united states average price per gallon.
+
+        Args:
+            start_date (datetime.date): the start date, inclusive
+            end_date (datetime.date): the end date, non inclusive
+
+        Returns:
+            dict: _description_
+        """
         # heating season is Oct - march, $/gal
         url = f"https://api.eia.gov/v2/petroleum/pri/wfr/data/?frequency=monthly&data[0]=value&facets[series][]=M_EPD2F_PRS_NUS_DPG&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&sort[1][column]=series&sort[1][direction]=asc&api_key={self.api_key}"
 
@@ -83,6 +119,15 @@ class EIADataRetriever:
     def monthly_heating_season_propane_price_per_gal(
         self, start_date: datetime.date, end_date: datetime.date
     ) -> dict:
+        """Returns a dictionary of year-month to price of a united states average price per gallon.
+
+        Args:
+            start_date (datetime.date): the start date, inclusive
+            end_date (datetime.date): the end date, non inclusive
+
+        Returns:
+            dict: _description_
+        """
         # heating season is Oct - march, $/gal
         url = f"https://api.eia.gov/v2/petroleum/pri/wfr/data/?frequency=monthly&data[0]=value&facets[series][]=M_EPLLPA_PRS_NUS_DPG&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&sort[1][column]=series&sort[1][direction]=asc&api_key={self.api_key}"
 
@@ -95,6 +140,16 @@ class EIADataRetriever:
     def monthly_ng_price_per_mcf(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> dict:
+        """Returns a dictionary of year-month to price of a given state's price per thousand cubic feet.
+
+        Args:
+            state (str): the 2 character postal code of a state
+            start_date (datetime.date): the start date, inclusive
+            end_date (datetime.date): the end date, non inclusive
+
+        Returns:
+            dict: _description_
+        """
         url = f"https://api.eia.gov/v2/natural-gas/pri/sum/data/?frequency=monthly&data[0]=value&facets[duoarea][]=S{state}&facets[process][]=PRS&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
         eia_request = requests.get(url)

@@ -102,5 +102,5 @@ def csv_from_search_page_url(url: str) -> pl.DataFrame | None:
         "LOT SIZE",
         "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
         "LATITUDE",
-        "LONGITUDE"
+        "LONGITUDE",
     )
