@@ -1,5 +1,6 @@
 import polars as pl
 
+# create master sheet for use in program
 zip_cbsa_092023_df = pl.read_excel("./augmenting_data/ZIP_CBSA_092023.xlsx")
 cbsa_est_df = pl.read_csv("./augmenting_data/cbsa-est2022.csv")
 
@@ -18,5 +19,4 @@ master_df = master_df.rename(
     }
 )
 
-# Save the merged data to a master CSV file
 master_df.write_csv("./augmenting_data/master.csv")

@@ -230,3 +230,11 @@ Using EIA v2 api for electricity prices by month per state. API key is free
 https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
 https://www.eia.gov/opendata/?category=0
 https://www.eia.gov/opendata/documentation.php
+
+# Project
+
+Metros chosen:
+
+Minneapolis-St. Paul-Bloomington, MN-WI
+Tampa-St. Petersburg-Clearwater, FL
+Washington-Arlington-Alexandria, DC-VA-MD-WV

@@ -59,7 +59,7 @@ def rate_limiter():
     # this will freeze the whole thread. make sure GUI is on a different thread, or use something like
     # import asyncio; async def...; await asyncio.sleep()
     # or singleshot, qWait, et
-    time.sleep(random.uniform(1.5, 3.5))
+    time.sleep(1)
 
 
 # enums
@@ -118,13 +118,13 @@ def is_valid_zipcode(zip: int) -> bool:
 
 
 def req_get_to_file(get_request: requests.Response) -> int:
-    with open(f"{time()}_request.html", "w", encoding="utf-8") as f:
+    with open(f"{time.time()}_request.html", "w+", encoding="utf-8") as f:
         f.write(get_request.text)
     return get_request.status_code
 
 
 def df_to_file(df: pl.dataframe.frame.DataFrame):
-    df.write_csv(f"{time()}_data_frame.csv", has_header=True)
+    df.write_csv(f"{time.time()}_data_frame.csv", has_header=True)
 
 
 # when making class, init the csv and have it open in memory. not too much and saves on making the df every call
@@ -137,9 +137,16 @@ def metro_name_to_zip_list(name: str) -> list[int]:
     Returns:
         list[int]: List of zip codes found
     """
+    #! for testing
+    if name == "TEST":
+        return [22066, 55424, 33629]
+
     df = pl.read_csv("./augmenting_data/master.csv")
 
-    result = df.filter(df["METRO_NAME"] == name)["ZIP"]
+    # MSAs are what were looking for in this project
+    result = df.filter(
+        (df["METRO_NAME"] == name) & (df["LSAD"] == "Metropolitan Statistical Area")
+    )["ZIP"]
 
     if len(result) > 0:
         return result.to_list()
@@ -166,8 +173,5 @@ def zip_to_metro(zip: int) -> str:
         return "    "
 
 
-# if __name__ == "__main__":
-# print(zip_to_metro(90001))
-# print(metro_name_to_zip_list("Los Angeles-Long Beach-Anaheim, CA"))
-# print(False == is_valid_zipcode(0))
-# print(True == is_valid_zipcode(90001))
+if __name__ == "__main__":
+    print(len(metro_name_to_zip_list("Washington-Arlington-Alexandria, DC-VA-MD-WV")))

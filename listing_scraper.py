@@ -75,8 +75,12 @@ def heating_amenities_scraper(url: str) -> dict:
         amenities: dict representation of all amenities
     """
     helper.rate_limiter()
-    html = requests.get(url).text
+    #! refactor all this junk
+    html = requests.get(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
+        }).text
     soup = btfs(html, "html.parser")
+    #! make more robust? i did it somewhere
     cur_elem = soup.find("div", string=re.compile(r"heating\b", re.I))
     heating_dict = {}
 
