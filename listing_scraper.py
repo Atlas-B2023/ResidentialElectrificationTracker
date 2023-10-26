@@ -16,7 +16,7 @@ def amenity_item_to_dict(tag: element.Tag) -> dict | str:
     Returns:
         amenity: dictionary or string representation of amenity
     """
-
+    #! for our regex parse thing that will categorize , it will be after this. what should be returned from "get housing amenities" is a list
     span_split_text = re.sub(r"\s+", " ", tag.find("span").text)
     if ":" in span_split_text:
         span_split_text = span_split_text.split(": ")
@@ -40,6 +40,7 @@ def clean_heating_info_dictionary(raw_heating_info_dict: dict) -> dict:
         dict: cleaned heating info dictionary
     """
     heating_info_dict = {}
+    #! this is what i was talking about
     heating_string = re.compile(r"heat", re.I)
     fuel_string = re.compile(r"fuel", re.I)
 
@@ -74,21 +75,24 @@ def heating_amenities_scraper(url: str) -> dict:
     Returns:
         amenities: dict representation of all amenities
     """
-    helper.rate_limiter()
     #! refactor all this junk
-    html = requests.get(url, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
-        }).text
+    #! https://www.redfin.com/VA/Great-Falls/952-Walker-Rd-22066/home/174503330 has heat pump in utilities info
+    # "Forced Air, Heat Pump(s)
+    # Heating Fuel: Propane - Leased, Electric"
+    req = helper.req_get_wrapper(url)
+    req.raise_for_status()
+    html = req.text
     soup = btfs(html, "html.parser")
-    #! make more robust? i did it somewhere
+    #! make more robust? i did it somewhere. it doesnt have the boundary token
     cur_elem = soup.find("div", string=re.compile(r"heating\b", re.I))
-    heating_dict = {}
 
     if cur_elem is None:
         # in production this should alert something to investigate. the local mls may have another format.
         # the other option is there is no heating info.
-        raise ValueError("No heating information")
+        return {}
+        # raise ValueError("No heating information")
 
+    heating_dict = {}
     # finding the heating amenity group.
     for sibling in cur_elem.next_siblings:
         if sibling.name == "li":

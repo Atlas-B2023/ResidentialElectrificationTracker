@@ -68,15 +68,10 @@ class RedfinSearcher:
             pl.dataframe.frame.DataFrame: dataframe in schema
         """
 
-        req = requests.get(url, self.headers)
-        req.encoding = "utf-8"
-        # try:
-        #     req.raise_for_status
-        # except requests.HTTPError:
-        #     return None
+        req = helper.req_get_wrapper(url)
         req.raise_for_status()
 
-        html = req.text
+        html = req.content
         soup = btfs(html, "html.parser")
         download_button_id = "download-and-save"
         download_link_tag = soup.find("a", id=download_button_id)
@@ -101,7 +96,6 @@ class RedfinSearcher:
             "ZIP OR POSTAL CODE",
             "PRICE",
             "SQUARE FEET",
-            "LOT SIZE",
             "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
             "LATITUDE",
             "LONGITUDE",
@@ -117,19 +111,25 @@ class RedfinSearcher:
 
         dfs_to_concat = []
         for zip in zip_codes:
-            zip_df = self.load_house_attributes_from_zip(zip, filters_path)
+            zip_df = self.load_house_attributes_from_zip_code(zip, filters_path)
             if zip_df is not None:
                 dfs_to_concat.append(zip_df)
 
-        # if for some reason all atribs are none (probably a bigger issue in creating the master.csv), 
+        # if for some reason all attribs are none (probably a bigger issue in creating the master.csv),
         # just give an empty dataframe
+
         print(f"Dataframes in list: {dfs_to_concat}")
         if len(dfs_to_concat) == 0:
+            # untested
             return pl.DataFrame()
         else:
-            return pl.concat(dfs_to_concat)
+            concat_dfs = pl.concat(dfs_to_concat, how="vertical_relaxed")
+            concat_dfs = concat_dfs.with_columns(
+                pl.col("SQUARE FEET").cast(pl.Int64)
+            )
+            return concat_dfs
 
-    def load_house_attributes_from_zip(
+    def load_house_attributes_from_zip_code(
         self, zip_code: int, filters_path: str
     ) -> pl.DataFrame | None:
         listing_dfs_to_concat = []
@@ -147,12 +147,21 @@ class RedfinSearcher:
 
         # all houses that meet criteria are in this df
         for listing in redfin_csv_df.rows(named=True):
+            listing_heating_amenities_dict = listing_scraper.heating_amenities_scraper(
+                listing[
+                    "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
+                ]
+            )
+            listing_heating_amenities_list = []
+            for key in listing_heating_amenities_dict.keys():
+                listing_heating_amenities_list.append(key)
+                listing_heating_amenities_list.append(listing_heating_amenities_dict.get(key))
+            #! this list conversion should be done in the helper method. really hacky
+            if len(listing_heating_amenities_list) == 0:
+                print(f"House {listing['ADDRESS']} does not have heating information available. Skipping...")
+                continue
             
-            listing_heating_amenities = listing_scraper.heating_amenities_scraper(
-                    listing[
-                        "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
-                    ]
-                )
+            # look into making heating amenities a list of strings, better for dataframe
             listing_info_dict = {
                 "LATITUDE": listing["LATITUDE"],
                 "LONGITUDE": listing["LONGITUDE"],
@@ -162,22 +171,10 @@ class RedfinSearcher:
                 "PRICE": listing["PRICE"],
                 "YEAR BUILT": listing["YEAR BUILT"],
                 "SQUARE FEET": listing["SQUARE FEET"],
-                "LOT SIZE": listing["LOT SIZE"],
-                "HEATING AMENITIES": listing_heating_amenities
+                "HEATING AMENITIES": listing_heating_amenities_list
             }
             listing_dfs_to_concat.append(pl.DataFrame(listing_info_dict))
             print(f"Adding {listing_info_dict['ADDRESS']} to list.")
-        
-        return pl.concat(listing_dfs_to_concat)
 
+        return pl.concat(listing_dfs_to_concat, how="vertical_relaxed")
 
-# if __name__ == "__main__":
-#     # d = RedfinSearcher()
-#     # #! handle this case. probably just print something, then exit
-#     # f = requests.get("https://www.redfin.com/zipcode/56998")
-#     # print(f.status_code)
-#     helper.req_get_to_file(
-#         requests.get(
-#             "https://www.redfin.com/zipcode/55424/filter/sort=hi-sale-date,property-type=house,min-year-built=2022,max-year-built=2022,include=sold-5yr"
-#         )
-#     )

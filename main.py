@@ -20,7 +20,7 @@
 #     print(f"{listing["LATITUDE"]}, {listing["LONGITUDE"]}, {listing["ADDRESS"]}, {listing["STATE OR PROVINCE"]}, {listing["ZIP OR POSTAL CODE"]}, {listing["PRICE"]}, {listing["YEAR BUILT"]}, {listing["SQUARE FEET"]}, {listing["LOT SIZE"]}, {listing_scraper.heating_amenities_scraper(listing["URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"])}")
 
 from searcher import RedfinSearcher
-from helper import Sort, Status, PropertyType, Include, Redfin
+from helper import Sort, PropertyType, Include, Stories
 
 redfin_searcher = RedfinSearcher()
 
@@ -30,9 +30,10 @@ filters_path = redfin_searcher.generate_filter_path(
     min_year_built=2022,
     max_year_built=2022,
     include=Include.LAST_5_YEAR,
+    min_stories=Stories.ONE
 )
 
 house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST", filters_path)
 # house_data_df = redfin_searcher.load_house_attributes_from_metro(55424, filters_path)
 
-print(house_data_df.head(25))
+print(house_data_df.head(100))
