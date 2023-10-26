@@ -154,6 +154,7 @@ robots.txt forbids using their search page. No unofficial api, so cannot search.
 
 2.9.4
 You will not, directly or indirectly, display, post, disseminate, distribute, publish, broadcast, transfer, sell, or sublicense, any information provided through the Services to another individual or entity. This prohibition expressly includes "scraping" (including screen and database scraping), "data mining", or any other activity intended to collect, store, re-organize, summarize, or manipulate any information provided or any related data.
+
 # Zillow
 
 Zillow Group does not allow scraping nor storage of their listing data. This includes through their api, and only allows dynamic data
@@ -197,6 +198,7 @@ there are many paid apis that do what we want. a simple one looks like https://a
 https://realtyna.com/mls-router-api/
 https://www.realestateapi.com/
 https://rapidapi.com/realtymole/api/realty-mole-property-api
+
 # Energy
 
 [WattBuy](https://wattbuy.com/en/) seems to have information on costs. look at [api](https://wattbuy.readme.io/reference/creating-an-account). "You are restricted from caching Licensed Content or any other output of WattB's APIs." Probably should just use [OpenEI](https://apps.openei.org/USURDB/).

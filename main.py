@@ -32,7 +32,7 @@ filters_path = redfin_searcher.generate_filter_path(
     include=Include.LAST_5_YEAR,
 )
 
-# house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST", filters_path)
-house_data_df = redfin_searcher.load_house_attributes_from_zip(55424, filters_path)
+house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST", filters_path)
+# house_data_df = redfin_searcher.load_house_attributes_from_metro(55424, filters_path)
 
 print(house_data_df.head(25))

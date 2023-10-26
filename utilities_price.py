@@ -16,9 +16,9 @@ class EIADataRetriever:
     #   can get by month per PAD, or by us average
     #   can get by week per tracked state
     class EnergyTypes(Enum):
-        PROPANE = 1,
-        NATURAL_GAS = 2,
-        ELECTRICITY = 3,
+        PROPANE = 1
+        NATURAL_GAS = 2
+        ELECTRICITY = 3
         HEATING_OIL = 4
     
     class PetroleumProductTypes(StrEnum):
@@ -80,7 +80,7 @@ class EIADataRetriever:
         return btu_dict
 
     # api to dict handler helpers
-    def price_json_to_dict(self, eia_json: str, energy_type: EnergyTypes, state: str) -> dict[str:float]:
+    def price_dict_to_dict(self, eia_json: dict, energy_type: EnergyTypes, state: str) -> dict[str:float]:
         """Cleaner for raw json data returned by EIA's API.
 
         Args:
@@ -90,7 +90,9 @@ class EIADataRetriever:
             dict: cleaned json with state and energy type
         """     
         # price key is different for electricity   
-        accessor = "product" not in eia_json["response"]["data"][0] if "price" else "value" 
+        accessor = "value"
+        if "product" not in eia_json["response"]["data"][0]:
+            accessor = "price"
         
         result_dict = {
             entry["period"]: entry[f"{accessor}"]
@@ -111,10 +113,10 @@ class EIADataRetriever:
         return result_dict
   
     # api to dict handler
-    def price_to_dict(self, price_struct: str|pl.DataFrame, energy_type: EnergyTypes, state: str)-> dict[str:float]:
+    def price_to_dict(self, price_struct: dict|pl.DataFrame, energy_type: EnergyTypes, state: str)-> dict[str:float]:
         match price_struct:
-            case str():
-                return self.price_json_to_dict(price_struct, energy_type, state)
+            case dict():
+                return self.price_dict_to_dict(price_struct, energy_type, state)
             case pl.DataFrame():
                 return self.price_df_to_dict(price_struct, energy_type, state)
             case _:
@@ -123,7 +125,7 @@ class EIADataRetriever:
     # api interaction                          
     def monthly_electricity_price_per_kwh(
         self, state: str, start_date: datetime.date, end_date: datetime.date
-    ) -> str:
+    ) -> dict:
         """Returns a dictionary for a given state's monthly energy price. Price is in cents per KWh
 
         Args:
@@ -144,7 +146,7 @@ class EIADataRetriever:
 
     def monthly_ng_price_per_mcf(
         self, state: str, start_date: datetime.date, end_date: datetime.date
-    ) -> str:
+    ) -> dict:
         """Returns a dictionary of year-month to price of a given state's price per thousand cubic feet.
 
         Args:
@@ -245,33 +247,25 @@ class EIADataRetriever:
             dict: Returns a dictionary containing the state, the energy type, and price per btu by month over the given time period
         """
         match energy_type:
-            case self.EnergyType.PROPANE:                
+            case self.EnergyTypes.PROPANE:                
                 return self.price_per_btu_converter(self.price_to_dict(self.monthly_heating_season_propane_price_per_gal(state, start_date, end_date), energy_type, state))
-            case self.EnergyType.NATURAL_GAS:
+            case self.EnergyTypes.NATURAL_GAS:
                 return self.price_per_btu_converter(self.price_to_dict(self.monthly_ng_price_per_mcf(state, start_date, end_date), energy_type, state))
-            case self.EnergyType.ELECTRICITY:
+            case self.EnergyTypes.ELECTRICITY:
                 return self.price_per_btu_converter(self.price_to_dict(self.monthly_electricity_price_per_kwh(state, start_date, end_date), energy_type, state))
-            case self.EnergyType.HEATING_OIL:
+            case self.EnergyTypes.HEATING_OIL:
                 return self.price_per_btu_converter(self.price_to_dict(self.monthly_heating_season_heating_oil_price_per_gal(state, start_date, end_date), energy_type, state))         
             case _:
                 raise NotImplementedError(f'Unsupported energy type: {energy_type}')
 
 if __name__ == "__main__":
     data_retriever = EIADataRetriever()
-    # result = data_retriever.monthly_electricity_price_per_kwh(
-    #     "CO", datetime.date(2022, 1, 1), datetime.date(2022, 12, 1)
-    # )
-    # result2 = data_retriever.monthly_heating_season_heating_oil_price_per_gal(
-    #         "CT", datetime.date(2022, 1, 1), datetime.date(2023, 1, 1)
-    # )
-    # result3 = data_retriever.monthly_heating_season_propane_price_per_gal(
-    #         "CT", datetime.date(2022, 1, 1), datetime.date(2023, 1, 1)
-    # )
-    result4 = data_retriever.monthly_ng_price_per_mcf(
-        "CO", datetime.date(2022, 1, 1), datetime.date(2023, 1, 1)
-    )
-    print(f"{result4}")
-    # print(
-    #     f"electricity: {result}\nheating oil: {result2}\npropane: {result3}\nnatural gas: {result4}"
-    # )
     
+    elec = data_retriever.monthly_price_per_btu_by_energy_type(data_retriever.EnergyTypes.ELECTRICITY, "NY", datetime.date(2022, 1, 1), datetime.date(2023, 1, 1))
+    prop = data_retriever.monthly_price_per_btu_by_energy_type(data_retriever.EnergyTypes.PROPANE, "NY", datetime.date(2022, 1, 1), datetime.date(2023, 1, 1))
+    oil = data_retriever.monthly_price_per_btu_by_energy_type(data_retriever.EnergyTypes.HEATING_OIL, "NY", datetime.date(2022, 1, 1), datetime.date(2023, 1, 1))
+    ng = data_retriever.monthly_price_per_btu_by_energy_type(data_retriever.EnergyTypes.NATURAL_GAS, "NY", datetime.date(2022, 1, 1), datetime.date(2023, 1, 1))
+
+    print(
+        f"electricity: {elec}\nheating oil: {oil}\npropane: {prop}\nnatural gas: {ng}"
+    )

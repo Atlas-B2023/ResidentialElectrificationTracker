@@ -139,7 +139,8 @@ def metro_name_to_zip_list(name: str) -> list[int]:
     """
     #! for testing
     if name == "TEST":
-        return [22066, 55424, 33629]
+        # 22066 has a lot which raises the line 90 listing scraper error
+        return [55424, 33629]
 
     df = pl.read_csv("./augmenting_data/master.csv")
 

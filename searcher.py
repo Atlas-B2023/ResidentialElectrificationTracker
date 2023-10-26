@@ -110,73 +110,49 @@ class RedfinSearcher:
     def load_house_attributes_from_metro(
         self, metro_name: str, filters_path: str
     ) -> pl.DataFrame:
-        house_attributes_df = pl.DataFrame()
         zip_codes = helper.metro_name_to_zip_list(metro_name)
-        for zip_code in zip_codes:
-            # 5 is zip code length, and this is if we have some issues reading from the file
-            zip_code = f"{zip_code:0{5}}"
-            url = f"{self.base_url}{self.generate_area_path(zip_code)}{filters_path}"
 
-            try:
-                redfin_csv_df = self.df_from_search_page_csv(url)
-            except requests.HTTPError as e:
-                print(f"Invalid zip: {e}")
-                continue
+        if len(zip_codes) == 0:
+            return pl.DataFrame()
 
-            for listing in redfin_csv_df.rows(named=True):
-                pl.concat(
-                    [
-                        house_attributes_df,
-                        pl.DataFrame(
-                            {
-                                "LATITUDE": listing["LATITUDE"],
-                                "LONGITUDE": listing["LONGITUDE"],
-                                "ADDRESS": listing["ADDRESS"],
-                                "STATE OR PROVINCE": listing["STATE OR PROVINCE"],
-                                "ZIP OR POSTAL CODE": listing["ZIP OR POSTAL CODE"],
-                                "PRICE": listing["PRICE"],
-                                "YEAR BUILT": listing["YEAR BUILT"],
-                                "SQUARE FEET": listing["SQUARE FEET"],
-                                "LOT SIZE": listing["LOT SIZE"],
-                                "HEATING AMENITIES": listing_scraper.heating_amenities_scraper(
-                                    listing[
-                                        "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
-                                    ]
-                                ),
-                            }
-                        ),
-                    ]
-                )
-        return house_attributes_df
+        dfs_to_concat = []
+        for zip in zip_codes:
+            zip_df = self.load_house_attributes_from_zip(zip, filters_path)
+            if zip_df is not None:
+                dfs_to_concat.append(zip_df)
+
+        # if for some reason all atribs are none (probably a bigger issue in creating the master.csv), 
+        # just give an empty dataframe
+        print(f"Dataframes in list: {dfs_to_concat}")
+        if len(dfs_to_concat) == 0:
+            return pl.DataFrame()
+        else:
+            return pl.concat(dfs_to_concat)
 
     def load_house_attributes_from_zip(
         self, zip_code: int, filters_path: str
-    ) -> pl.DataFrame:
-        # schema = {
-        #     "LATITUDE": pl.Float64,
-        #     "LONGITUDE": pl.Float64,
-        #     "ADDRESS": str,
-        #     "STATE OR PROVINCE": str,
-        #     "ZIP OR POSTAL CODE": pl.Int64,
-        #     "PRICE": pl.UInt32,
-        #     "YEAR BUILT": pl.Int64,
-        #     "SQUARE FEET": pl.Int64,
-        #     "LOT SIZE": pl.Int64,
-        #     "HEATING AMENITIES": pl.Struct,
-        # }
-        # house_attributes_df = pl.DataFrame(schema=schema)
-        listing_dfs_to_append = []
+    ) -> pl.DataFrame | None:
+        listing_dfs_to_concat = []
         zip_code = f"{zip_code:0{5}}"
         url = f"{self.base_url}{self.generate_area_path(zip_code)}{filters_path}"
 
         try:
-            # this is the only place where this error should pop up. if a zip is invalid, it is simply ignored
+            # this is the only place where this error should pop up. if a zip is invalid,
+            # return none and handle in caller. an example is the zip 56998, which is just a
+            # USPS distribution center in D.C
             redfin_csv_df = self.df_from_search_page_csv(url)
         except requests.HTTPError:
             print("Invalid zip")
+            return None
 
         # all houses that meet criteria are in this df
         for listing in redfin_csv_df.rows(named=True):
+            
+            listing_heating_amenities = listing_scraper.heating_amenities_scraper(
+                    listing[
+                        "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
+                    ]
+                )
             listing_info_dict = {
                 "LATITUDE": listing["LATITUDE"],
                 "LONGITUDE": listing["LONGITUDE"],
@@ -187,19 +163,12 @@ class RedfinSearcher:
                 "YEAR BUILT": listing["YEAR BUILT"],
                 "SQUARE FEET": listing["SQUARE FEET"],
                 "LOT SIZE": listing["LOT SIZE"],
-                "HEATING AMENITIES": listing_scraper.heating_amenities_scraper(
-                    listing[
-                        "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
-                    ]
-                ),
+                "HEATING AMENITIES": listing_heating_amenities
             }
-            listing_dfs_to_append.append(pl.DataFrame(listing_info_dict))
-            # print("Adding listing to data frame to dataframe")
-            # house_attributes_df = pl.concat(
-            #     [house_attributes_df, listing_info_df], how="vertical_relaxed"
-            # )
-            # print(f"Add listings added so far: {house_attributes_df.head()}")
-        return pl.concat(listing_dfs_to_append)
+            listing_dfs_to_concat.append(pl.DataFrame(listing_info_dict))
+            print(f"Adding {listing_info_dict['ADDRESS']} to list.")
+        
+        return pl.concat(listing_dfs_to_concat)
 
 
 # if __name__ == "__main__":
