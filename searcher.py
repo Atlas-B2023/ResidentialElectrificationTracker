@@ -118,12 +118,12 @@ class RedfinSearcher:
         # if for some reason all attribs are none (probably a bigger issue in creating the master.csv),
         # just give an empty dataframe
 
-        print(f"Dataframes in list: {dfs_to_concat}")
         if len(dfs_to_concat) == 0:
             # untested
             return pl.DataFrame()
         else:
             concat_dfs = pl.concat(dfs_to_concat, how="vertical_relaxed")
+            #check dtype before cast? wasnt sure how to 
             concat_dfs = concat_dfs.with_columns(
                 pl.col("SQUARE FEET").cast(pl.Int64)
             )
@@ -152,11 +152,12 @@ class RedfinSearcher:
                     "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
                 ]
             )
+            #! this list conversion should be done in the helper method. really hacky
             listing_heating_amenities_list = []
             for key in listing_heating_amenities_dict.keys():
                 listing_heating_amenities_list.append(key)
                 listing_heating_amenities_list.append(listing_heating_amenities_dict.get(key))
-            #! this list conversion should be done in the helper method. really hacky
+                
             if len(listing_heating_amenities_list) == 0:
                 print(f"House {listing['ADDRESS']} does not have heating information available. Skipping...")
                 continue
@@ -171,7 +172,7 @@ class RedfinSearcher:
                 "PRICE": listing["PRICE"],
                 "YEAR BUILT": listing["YEAR BUILT"],
                 "SQUARE FEET": listing["SQUARE FEET"],
-                "HEATING AMENITIES": listing_heating_amenities_list
+                "HEATING AMENITIES": [listing_heating_amenities_list]
             }
             listing_dfs_to_concat.append(pl.DataFrame(listing_info_dict))
             print(f"Adding {listing_info_dict['ADDRESS']} to list.")
