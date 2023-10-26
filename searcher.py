@@ -152,19 +152,20 @@ class RedfinSearcher:
     def load_house_attributes_from_zip(
         self, zip_code: int, filters_path: str
     ) -> pl.DataFrame:
-        schema = {
-            "LATITUDE": pl.Float64,
-            "LONGITUDE": pl.Float64,
-            "ADDRESS": str,
-            "STATE OR PROVINCE": str,
-            "ZIP OR POSTAL CODE": pl.Int64,
-            "PRICE": pl.UInt32,
-            "YEAR BUILT": pl.Int64,
-            "SQUARE FEET": pl.Int64,
-            "LOT SIZE": pl.Int64,
-            "HEATING AMENITIES": pl.Struct,
-        }
-        house_attributes_df = pl.DataFrame(schema=schema)
+        # schema = {
+        #     "LATITUDE": pl.Float64,
+        #     "LONGITUDE": pl.Float64,
+        #     "ADDRESS": str,
+        #     "STATE OR PROVINCE": str,
+        #     "ZIP OR POSTAL CODE": pl.Int64,
+        #     "PRICE": pl.UInt32,
+        #     "YEAR BUILT": pl.Int64,
+        #     "SQUARE FEET": pl.Int64,
+        #     "LOT SIZE": pl.Int64,
+        #     "HEATING AMENITIES": pl.Struct,
+        # }
+        # house_attributes_df = pl.DataFrame(schema=schema)
+        listing_dfs_to_append = []
         zip_code = f"{zip_code:0{5}}"
         url = f"{self.base_url}{self.generate_area_path(zip_code)}{filters_path}"
 
@@ -192,13 +193,13 @@ class RedfinSearcher:
                     ]
                 ),
             }
-            listing_info_df = pl.DataFrame(listing_info_dict)
-            print(f"Adding {listing_info_df.head()} to dataframe")
-            house_attributes_df = pl.concat(
-                [house_attributes_df, listing_info_df], how="vertical_relaxed"
-            )
-            print(f"Add listings added so far: {house_attributes_df.head()}")
-        return house_attributes_df
+            listing_dfs_to_append.append(pl.DataFrame(listing_info_dict))
+            # print("Adding listing to data frame to dataframe")
+            # house_attributes_df = pl.concat(
+            #     [house_attributes_df, listing_info_df], how="vertical_relaxed"
+            # )
+            # print(f"Add listings added so far: {house_attributes_df.head()}")
+        return pl.concat(listing_dfs_to_append)
 
 
 # if __name__ == "__main__":
