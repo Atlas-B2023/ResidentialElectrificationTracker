@@ -3,6 +3,7 @@ from redfin import Redfin
 from enum import StrEnum
 import requests
 import time
+import random
 
 
 class PropertyType(StrEnum):
@@ -84,7 +85,7 @@ class Sort(StrEnum):
     PRICE_PER_SQFT = "lo-dollarsqft"
 
 
-def state_county_to_zip_df(state: str, county: str) -> pl.dataframe.DataFrame:
+def state_county_to_zip_df(state: str, county: str) -> pl.DataFrame:
     """takes in a state and county and returns the zip code constituents of that county
 
     Args:
@@ -101,7 +102,7 @@ def state_county_to_zip_df(state: str, county: str) -> pl.dataframe.DataFrame:
     )
 
 
-def state_city_to_zip_df(state: str, city: str) -> pl.dataframe.DataFrame:
+def state_city_to_zip_df(state: str, city: str) -> pl.DataFrame:
     """takes in a state and city and returns the zip code constituents of that city
 
     Args:
@@ -140,18 +141,8 @@ def is_valid_zipcode(zip: int) -> bool:
     return zip in df["ZIP"]
 
 
-def req_get_to_file(get_request: requests.Response) -> int:
-    with open(f"{time.time()}_request.html", "w+", encoding="utf-8") as f:
-        f.write(get_request.text)
-    return get_request.status_code
-
-
-def df_to_file(df: pl.dataframe.frame.DataFrame):
-    df.write_csv(f"{time.time()}_data_frame.csv", has_header=True)
-
-
 # when making class, init the csv and have it open in memory. not too much and saves on making the df every call
-def metro_name_to_zip_list(name: str) -> list[int]:
+def metro_name_to_zip_code_list(name: str) -> list[int]:
     """Returns a list of zip codes in the given Metropolitan. Returns nothing if metropolitan name is invalid.
 
     Args:
@@ -163,8 +154,8 @@ def metro_name_to_zip_list(name: str) -> list[int]:
     #! for testing
     if name == "TEST":
         # 22066 has a lot which raises the line 90 listing scraper error
-        # return [22066, 55424, 33629]
-        return [22066]
+        return [22067, 55424, 33629]
+        # return [22067, 55424]
 
     df = pl.read_csv("./augmenting_data/master.csv")
 
@@ -198,6 +189,23 @@ def zip_to_metro(zip: int) -> str:
         return "    "
 
 
+def get_random_user_agent() -> str:
+    list = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
+        "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
+        "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
+        "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
+        "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/113.0",
+        "Mozilla/5.0 (Android 12; Mobile; rv:109.0) Gecko/113.0 Firefox/113.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+    ]
+    return random.choice(list)
+
+
 def req_get_wrapper(url: str) -> requests.Response:
     """wrapper for requests. has a sleep and headers
 
@@ -207,16 +215,27 @@ def req_get_wrapper(url: str) -> requests.Response:
     Returns:
         requests.Response: the response object
     """
-    time.sleep(0.6)
+    time.sleep(random.uniform(0.6, 1.1))
     req = requests.get(
         url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36"
-        },
-        timeout=17)
-    
+        headers={"User-Agent": get_random_user_agent()},
+        timeout=17,
+    )
+
     return req
 
 
+def req_get_to_file(get_request: requests.Response) -> int:
+    with open(f"{time.time()}_request.html", "w+", encoding="utf-8") as f:
+        f.write(get_request.text)
+    return get_request.status_code
+
+
+def df_to_file(df: pl.DataFrame):
+    df.write_csv(f"{time.time()}_data_frame.csv", has_header=True)
+
+
 if __name__ == "__main__":
-    print(len(metro_name_to_zip_list("Washington-Arlington-Alexandria, DC-VA-MD-WV")))
+    print(
+        len(metro_name_to_zip_code_list("Washington-Arlington-Alexandria, DC-VA-MD-WV"))
+    )

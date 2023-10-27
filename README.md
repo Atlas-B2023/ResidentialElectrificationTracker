@@ -198,6 +198,7 @@ there are many paid apis that do what we want. a simple one looks like https://a
 https://realtyna.com/mls-router-api/
 https://www.realestateapi.com/
 https://rapidapi.com/realtymole/api/realty-mole-property-api
+https://developer.batchdata.com/docs/batchdata/batchdata-v1%2Foperations%2Fcreate-a-property-lookup-all-attribute
 
 # Energy
 
@@ -238,5 +239,19 @@ https://www.eia.gov/opendata/documentation.php
 Metros chosen:
 
 Minneapolis-St. Paul-Bloomington, MN-WI
-Tampa-St. Petersburg-Clearwater, FL
+Tampa-St. Petersburg-Clearwater, FL -> reevaluating
 Washington-Arlington-Alexandria, DC-VA-MD-WV
+
+# Terminology
+
+Search page: when searching a location, this is what is displayed. Typically a map on the left with listing results on the right.
+
+Listing page: the page showing a house's listing. Has information about the property, as well as supplemental info
+
+Search page csv: when looking at a search page, there is a button by the pagination buttons. If there are houses on the search page, a "download all" button will appear. The contents of that link, a CSV file, are what is being referred to.
+
+Attributes: Typically in reference to a listing attribute. These describe the listing, such as location, price, and relevant info from the listing page.
+
+# Speed
+
+Each house takes about 1.7 seconds averaged over the programs run time. This includes a random amount of time between .6 and 1.1 seconds

@@ -21,19 +21,21 @@
 
 from searcher import RedfinSearcher
 from helper import Sort, PropertyType, Include, Stories
+import polars as pl
 
 redfin_searcher = RedfinSearcher()
 
-filters_path = redfin_searcher.generate_filter_path(
+filters_path = redfin_searcher._generate_filter_path(
     sort=Sort.MOST_RECENT_SOLD,
     property_type=PropertyType.HOUSE,
     min_year_built=2022,
     max_year_built=2022,
     include=Include.LAST_5_YEAR,
-    min_stories=Stories.ONE
+    min_stories=Stories.ONE,
 )
 
 house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST", filters_path)
 # house_data_df = redfin_searcher.load_house_attributes_from_metro(55424, filters_path)
 
-print(house_data_df.head(100))
+with pl.Config(tbl_cols=10, tbl_rows=25):
+    print(house_data_df.head(25))

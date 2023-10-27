@@ -1,0 +1,192 @@
+<mxfile host="Electron" modified="2023-10-27T17:09:20.406Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/22.0.3 Chrome/114.0.5735.289 Electron/25.8.4 Safari/537.36" etag="zZHDTbgDeNGJ_N-uhaZ5" version="22.0.3" type="device">
+  <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
+    <mxGraphModel dx="1381" dy="2041" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
+        <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
+        <mxCell id="jF7dxADPitwJ9rCijpqG-79" value="" style="whiteSpace=wrap;html=1;glass=0;perimeterSpacing=1;fillColor=none;container=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1840" y="-90" width="1740" height="1360" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-50" value="" style="whiteSpace=wrap;html=1;glass=0;perimeterSpacing=1;fillColor=none;container=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="10" y="-80" width="1740" height="1360" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-54" value="" style="whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="50" y="-50" width="220" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-65" value="" style="whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="110" y="260" width="790" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-51" value="Code contents" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="70" y="-50" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-47" value="Function name" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="80" y="110" width="160" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-48" value="+Parameters&lt;br&gt;--&lt;br&gt;-Return values" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-47">
+          <mxGeometry y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-45" value="RedfinSearcher()" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="445" y="280" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-43" value="load_house_attributes_from_metro" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="120" y="400" width="240" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-44" value="+Metro name&lt;br&gt;+Search filters&lt;br&gt;--&lt;br&gt;-House information dataframe" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-43">
+          <mxGeometry y="50" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-53" value="Class" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="100" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-55" value="load_house_attributes_from_zip_code" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="380" y="400" width="250" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-56" value="+Zip code&lt;br&gt;+Search filters&lt;br&gt;--&lt;br&gt;-House information dataframe" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-55">
+          <mxGeometry y="50" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-57" value="_df_from_search_page_csv" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="650" y="400" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-58" value="+Metro name&lt;br&gt;+Search filters&lt;br&gt;--&lt;br&gt;-House information dataframe" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-57">
+          <mxGeometry y="50" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-61" value="_generate_area_path" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="380" y="540" width="240" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-62" value="+Area, zip code, address, or city and state&lt;br&gt;--&lt;br&gt;-url path" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-61">
+          <mxGeometry y="50" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-63" value="_generate_filter_path" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="120" y="540" width="240" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-64" value="+keyword args of redfin filters&lt;br&gt;--&lt;br&gt;-url path" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-63">
+          <mxGeometry y="50" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-66" value="" style="whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="950" y="260" width="630" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-67" value="helper" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1205" y="280" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-68" value="metro_name_to_zip_list" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="980" y="380" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-69" value="+Metro name&lt;br&gt;--&lt;br&gt;-List of zip codes in metro" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-68">
+          <mxGeometry y="50" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-70" value="" style="whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="950" y="720" width="630" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-71" value="listing_scraper" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1205" y="740" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-72" value="heating_amenities_scraper" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="980" y="840" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-73" value="+Url of redfin listing&lt;br&gt;--&lt;br&gt;-Heating information dictionary" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-72">
+          <mxGeometry y="50" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-74" value="" style="whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="110" y="720" width="790" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-75" value="EIADataRetriever()" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="440" y="750" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-76" value="monthly_price_per_btu_by_energy_type" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="130" y="850" width="290" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-77" value="+Energy type&lt;br&gt;+State&lt;br&gt;+start date&lt;br&gt;+end date&lt;br&gt;--&lt;br&gt;-Energy price by month normalized by btu. Efficiency&lt;br&gt;is not taken into account in this function" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-76">
+          <mxGeometry y="50" width="290" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-80" value="" style="whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1860" y="-60" width="400" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-81" value="Code contents" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1880" y="-60" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-82" value="Function name" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1890" y="100" width="160" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-83" value="+Parameters&lt;br&gt;--&lt;br&gt;-Return values" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-82">
+          <mxGeometry y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-84" value="Class" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="1910" y="-10" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-85" value="For" style="triangle;whiteSpace=wrap;html=1;direction=south;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2120" y="10" width="80" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-93" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-86" target="jF7dxADPitwJ9rCijpqG-92">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-86" value="Main" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2140" y="320" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-97" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-92" target="jF7dxADPitwJ9rCijpqG-95">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-92" value="RedfinSearcher()" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2130" y="440" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-95" value="load_house_attributes_from_metro" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2070" y="560" width="240" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-96" value="+Metro name&lt;br&gt;+Search filters&lt;br&gt;--&lt;br&gt;-House information dataframe" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-95">
+          <mxGeometry y="50" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-107" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-98" target="jF7dxADPitwJ9rCijpqG-106">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2490" y="710" />
+              <mxPoint x="2190" y="710" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-98" value="metro_name_to_zip_list" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2380" y="560" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-99" value="+Metro name&lt;br&gt;--&lt;br&gt;-List of zip codes in metro" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-98">
+          <mxGeometry y="50" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-100" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-96" target="jF7dxADPitwJ9rCijpqG-99">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-103" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-102" target="jF7dxADPitwJ9rCijpqG-98">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-102" value="helper" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2430" y="450" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-126" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-106" target="jF7dxADPitwJ9rCijpqG-110">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-106" value="zips" style="rhombus;whiteSpace=wrap;html=1;fontSize=14;fontStyle=0;startSize=50;rounded=1;strokeWidth=2;shadow=0;dashed=0;arcSize=4;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2150" y="720" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-108" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-96" target="jF7dxADPitwJ9rCijpqG-106">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-123" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeColor=default;startArrow=classic;startFill=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-110" target="jF7dxADPitwJ9rCijpqG-112">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-125" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="jF7dxADPitwJ9rCijpqG-110" target="jF7dxADPitwJ9rCijpqG-124">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-110" value="" style="triangle;whiteSpace=wrap;html=1;direction=south;rotation=-90;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2123.34" y="860" width="133.33" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-112" value="load_house_attributes_from_zip_code" style="swimlane;childLayout=stackLayout;horizontal=1;startSize=50;horizontalStack=0;rounded=1;fontSize=14;fontStyle=0;strokeWidth=2;resizeParent=0;resizeLast=1;shadow=0;dashed=0;align=center;arcSize=4;whiteSpace=wrap;html=1;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2330" y="820" width="250" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-113" value="+Zip code&lt;br&gt;+Search filters&lt;br&gt;--&lt;br&gt;-House information dataframe" style="align=left;strokeColor=none;fillColor=none;spacingLeft=4;fontSize=12;verticalAlign=top;resizable=0;rotatable=0;part=1;html=1;" vertex="1" parent="jF7dxADPitwJ9rCijpqG-112">
+          <mxGeometry y="50" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-120" value="For zip in zips" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2140" y="895" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="jF7dxADPitwJ9rCijpqG-124" value="attributes" style="rhombus;whiteSpace=wrap;html=1;fontSize=14;fontStyle=0;startSize=50;rounded=1;strokeWidth=2;shadow=0;dashed=0;arcSize=4;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="2150" y="1000" width="80" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
