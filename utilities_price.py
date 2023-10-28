@@ -4,6 +4,7 @@ import helper
 import datetime
 import polars as pl
 from enum import Enum, StrEnum
+from typing import Any
 
 load_dotenv()
 
@@ -48,7 +49,8 @@ class EIADataRetriever:
         self.api_key = os.getenv("EIA_API_KEY")
 
     # normalize prices
-    def _price_per_btu_converter(self, energy_price_dict: dict) -> dict:
+    #!this should be failing?
+    def _price_per_btu_converter(self, energy_price_dict: dict) -> dict[str, str|EnergyTypes|float]:
         """Converts energy source's price per quantity to price per BTU.
 
         Args:
@@ -64,7 +66,7 @@ class EIADataRetriever:
         btu_dict = {}
         factor = 1
         CENTS_IN_DOLLAR = 100
-        match energy_price_dict.get(type):
+        match energy_price_dict.get("type"):
             case self.EnergyTypes.PROPANE:
                 factor = self.FuelBTUConversion.PROPANE_BTU_PER_GAL 
             case self.EnergyTypes.NATURAL_GAS:
@@ -83,7 +85,7 @@ class EIADataRetriever:
         return btu_dict
 
     # api to dict handler helpers
-    def _price_dict_to_clean_dict(self, eia_json: dict, energy_type: EnergyTypes, state: str) -> dict:
+    def _price_dict_to_clean_dict(self, eia_json: dict, energy_type: EnergyTypes, state: str) -> dict[str,str|EnergyTypes|float]:
         """Cleaner for raw json data returned by EIA's API.
 
         Args:
@@ -106,7 +108,7 @@ class EIADataRetriever:
         
         return result_dict
 
-    def _price_df_to_clean_dict(self, eia_df: pl.DataFrame, energy_type: EnergyTypes, state: str) -> dict:
+    def _price_df_to_clean_dict(self, eia_df: pl.DataFrame, energy_type: EnergyTypes, state: str) -> dict[str, str|EnergyTypes|float]:
         result_dict = {}
         for row in eia_df.rows(named=True):
             year_month = f"{row.get("year")}-{row.get("month")}"
@@ -116,7 +118,7 @@ class EIADataRetriever:
         return result_dict
   
     # api to dict handler
-    def _price_to_clean_dict(self, price_struct: dict|pl.DataFrame, energy_type: EnergyTypes, state: str)-> dict:
+    def _price_to_clean_dict(self, price_struct: dict|pl.DataFrame, energy_type: EnergyTypes, state: str)-> dict[str, str|EnergyTypes|float]:
         match price_struct:
             case dict():
                 return self._price_dict_to_clean_dict(price_struct, energy_type, state)
@@ -128,7 +130,7 @@ class EIADataRetriever:
     # api interaction                          
     def _monthly_electricity_price_per_kwh(
         self, state: str, start_date: datetime.date, end_date: datetime.date
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Returns a dictionary for a given state's monthly energy price. Price is in cents per KWh
 
         Args:
@@ -149,7 +151,7 @@ class EIADataRetriever:
 
     def _monthly_ng_price_per_mcf(
         self, state: str, start_date: datetime.date, end_date: datetime.date
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Returns a dictionary of year-month to price of a given state's price per thousand cubic feet.
 
         Args:
@@ -240,7 +242,7 @@ class EIADataRetriever:
 
         return monthly_avg_price
 
-    def monthly_price_per_btu_by_energy_type(self, energy_type: EnergyTypes, state: str, start_date: datetime.date, end_date: datetime.date) -> dict:
+    def monthly_price_per_btu_by_energy_type(self, energy_type: EnergyTypes, state: str, start_date: datetime.date, end_date: datetime.date) -> dict[str, str|EnergyTypes|float]:
         """Finds the cost per BTU of the given energy type given the state, over the given period of time. Refer to EIA's documentation 
         for changes to data collection during certain years.
 

@@ -255,3 +255,5 @@ Attributes: Typically in reference to a listing attribute. These describe the li
 # Speed
 
 Each house takes about 1.7 seconds averaged over the programs run time. This includes a random amount of time between .6 and 1.1 seconds
+
+profiling is done with `python -m profile -o ./output.pstats main.py``. graph is made with (since scripts in site-packages dont run, duh, and since exes listed in ur PATH dont exist, duh) `python path\to\venv\.venv\Lib\site-packages\gprof2dot.py -f pstats output.pstats | path\to\gviz\dot -Tpng -o output.png`

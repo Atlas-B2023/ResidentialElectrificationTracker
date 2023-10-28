@@ -3,11 +3,29 @@ from bs4 import element
 import re
 import helper
 
+logger = helper.logger
 
-def _amenity_item_to_dict(tag: element.Tag) -> dict | str:
-    """Amenity groups have amenities listed in them with <li> tags. Furthermore,
-    amenities come in two types, key: value, and value. This function returns the
-    string, or a dict of the key: value pair.
+# re.compile(r"heat", re.I), is not included as we dont care if it has heating, we care the type. "has heating" isnt really useful
+heating_related_patterns = [
+    re.compile(r"fuel", re.I),
+    re.compile(r"forced", re.I),
+    re.compile(r"(natural)\s(gas)", re.I),
+    re.compile(r"gas", re.I),
+    re.compile(r"oil", re.I),
+    re.compile(r"electricity", re.I),
+    re.compile(r"(heat)\s(pump)", re.I),
+    re.compile(r"propane", re.I),
+    re.compile(r"base", re.I),
+    re.compile(r"mini[\s-]split", re.I),
+    re.compile(r"pellet", re.I),
+    re.compile(r"wood", re.I),
+    re.compile(r"radiant", re.I),
+]
+
+
+def _amenity_item_to_str(tag: element.Tag) -> str:
+    """Amenity groups have amenities listed in them with <li> tags. These
+    amenities come in two types, key: value, and value. To get all items in a list, call this function in a loop
 
     Args:
         tag (element.Tag): The <li> tag
@@ -16,28 +34,20 @@ def _amenity_item_to_dict(tag: element.Tag) -> dict | str:
         amenity: dictionary or string representation of amenity
     """
     #! for our regex parse thing that will categorize , it will be after this. what should be returned from "get housing amenities" is a list
-    spans =tag.find("span")
+    spans = tag.find("span")
     if spans is None:
         #! should probably error here
-        print("AMENITY ITEM NOT FOUND< UNDEFINE BEHAVIOR")
+        logger.critical("Blank <li> tag on listing page. investigate further")
         return ""
-        
+
+    # sometimes they have weird spacing, just normalizing
     span_split_text = re.sub(r"\s+", " ", spans.text)
-    #handling the key value items
-    if ":" in span_split_text:
-        span_split_text = span_split_text.split(": ")
-    else:
-        # if its not like "heating: central", then do this
-        return span_split_text
 
-    if len(span_split_text) == 2:
-        #this is where all amenities should fal under, if else condition is hit, have to rethink/ revist this function for how to handle
-        return {span_split_text[0]: span_split_text[1]}
-    else:
-        return {"amenity_item_to_dict_N/a": "N/a"}
+    return span_split_text
+    #! do we even need all this? all were going to be looking for in the end is fuel type/ burner/heat maker type...
 
 
-def _clean_heating_info_dictionary(raw_heating_info_dict: dict) -> dict:
+def _clean_heating_info_list(raw_heating_info_list: list[str]) -> list[str]:
     """Takes in a raw amenity heating info dictionary and only returns relevant heating information.
 
     Args:
@@ -46,20 +56,22 @@ def _clean_heating_info_dictionary(raw_heating_info_dict: dict) -> dict:
     Returns:
         dict: cleaned heating info dictionary
     """
-    heating_info_dict = {}
-    #! this is what i was talking about
-    heating_string = re.compile(r"heat", re.I)
-    fuel_string = re.compile(r"fuel", re.I)
 
-    for key, value in raw_heating_info_dict.items():
-        if re.search(heating_string, key) or re.search(fuel_string, key):
-            heating_info_dict[key] = value
+    # for elem in list:
+    # if elem matches pattern, add to list
+    # return list
+    # here we just care that anything matches, not categorizing yet
+    heating_info_list = []
 
-    return heating_info_dict
+    for string in raw_heating_info_list:
+        if any(regex.findall(string) for regex in heating_related_patterns):
+            heating_info_list.append(string)
+
+    return heating_info_list
 
 
 # this will probably be inside of a func called scrape_housing_information
-def heating_amenities_scraper(url: str) -> dict:
+def heating_amenities_scraper(url: str) -> list[str]:
     """Scrapes amenity info when the given HTML is in the form:
     <div class="amenity-group>
         <ul>
@@ -90,32 +102,26 @@ def heating_amenities_scraper(url: str) -> dict:
     req.raise_for_status()
     html = req.text
     soup = btfs(html, "html.parser")
-    #! make more robust? i did it somewhere. it doesnt have the boundary token
+    #! make more robust? might have to loop over a select few amenity super groups
     cur_elem = soup.find("div", string=re.compile(r"heating\b", re.I))
 
     if cur_elem is None:
         # in production this should alert something to investigate. the local mls may have another format.
         # the other option is there is no heating info.
-        return {}
+        # make search strings a list, then compile the list. use the string list here
+        logger.info("No div matching pattern \"heating\"")
+        return []
         # raise ValueError("No heating information")
 
-    heating_dict = {}
+    heating_list = []
     # finding the heating amenity group.
     for sibling in cur_elem.next_siblings:
-        if sibling.name == "li": # type: ignore
-            # if we have a string, the amenity stands alone in the html. we typically dont care about these, so they're
-            # all grouped under a misc info list
-            #! rethink heating scraping. will have to probably do big refactor
-            item = _amenity_item_to_dict(sibling) # type: ignore
-            if isinstance(item, str):
-                if "misc_heating_info" in heating_dict:
-                    list = heating_dict.get("misc_heating_info")
-                    list.append(item)
-                    heating_dict.update({"misc_heating_info": list})
-                else:
-                    heating_dict.update({"misc_heating_info": [item]})
-            else:
-                heating_dict.update(item)
+        if sibling.name == "li":  # type: ignore
+            # heating fuel: x, natural gas; has heating;
+
+            amenity_item = _amenity_item_to_str(sibling)
+            if amenity_item != "":
+                heating_list.append(amenity_item)
 
     # handles the <ul>'s dangling <li> tags. Guards for the case when there is no <ul>
     count = 0
@@ -124,19 +130,18 @@ def heating_amenities_scraper(url: str) -> dict:
         count += 1
         if count > 3:
             # all of the amenities have been added to the dict. now we're in no man's land
-            return heating_dict
+            return heating_list
 
     # we are now in the <ul>
     for child in cur_elem.children:
         if child.name == "li":
-            item = _amenity_item_to_dict(child)
-            if isinstance(item, str):
-                if "misc_heating_info" in heating_dict:
-                    list = heating_dict.get("misc_heating_info")
-                    list.append(item)
-                    heating_dict.update({"misc_heating_info": list})
-                else:
-                    heating_dict.update({"misc_heating_info": [item]})
-            else:
-                heating_dict.update(item)
-    return _clean_heating_info_dictionary(heating_dict)
+            amenity_item = _amenity_item_to_str(child)
+            if amenity_item != "":
+                heating_list.append(amenity_item)
+    
+    cleaned_heating_info_list = _clean_heating_info_list(heating_list)
+    if len(cleaned_heating_info_list) == 0:
+        logger.info("No heating amenities found") # for {address}
+    else:
+        logger.info("Heating amenities found")
+    return cleaned_heating_info_list

@@ -4,6 +4,7 @@ from enum import StrEnum
 import requests
 import time
 import random
+import logging
 
 
 class PropertyType(StrEnum):
@@ -154,8 +155,9 @@ def metro_name_to_zip_code_list(name: str) -> list[int]:
     #! for testing
     if name == "TEST":
         # 22066 has a lot which raises the line 90 listing scraper error
-        return [22067, 55424, 33629]
-        # return [22067, 55424]
+        # return [55424]
+        return [22067, 55424]
+        # return [22067, 55424, 33629]
 
     df = pl.read_csv("./augmenting_data/master.csv")
 
@@ -234,6 +236,32 @@ def req_get_to_file(get_request: requests.Response) -> int:
 def df_to_file(df: pl.DataFrame):
     df.write_csv(f"{time.time()}_data_frame.csv", has_header=True)
 
+
+def _set_up_logger(level: int) -> logging.Logger:
+    """Get a logger based on levels specified with formatting applied. Does not save to file
+
+    Args:
+        level (int): Severity level
+
+    Returns:
+        logging.Logger: _description_
+    """
+    logger = logging.getLogger(__name__)
+    logger.setLevel(level)
+    date_format = "%Y-%m-%d %H:%M:%S"
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s: %(message)s", datefmt=date_format
+    )
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+
+    # Add the handler to the logger
+    logger.addHandler(handler)
+    logger.propagate = False
+
+    return logger
+
+logger = _set_up_logger(logging.INFO)
 
 if __name__ == "__main__":
     print(
