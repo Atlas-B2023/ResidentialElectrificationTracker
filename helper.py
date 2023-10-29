@@ -7,94 +7,23 @@ import random
 import logging
 
 
-class PropertyType(StrEnum):
-    HOUSE = "house"
-    CONDO = "condo"
-    TOWNHOUSE = "townhouse"
-    LAND = "land"
-    OTHER = "other"
-    MANUFACTURED = "manufactured"
-    COOP = "co-op"
-    MULTIFAMILY = "multifamily"
-
-
-class Status(StrEnum):
-    ACTIVE = "active"
-    COMINGSOON = "comingsoon"
-    CONTINGENT = "contingent"
-    PENDING = "pending"
-
-
-class Include(StrEnum):
-    """Sold times are cumulative. When sorting by last sold, the houses that
-    show up in the 1 week search will be the first ones to show up in the last 1 year search, for example
-    """
-
-    LAST_1_WEEK = "sold-1wk"
-    LAST_1_MONTH = "sold-1mo"
-    LAST_3_MONTHS = "sold-3mo"
-    LAST_6_MONTHS = "sold-6mo"
-    LAST_1_YEAR = "sold-1yr"
-    LAST_2_YEAR = "sold-2yr"
-    LAST_3_YEAR = "sold-3yr"
-    LAST_5_YEAR = "sold-5yr"
-
-
-class Stories(StrEnum):
-    ONE = "1"
-    TWO = "2"
-    THREE = "3"
-    FOUR = "4"
-    FIVE = "5"
-    TEN = "10"
-    FIFTEEN = "15"
-    TWENTY = "20"
-
-
-class Sqft(StrEnum):
-    SEVEN_FIFTY = "750"
-    THOU = "1K"
-    THOU_1 = "1.1k"
-    THOU_2 = "1.2k"
-    THOU_3 = "1.3k"
-    THOU_4 = "1.4k"
-    THOU_5 = "1.5k"
-    THOU_6 = "1.6k"
-    THOU_7 = "1.7k"
-    THOU_8 = "1.8k"
-    THOU_9 = "1.9k"
-    TWO_THOU = "2k"
-    TWO_THOU_250 = "2.25k"
-    TWO_THOU_500 = "2.5k"
-    TWO_THOU_750 = "2.75k"
-    THREE_THOU = "3k"
-    FOUR_THOU = "4k"
-    FIVE_THOU = "5k"
-    SEVEN_THOU_500 = "7.5k"
-    TEN_THOU = "10k"
-
-
-class Sort(StrEnum):
-    # for sale only
-    NEWEST = "lo-days"
-    # sold only
-    MOST_RECENT_SOLD = "hi-sale-date"
-    LOW__TO_HIGH_PRICE = "lo-price"
-    HIGH_TO_LOW_PRICE = "hi-price"
-    SQFT = "hi-sqft"
-    LOT_SIZE = "hi-lot-sqf"
-    PRICE_PER_SQFT = "lo-dollarsqft"
+class ASCIIColors(StrEnum):
+    GREY = "\x1b[38;20m"
+    YELLOW = "\x1b[33;20m"
+    RED = "\x1b[31;20m"
+    BOLD_RED = "\x1b[31;1m"
+    RESET = "\x1b[0m"
 
 
 def state_county_to_zip_df(state: str, county: str) -> pl.DataFrame:
-    """takes in a state and county and returns the zip code constituents of that county
+    """Takes in a state and county and returns the zip code constituents of that county.
 
     Args:
-        state (str): the
+        state (str): the state
         county (str): the county
 
     Returns:
-        pl.dataframe.DataFrame: data frame of zip codes
+        pl.DataFrame: DataFrame of ZIP codes
     """
     return (
         pl.read_csv("zip_registry.csv")
@@ -104,14 +33,14 @@ def state_county_to_zip_df(state: str, county: str) -> pl.DataFrame:
 
 
 def state_city_to_zip_df(state: str, city: str) -> pl.DataFrame:
-    """takes in a state and city and returns the zip code constituents of that city
+    """Takes in a state and city and returns the zip code constituents of that city.
 
     Args:
-        state (str): the
+        state (str): the state
         city (str): the city
 
     Returns:
-        pl.dataframe.DataFrame: data frame of zip codes
+        pl.DataFrame: DataFrame of ZIP codes
     """
     return (
         pl.read_csv("zip_registry.csv")
@@ -120,23 +49,30 @@ def state_city_to_zip_df(state: str, city: str) -> pl.DataFrame:
     )
 
 
-# get_redfin_city_state_url_path
-def get_redfin_url_path(address: str) -> str:
-    """Will generate the path for city, zipcode, and addresses
+def get_redfin_url_path(location: str) -> str:
+    """Will generate the path with the proprietary number for city, zipcode, and addresses.
+
     Args:
-        city (str): the city or county to look up
-        state (str): the state in which the city resides
+        location (str): the geopolitical location
 
     Returns:
         str: returns path to city/county number, state, and city/county, like /city/20420/MA/Worcester
     """
     client = Redfin()
-    response = client.search(address)
+    response = client.search(location)
     return response["payload"]["sections"][0]["rows"][0]["url"]
 
 
 def is_valid_zipcode(zip: int) -> bool:
-    # going to treat zips as numbers here, reevaluate later
+    """Checks if the given ZIP code is valid, base on a local file.
+
+    Args:
+        zip (int): the ZIP code to check
+
+    Returns:
+        bool: if ZIP code is valid
+    """
+    # zip codes are stored as numbers in the csv as of 10/28/23
     df = pl.read_csv("./augmenting_data/uszips.csv")
 
     return zip in df["ZIP"]
@@ -144,32 +80,25 @@ def is_valid_zipcode(zip: int) -> bool:
 
 # when making class, init the csv and have it open in memory. not too much and saves on making the df every call
 def metro_name_to_zip_code_list(name: str) -> list[int]:
-    """Returns a list of zip codes in the given Metropolitan. Returns nothing if metropolitan name is invalid.
+    """Returns the constituent ZIP codes for a given Metropolitan Statistical Area.
 
     Args:
-        name (str): Name of the Metropolitan
+        name (str): name of the Metropolitan Statistical Area
 
     Returns:
-        list[int]: List of zip codes found
+        list[int]: list of zip codes found. Is empty if MSA name is invalid
     """
-    #! for testing
     if name == "TEST":
-        # 22066 has a lot which raises the line 90 listing scraper error
-        # return [55424]
-        return [22067, 55424]
-        # return [22067, 55424, 33629]
+        # return [55424] # good and small
+        return [22067, 55424]  # nulls in sqft
+        # return [22067, 55424, 33629] # nulls in sqft and large
 
     df = pl.read_csv("./augmenting_data/master.csv")
 
-    # MSAs are what were looking for in this project
-    result = df.filter(
+    # MSAs are what were looking for in this project. Some MSA are repeated. can use unique(), but using a select is faster and better
+    return df.filter(
         (df["METRO_NAME"] == name) & (df["LSAD"] == "Metropolitan Statistical Area")
-    )["ZIP"]
-
-    if len(result) > 0:
-        return result.to_list()
-    else:
-        return []
+    )["ZIP"].to_list()
 
 
 def zip_to_metro(zip: int) -> str:
@@ -192,6 +121,11 @@ def zip_to_metro(zip: int) -> str:
 
 
 def get_random_user_agent() -> str:
+    """Picks a user agent from a list of popular user agents.
+
+    Returns:
+        str: user agent string
+    """
     list = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
@@ -209,10 +143,10 @@ def get_random_user_agent() -> str:
 
 
 def req_get_wrapper(url: str) -> requests.Response:
-    """wrapper for requests. has a sleep and headers
+    """Wrapper for requests. Random short sleep and random user agent string.
 
     Args:
-        url (str): url
+        url (str): url to pass to ``requests.get()``
 
     Returns:
         requests.Response: the response object
@@ -227,30 +161,43 @@ def req_get_wrapper(url: str) -> requests.Response:
     return req
 
 
-def req_get_to_file(get_request: requests.Response) -> int:
+def req_get_to_file(request: requests.Response) -> int:
+    """Write the contents of a request response to a unique file.
+
+    Args:
+        get_request (requests.Response): the request
+
+    Returns:
+        int: the status code of the request
+    """
     with open(f"{time.time()}_request.html", "w+", encoding="utf-8") as f:
-        f.write(get_request.text)
-    return get_request.status_code
+        f.write(request.text)
+    return request.status_code
 
 
 def df_to_file(df: pl.DataFrame):
+    """Writes a DataFrame to a unique file.
+
+    Args:
+        df (pl.DataFrame): the DataFrame to write
+    """
     df.write_csv(f"{time.time()}_data_frame.csv", has_header=True)
 
 
 def _set_up_logger(level: int) -> logging.Logger:
-    """Get a logger based on levels specified with formatting applied. Does not save to file
+    """Setup logger with basic config.
 
     Args:
         level (int): Severity level
 
     Returns:
-        logging.Logger: _description_
+        logging.Logger: logger
     """
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
     date_format = "%Y-%m-%d %H:%M:%S"
     formatter = logging.Formatter(
-        fmt="%(asctime)s - %(name)s - %(levelname)s: %(message)s", datefmt=date_format
+        fmt="%(asctime)s - %(levelname)s: %(message)s", datefmt=date_format
     )
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
@@ -261,9 +208,8 @@ def _set_up_logger(level: int) -> logging.Logger:
 
     return logger
 
+
 logger = _set_up_logger(logging.INFO)
 
 if __name__ == "__main__":
-    print(
-        len(metro_name_to_zip_code_list("Washington-Arlington-Alexandria, DC-VA-MD-WV"))
-    )
+    print(metro_name_to_zip_code_list("blarb"))

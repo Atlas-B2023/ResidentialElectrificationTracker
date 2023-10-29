@@ -4,6 +4,7 @@ import polars as pl
 import helper
 import listing_scraper
 from enum import StrEnum
+from datetime import datetime, timedelta
 
 # PURPOSE: this file
 
@@ -14,16 +15,27 @@ from enum import StrEnum
 
 # look at ways to decuple this class from redfin?
 class RedfinSearcher:
-    def __init__(self) -> None:
+    """A class that scrapes and Redfin, while also using their stingray API for getting information about houses on Redfin.
+
+    Usage
+    -----
+    >>> rfs = RedfinSearcher()
+    >>> filters = rfs.generate_filters_path(...)
+    >>> rfs.set_filters_path(filters)
+    """
+
+    def __init__(self, filters_path: str | None = None) -> None:
         self.REDFIN_BASE_URL = "https://www.redfin.com"
-        self.filters_path = self.generate_filters_path(
-            sort=self.Sort.MOST_RECENT_SOLD,
-            property_type=self.PropertyType.HOUSE,
-            min_year_built=2022,
-            max_year_built=2022,
-            include=self.Include.LAST_5_YEAR,
-            min_stories=self.Stories.ONE,
-        )
+        if filters_path is None:
+            self.filters_path = self.generate_filters_path(
+                sort=self.Sort.MOST_RECENT_SOLD,
+                property_type=self.PropertyType.HOUSE,
+                min_year_built=(datetime.now() - timedelta(weeks=52 * 5)).year,
+                include=self.Include.LAST_5_YEAR,
+                min_stories=self.Stories.ONE,
+            )
+        else:
+            self.filters_path = filters_path
         self.LISTING_SCHEMA = {
             "LATITUDE": pl.Float32,
             "LONGITUDE": pl.Float32,
@@ -152,49 +164,82 @@ class RedfinSearcher:
         LOT_SIZE = "hi-lot-sqf"
         PRICE_PER_SQFT = "lo-dollarsqft"
 
-    def set_filters_path(self, filter_path: str) -> None:
-        self.filter_path = filter_path
-
-    def _generate_area_path(self, zip_code_or_city_and_state_or_address: str) -> str:
-        """Generates the path for a location
+    def set_filters_path(self, filters_path: str) -> None:
+        """Set the search filters for all searchers made with this RedfinSearcher object.
 
         Args:
-            zip_code_or_city_and_state_or_address (str): the location, either a zip code, or a city and state, or an address
+            filters_path (str): the URL path to search with
+        """
+        self.logger.debug(f"Setting filters to: {filters_path}")
+        self.filters_path = filters_path
+
+    def _generate_area_path(self, zip_code_or_city_and_state_or_address: str) -> str:
+        """Generates the path for a location. Redfin uses proprietary numbers to identify cities. This makes a call to their
+        stingray API to get the translation.
+
+        Args:
+            zip_code_or_city_and_state_or_address (str): the location. Either a zip code, or a city and state, or an address
 
         Returns:
             path: the path, for example "/zipcode/01609"
         """
-        # save on a request?. have to really check where zips are being treated as strings and ints
         if (
             len(zip_code_or_city_and_state_or_address) == 5
             and zip_code_or_city_and_state_or_address.isdigit()
         ):
             return f"/zipcode/{zip_code_or_city_and_state_or_address}"
-        return f"{helper.get_redfin_url_path(zip_code_or_city_and_state_or_address)}"
 
-    def generate_filters_path(self, **kwargs) -> str:
-        """Generates the path for given filters. Available filters are listed below, and values can be found in the enums in this class.
+        # Cache this to a json or something
+        path_url = (
+            f"{helper.get_redfin_url_path(zip_code_or_city_and_state_or_address)}"
+        )
+        return path_url
+
+    @staticmethod
+    def generate_filters_path(**kwargs) -> str:
+        """Generates the path for given filters. Note that some filters cannot be used together
+
+        Available filters
+        -----------------
+            * ``include``
+            * ``property-type``
+            * ``min-beds``
+            * ``max-beds``
+            * ``min-baths``
+            * ``max-baths``
+            * ``min-year-built``
+            * ``max-year-built``
+            * ``status``
+            * ``min-price``
+            * ``max-price``
+            * ``sort``
+            * ``exclude-age-restricted``
+            * ``is-green``
+            * ``fireplace``
+            * ``min-stories``
+            * ``min-sqft``
+
+        Example
+        -------
+        For generating a filter string that has a filter with 1 value:
+
+        >>> generate_filters_path(min-sqft=Sqft.THOU, property_type=PropertyType.HOUSE)
+        "/filter/min-sqft=1k,property-type=house"
+
+        For generating a filter string that has a filter with multiple values:
+
+        >>> generate_filters_path(min-sqft=Sqft.THOU, property_type=[PropertyType.HOUSE, PropertyType.TOWNHOUSE])
+        "/filter/min-sqft=1k,property-type=house+townhouse"
+
+        Exclusions
+        ----------
+        When searching by sold, you cannot use: TODO
+
+        When searching by for-sale, you cannot use: TODO
 
         Returns:
-            str: the url path, for example "/min-story=1,min-year-built=2023"
+            str: the url filter string
         """
-        # available_filters = [
-        #     "include",
-        #     "property-type",
-        #     "min-beds",
-        #     "max-beds",
-        #     "min-baths",
-        #     "max-baths",
-        #     "min-year-built",
-        #     "max-year-built",
-        #     "status",
-        #     "min-price",
-        #     "max-price",
-        #     "sort",
-        #     "exclude-age-restricted",
-        #     "is-green",
-        #     "fireplace",
-        # ]
         selected_filters = []
 
         # can do additional checks if wanted, treat param names as filter words
@@ -207,17 +252,14 @@ class RedfinSearcher:
         return f'/filter/{",".join(selected_filters)}'
 
     def _df_from_search_page_csv(self, url: str) -> pl.DataFrame | None:
-        """Returns a modified format of the search page csv from the given search page url.
+        """Returns a DataFrame of the contents scraped from the download button from the specified search page URL. The schema of this DataFrame is listed in ``RedfinSearcher.CSV_SCHEMA``.
 
         Args:
-            url (str): url of search page
+            url (str): the URL of the search page
 
         Returns:
-            pl.DataFrame: dataframe in format of "ADDRESS","CITY","STATE OR PROVINCE","YEAR BUILT","ZIP OR POSTAL CODE",
-            "PRICE","SQUARE FEET","URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
-            "LATITUDE","LONGITUDE"
+            pl.DataFrame | None: the DataFrame. Is empty if there are no listings for the given filters. Is None if the CSV download link is not available
         """
-
         req = helper.req_get_wrapper(url)
         req.raise_for_status()
 
@@ -227,12 +269,15 @@ class RedfinSearcher:
         download_link_tag = soup.find("a", id=download_button_id)
         if download_link_tag is None:
             # should be handled in caller
-            # randomly gives this error. investegate, if truly just random, retry in one second
+            # randomly gives this error. investigate, if truly just random, retry in one second
+            self.logger.debug(
+                f"Finding download button failed for {url = }. {req.status_code = }, {len(html) = }"
+            )
             raise TypeError(
-                "Could not find csv download. Check if the html downloaded is correct, or if the download button id has changed"
+                "Could not find CSV download. Check if the html downloaded is correct, or if the download button id has changed"
             )
 
-        download_link = download_link_tag.get("href")
+        download_link = download_link_tag.get("href")  # type: ignore
 
         match download_link:
             case None:
@@ -244,11 +289,9 @@ class RedfinSearcher:
                     f"<a> tag with id {download_button_id} has multiple values"
                 )
 
-        df = pl.read_csv(
+        return pl.read_csv(
             source=f"{self.REDFIN_BASE_URL}{download_link}", dtypes=self.FULL_CSV_SCHEMA
-        )
-
-        return df.select(
+        ).select(
             "ADDRESS",
             "CITY",
             "STATE OR PROVINCE",
@@ -262,45 +305,67 @@ class RedfinSearcher:
         )
 
     def _zips_to_search_page_csvs(self, zip_codes: list[int]) -> pl.DataFrame | None:
-        """Takes in a list of zip codes and returns a dataframe produced by concatenating all of the zip codes' search page csvs.
+        """Returns a DataFrame produced by concatenating all of the specified ZIP codes' search page CSVs.
 
         Args:
-            zip_codes (list[int]): list of zip codes to search
+            zip_codes (list[int]): list of ZIP codes to search
 
         Returns:
-            pl.DataFrame | None: the dataframe of all of the csvs concatenated into one dataframe
+            pl.DataFrame | None: the concatenated DataFrame. Is empty if there are no listings for the given filters. Is None if the CSV download link is not available
         """
         formatted_zip_codes = [f"{zip_code:0{5}}" for zip_code in zip_codes]
         list_of_csv_dfs = []
 
         for zip_code in formatted_zip_codes:
-            url = f"{self.REDFIN_BASE_URL}{self._generate_area_path(zip_code)}{self.filters_path}"
-
+            search_page_url = f"{self.REDFIN_BASE_URL}{self._generate_area_path(zip_code)}{self.filters_path}"
+            self.logger.debug(f"searching zip code with {search_page_url = }")
             try:
                 # this is the only place where this error should pop up. if a zip is invalid,
                 # return none and handle in caller. an example is the zip 56998, which is just a
                 # USPS distribution center in D.C
                 # should df_from_search_page be returning none
-                redfin_csv_df = self._df_from_search_page_csv(url)
-            except requests.HTTPError:
+                redfin_csv_df = self._df_from_search_page_csv(search_page_url)
+            except requests.HTTPError as e:
                 #! this also gave random error
-                self.logger.error("Invalid zip")
+                self.logger.error(
+                    f"{search_page_url = } gave an invalid zip code (possible its something else) error.\n{e}"
+                )
                 return None
 
             if redfin_csv_df is None:
                 self.logger.info(
-                    f"{zip_code} did not return any matching houses with the given filters"
+                    f"The download link for {zip_code}'s search page is not available"
                 )
-                return None
+                continue
 
             list_of_csv_dfs.append(redfin_csv_df)
         return pl.concat(list_of_csv_dfs)
 
     def load_house_attributes_from_metro(
-        self, metro_name: str, filters_path: str
+        self, metro_name: str, filters_path: str | None = None
     ) -> pl.DataFrame:
+        """Produces a DataFrame of a metropolitan's available houses' attributes, including heating information.
+
+        Process
+        -------
+        * Converts a Metropolitan Statistical Area name into its constituent ZIP codes
+        * For each ZIP code, searches Redfin with filters and collects listing results. ZIP codes are searched to ensure maximal data collection, as Redfin only returns (9 pages * 40 listings) 360 entries per search.
+        * For each listing collected, creates a DataFrame of house attributes, such as location and heating amenities.
+
+        Args:
+            metro_name (str): a Metropolitan Statistical Area name
+            filters_path (str): a filters path to search with
+
+        Returns:
+            pl.DataFrame: DataFrame of collected listing information
+        """
+        if filters_path is not None:
+            self.logger.info(
+                f"Filter path was supplied, overwriting filter string {helper.ASCIIColors.YELLOW}{self.filters_path}{helper.ASCIIColors.RESET} with {helper.ASCIIColors.YELLOW}{filters_path}{helper.ASCIIColors.RESET}"
+            )
+            self.set_filters_path(filters_path)
+            self.logger.debug(f"Metro is using filter string: {self.filters_path}")
         zip_codes = helper.metro_name_to_zip_code_list(metro_name)
-        self.set_filters_path(filters_path)
 
         if len(zip_codes) == 0:
             self.logger.debug("no zip codes returned from metro name conversion")
@@ -320,13 +385,13 @@ class RedfinSearcher:
     def listing_attributes_from_search_page_csv(
         self, search_page_csvs: pl.DataFrame
     ) -> pl.DataFrame:
-        """Given a dataframe with a column of URL (SEE ht...), will look up the listings page and scrape specific house attributes.
+        """Given a dataframe with a column of "URL (SEE ht...)", this will look up the listings page and scrape specific house attributes.
 
         Args:
-            search_page_csvs (pl.DataFrame): search page csv dataframe
+            search_page_csvs (pl.DataFrame): search page CSV DataFrame
 
         Returns:
-            pl.DataFrame: the dataframe. may be empty
+            pl.DataFrame: the DataFrame. Is empty if no house has heating data
         """
         url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
         self.logger.info("Starting lookups on listing URLS")
@@ -334,7 +399,7 @@ class RedfinSearcher:
         # if cant make two function arg, can build two cols into list and pass the list using
         return (
             search_page_csvs.with_columns(
-                pl.col(url_col_name)
+                (pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)]))
                 .map_elements(listing_scraper.heating_amenities_scraper)
                 .cast(pl.List(pl.Utf8))
                 .alias("HEATING AMENITIES")
