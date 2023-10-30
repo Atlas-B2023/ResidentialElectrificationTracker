@@ -1,8 +1,10 @@
-from bs4 import element, BeautifulSoup as btfs
 import re
-import helper
 
-logger = helper.logger
+import Helper as Helper
+from bs4 import BeautifulSoup as btfs
+from bs4 import element
+
+logger = Helper.logger
 
 
 heating_related_patterns = [
@@ -29,11 +31,11 @@ heating_related_patterns = [
 ]
 
 
-def _amenity_item_to_str(tag: element.Tag) -> str:
-    """Extracts amenity items from their <li> tag. Should be called when dealing with amenity groups.
+def amenity_item_to_str(tag: element.Tag) -> str:
+    """Extract amenity items from their <li> tag. Should be called when dealing with amenity groups.
 
     Args:
-        tag (element.Tag): The <li> tag
+        tag (element.Tag): <li> tag
 
     Returns:
         str: string representation of amenity item
@@ -51,11 +53,15 @@ def _amenity_item_to_str(tag: element.Tag) -> str:
     return span_split_text
 
 
-def _extract_heating_terms_to_list(terms_list: list[str]) -> list[str]:
-    """Returns a list of strings that deal with heating. Strings are matched based on ``helper.heating_related_patterns``.
+def extract_heating_terms_to_list(terms_list: list[str]) -> list[str]:
+    """Extract a list of terms related to heating from a list.
+
+    Note:
+        TODO link to this
+        Strings are matched based on `heating_related_patterns`.
 
     Args:
-        raw_heating_info_dict (list[str]): list of strings to search through
+        raw_heating_info_dict (list[str]): list of terms to search through
 
     Returns:
         list[str]: list of strings dealing with heating
@@ -72,8 +78,11 @@ def _extract_heating_terms_to_list(terms_list: list[str]) -> list[str]:
 
 
 # TODO this only deals with a div that matches "Heating", but heating information can be in things like "utilities" or "interior"
+# Make this a tuple?
 def heating_amenities_scraper(address_and_listing_url_list: list[str]) -> list[str]:
-    """Scrapes amenity info when the given HTML is in the form:
+    """Scrape amenity info when given HTML of the form:
+
+    ```html
     <div class="amenity-group>
         <ul>
             <div class="no-break-inside">
@@ -88,10 +97,7 @@ def heating_amenities_scraper(address_and_listing_url_list: list[str]) -> list[s
                 </li>
         </ul>
     </div>
-
-    Logging
-    -------
-    Uses the first element of the given list as an address for logging purposes
+    ```
 
     Args:
         add_url_list (list[str]): The first element is an address, and the second element is the listing page for said address
@@ -100,7 +106,7 @@ def heating_amenities_scraper(address_and_listing_url_list: list[str]) -> list[s
         list[str]: list of heating amenities found
     """
     address, url = address_and_listing_url_list
-    req = helper.req_get_wrapper(url)
+    req = Helper.req_get_wrapper(url)
     req.raise_for_status()
     html = req.text
     soup = btfs(html, "html.parser")
@@ -121,7 +127,7 @@ def heating_amenities_scraper(address_and_listing_url_list: list[str]) -> list[s
         if sibling.name == "li":  # type: ignore
             # heating fuel: x, natural gas; has heating;
 
-            amenity_item = _amenity_item_to_str(sibling)
+            amenity_item = amenity_item_to_str(sibling)
             if amenity_item != "":
                 heating_list.append(amenity_item)
 
@@ -142,11 +148,11 @@ def heating_amenities_scraper(address_and_listing_url_list: list[str]) -> list[s
     # we are now in the <ul>
     for child in cur_elem.children:
         if child.name == "li":
-            amenity_item = _amenity_item_to_str(child)
+            amenity_item = amenity_item_to_str(child)
             if amenity_item != "":
                 heating_list.append(amenity_item)
 
-    cleaned_heating_info_list = _extract_heating_terms_to_list(heating_list)
+    cleaned_heating_info_list = extract_heating_terms_to_list(heating_list)
     if len(cleaned_heating_info_list) == 0:
         logger.info(f"{address} does not have heating information.")
     else:

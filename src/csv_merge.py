@@ -1,8 +1,9 @@
 import polars as pl
 
 # create master sheet for use in program
-zip_cbsa_092023_df = pl.read_excel("./augmenting_data/ZIP_CBSA_092023.xlsx")
-cbsa_est_df = pl.read_csv("./augmenting_data/cbsa-est2022.csv")
+# TODO looks like error on zip cbsa is raised for now found
+zip_cbsa_092023_df = pl.read_excel("../augmenting_data/ZIP_CBSA_092023.xlsx")
+cbsa_est_df = pl.read_csv("../augmenting_data/cbsa-est2022.csv")
 
 zip_cbsa_df = zip_cbsa_092023_df.select(
     ["ZIP", "CBSA", "USPS_ZIP_PREF_CITY", "USPS_ZIP_PREF_STATE"]
@@ -19,4 +20,4 @@ master_df = master_df.rename(
     }
 )
 
-master_df.write_csv("./augmenting_data/master.csv")
+master_df.write_csv("../augmenting_data/master.csv")

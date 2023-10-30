@@ -1,10 +1,11 @@
+from datetime import datetime, timedelta
+from enum import StrEnum
+
+import Helper as Helper
+import polars as pl
+import RedfinListingScraper
 import requests
 from bs4 import BeautifulSoup as btfs
-import polars as pl
-import helper
-import listing_scraper
-from enum import StrEnum
-from datetime import datetime, timedelta
 
 # PURPOSE: this file
 
@@ -15,20 +16,21 @@ from datetime import datetime, timedelta
 
 # look at ways to decuple this class from redfin?
 class RedfinSearcher:
-    """A class that scrapes and Redfin, while also using their stingray API for getting information about houses on Redfin.
+    """
+    Scrape Redfin and make use of their stingray API for retrieving housing information.
 
-    Usage
-    -----
-    >>> rfs = RedfinSearcher()
-    >>> filters = rfs.generate_filters_path(...)
-    >>> rfs.set_filters_path(filters)
+    Examples:
+        >>> rfs = RedfinSearcher()
+        >>> filters = rfs.generate_filters_path(...)
+        >>> rfs.set_filters_path(filters)
+        shape(3,3)
     """
 
     def __init__(self, filters_path: str | None = None) -> None:
         self.REDFIN_BASE_URL = "https://www.redfin.com"
         if filters_path is None:
             self.filters_path = self.generate_filters_path(
-                sort=self.Sort.MOST_RECENT_SOLD,
+                sort=self.Sort.MOST_RECENTLY_SOLD,
                 property_type=self.PropertyType.HOUSE,
                 min_year_built=(datetime.now() - timedelta(weeks=52 * 5)).year,
                 include=self.Include.LAST_5_YEAR,
@@ -89,9 +91,11 @@ class RedfinSearcher:
             "LATITUDE": pl.Float32,
             "LONGITUDE": pl.Float32,
         }
-        self.logger = helper.logger
+        self.logger = Helper.logger
 
     class PropertyType(StrEnum):
+        """Properties of the `property-type` filter."""
+
         HOUSE = "house"
         CONDO = "condo"
         TOWNHOUSE = "townhouse"
@@ -102,15 +106,20 @@ class RedfinSearcher:
         MULTIFAMILY = "multifamily"
 
     class Status(StrEnum):
+        """Properties of the `status` filter.
+
+        Note:
+            Do not use in conjunction with `Include`. Use of the `status` filter on Redfin implies the house is for sale.
+            By default, Redfin searches for \"active\" and \"commingsoon\". This behavior is not replicated
+        """
+
         ACTIVE = "active"
         COMINGSOON = "comingsoon"
         CONTINGENT = "contingent"
         PENDING = "pending"
 
     class Include(StrEnum):
-        """Sold times are cumulative. When sorting by last sold, the houses that
-        show up in the 1 week search will be the first ones to show up in the last 1 year search, for example
-        """
+        """Properties of the `include` filter."""
 
         LAST_1_WEEK = "sold-1wk"
         LAST_1_MONTH = "sold-1mo"
@@ -122,6 +131,8 @@ class RedfinSearcher:
         LAST_5_YEAR = "sold-5yr"
 
     class Stories(StrEnum):
+        """Properties of the `min-stories` filter."""
+
         ONE = "1"
         TWO = "2"
         THREE = "3"
@@ -132,6 +143,8 @@ class RedfinSearcher:
         TWENTY = "20"
 
     class Sqft(StrEnum):
+        """Properties of the `min-sqft` and `max-sqft` filter."""
+
         SEVEN_FIFTY = "750"
         THOU = "1K"
         THOU_1 = "1.1k"
@@ -154,10 +167,17 @@ class RedfinSearcher:
         TEN_THOU = "10k"
 
     class Sort(StrEnum):
+        """Properties of the `sort` filter.
+
+        Note:
+            Filters `NEWEST` and `MOST_RECENTLY_SOLD` are mutually exclusive.
+        """
+
         # for sale only
         NEWEST = "lo-days"
         # sold only
-        MOST_RECENT_SOLD = "hi-sale-date"
+        MOST_RECENTLY_SOLD = "hi-sale-date"
+        # both
         LOW__TO_HIGH_PRICE = "lo-price"
         HIGH_TO_LOW_PRICE = "hi-price"
         SQFT = "hi-sqft"
@@ -165,7 +185,7 @@ class RedfinSearcher:
         PRICE_PER_SQFT = "lo-dollarsqft"
 
     def set_filters_path(self, filters_path: str) -> None:
-        """Set the search filters for all searchers made with this RedfinSearcher object.
+        """Set the search filters for all searches made with this RedfinSearcher object.
 
         Args:
             filters_path (str): the URL path to search with
@@ -173,8 +193,8 @@ class RedfinSearcher:
         self.logger.debug(f"Setting filters to: {filters_path}")
         self.filters_path = filters_path
 
-    def _generate_area_path(self, zip_code_or_city_and_state_or_address: str) -> str:
-        """Generates the path for a location. Redfin uses proprietary numbers to identify cities. This makes a call to their
+    def generate_area_path(self, zip_code_or_city_and_state_or_address: str) -> str:
+        """Generate the path for the specified location. Redfin uses proprietary numbers to identify cities. This makes a call to their
         stingray API to get the translation.
 
         Args:
@@ -191,51 +211,48 @@ class RedfinSearcher:
 
         # Cache this to a json or something
         path_url = (
-            f"{helper.get_redfin_url_path(zip_code_or_city_and_state_or_address)}"
+            f"{Helper.get_redfin_url_path(zip_code_or_city_and_state_or_address)}"
         )
         return path_url
 
     @staticmethod
     def generate_filters_path(**kwargs) -> str:
-        """Generates the path for given filters. Note that some filters cannot be used together
+        """Generate the path for the specified filters.
 
-        Available filters
-        -----------------
-            * ``include``
-            * ``property-type``
-            * ``min-beds``
-            * ``max-beds``
-            * ``min-baths``
-            * ``max-baths``
-            * ``min-year-built``
-            * ``max-year-built``
-            * ``status``
-            * ``min-price``
-            * ``max-price``
-            * ``sort``
-            * ``exclude-age-restricted``
-            * ``is-green``
-            * ``fireplace``
-            * ``min-stories``
-            * ``min-sqft``
+        Note:
+            When using `include`, you cannot use: `status` TODO
 
-        Example
-        -------
-        For generating a filter string that has a filter with 1 value:
+            When searching by f, you cannot use: TODO
 
-        >>> generate_filters_path(min-sqft=Sqft.THOU, property_type=PropertyType.HOUSE)
-        "/filter/min-sqft=1k,property-type=house"
+        Available filters:
+            * `include`
+            * `property-type`
+            * `min-beds`
+            * `max-beds`
+            * `min-baths`
+            * `max-baths`
+            * `min-year-built`
+            * `max-year-built`
+            * `status`
+            * `min-price`
+            * `max-price`
+            * `sort`
+            * `exclude-age-restricted`
+            * `is-green`
+            * `fireplace`
+            * `min-stories`
+            * `min-sqft`
 
-        For generating a filter string that has a filter with multiple values:
+        Examples:
+            For generating a filter string that has a filter with 1 value:
 
-        >>> generate_filters_path(min-sqft=Sqft.THOU, property_type=[PropertyType.HOUSE, PropertyType.TOWNHOUSE])
-        "/filter/min-sqft=1k,property-type=house+townhouse"
+            >>> generate_filters_path(min-sqft=Sqft.THOU, property_type=PropertyType.HOUSE)
+            "/filter/min-sqft=1k,property-type=house"
 
-        Exclusions
-        ----------
-        When searching by sold, you cannot use: TODO
+            For generating a filter string that has a filter with multiple values:
 
-        When searching by for-sale, you cannot use: TODO
+            >>> generate_filters_path(min-sqft=Sqft.THOU, property_type=[PropertyType.HOUSE, PropertyType.TOWNHOUSE])
+            "/filter/min-sqft=1k,property-type=house+townhouse"
 
         Returns:
             str: the url filter string
@@ -251,8 +268,11 @@ class RedfinSearcher:
 
         return f'/filter/{",".join(selected_filters)}'
 
-    def _df_from_search_page_csv(self, url: str) -> pl.DataFrame | None:
-        """Returns a DataFrame of the contents scraped from the download button from the specified search page URL. The schema of this DataFrame is listed in ``RedfinSearcher.CSV_SCHEMA``.
+    def df_from_search_page_csv(self, url: str) -> pl.DataFrame | None:
+        """Return a DataFrame of the contents scraped from the \"Download all\" button on the specified search page URL.
+
+        Note:
+            The schema of this DataFrame is listed in `RedfinSearcher.CSV_SCHEMA`.
 
         Args:
             url (str): the URL of the search page
@@ -260,7 +280,7 @@ class RedfinSearcher:
         Returns:
             pl.DataFrame | None: the DataFrame. Is empty if there are no listings for the given filters. Is None if the CSV download link is not available
         """
-        req = helper.req_get_wrapper(url)
+        req = Helper.req_get_wrapper(url)
         req.raise_for_status()
 
         html = req.content
@@ -304,8 +324,8 @@ class RedfinSearcher:
             "LONGITUDE",
         )
 
-    def _zips_to_search_page_csvs(self, zip_codes: list[int]) -> pl.DataFrame | None:
-        """Returns a DataFrame produced by concatenating all of the specified ZIP codes' search page CSVs.
+    def zips_to_search_page_csvs(self, zip_codes: list[int]) -> pl.DataFrame | None:
+        """Return a DataFrame produced by concatenating all of the specified ZIP codes' search page CSVs.
 
         Args:
             zip_codes (list[int]): list of ZIP codes to search
@@ -317,14 +337,14 @@ class RedfinSearcher:
         list_of_csv_dfs = []
 
         for zip_code in formatted_zip_codes:
-            search_page_url = f"{self.REDFIN_BASE_URL}{self._generate_area_path(zip_code)}{self.filters_path}"
+            search_page_url = f"{self.REDFIN_BASE_URL}{self.generate_area_path(zip_code)}{self.filters_path}"
             self.logger.debug(f"searching zip code with {search_page_url = }")
             try:
                 # this is the only place where this error should pop up. if a zip is invalid,
                 # return none and handle in caller. an example is the zip 56998, which is just a
                 # USPS distribution center in D.C
                 # should df_from_search_page be returning none
-                redfin_csv_df = self._df_from_search_page_csv(search_page_url)
+                redfin_csv_df = self.df_from_search_page_csv(search_page_url)
             except requests.HTTPError as e:
                 #! this also gave random error
                 self.logger.error(
@@ -344,13 +364,13 @@ class RedfinSearcher:
     def load_house_attributes_from_metro(
         self, metro_name: str, filters_path: str | None = None
     ) -> pl.DataFrame:
-        """Produces a DataFrame of a metropolitan's available houses' attributes, including heating information.
+        """Create a DataFrame of a metropolitan's available houses' attributes, including heating information.
 
-        Process
-        -------
-        * Converts a Metropolitan Statistical Area name into its constituent ZIP codes
-        * For each ZIP code, searches Redfin with filters and collects listing results. ZIP codes are searched to ensure maximal data collection, as Redfin only returns (9 pages * 40 listings) 360 entries per search.
-        * For each listing collected, creates a DataFrame of house attributes, such as location and heating amenities.
+        Note:
+            The process is as follows:
+            * Convert a Metropolitan Statistical Area name into its constituent ZIP codes
+            * For each ZIP code, search Redfin with filters and collect listing results. (ZIP codes are searched to ensure maximal data collection, as Redfin only returns (9 pages * 40 listings) 360 entries per search.)
+            * For each listing collected, creates a DataFrame of house attributes, such as location and heating amenities.
 
         Args:
             metro_name (str): a Metropolitan Statistical Area name
@@ -361,17 +381,17 @@ class RedfinSearcher:
         """
         if filters_path is not None:
             self.logger.info(
-                f"Filter path was supplied, overwriting filter string {helper.ASCIIColors.YELLOW}{self.filters_path}{helper.ASCIIColors.RESET} with {helper.ASCIIColors.YELLOW}{filters_path}{helper.ASCIIColors.RESET}"
+                f"Filter path was supplied, overwriting filter string {Helper.ASCIIColors.YELLOW}{self.filters_path}{Helper.ASCIIColors.RESET} with {Helper.ASCIIColors.YELLOW}{filters_path}{Helper.ASCIIColors.RESET}"
             )
             self.set_filters_path(filters_path)
             self.logger.debug(f"Metro is using filter string: {self.filters_path}")
-        zip_codes = helper.metro_name_to_zip_code_list(metro_name)
+        zip_codes = Helper.metro_name_to_zip_code_list(metro_name)
 
         if len(zip_codes) == 0:
             self.logger.debug("no zip codes returned from metro name conversion")
             return pl.DataFrame(schema=self.LISTING_SCHEMA)
 
-        zip_code_search_page_csvs_df = self._zips_to_search_page_csvs(zip_codes)
+        zip_code_search_page_csvs_df = self.zips_to_search_page_csvs(zip_codes)
 
         if zip_code_search_page_csvs_df is None:
             self.logger.info("Supplied zip codes do not have listings. Relax filters?")
@@ -385,7 +405,7 @@ class RedfinSearcher:
     def listing_attributes_from_search_page_csv(
         self, search_page_csvs: pl.DataFrame
     ) -> pl.DataFrame:
-        """Given a dataframe with a column of "URL (SEE ht...)", this will look up the listings page and scrape specific house attributes.
+        """Get house attributes the URLS supplied by the specified DataFrame, given that it has a column with the name "URL (SEE ht...)".
 
         Args:
             search_page_csvs (pl.DataFrame): search page CSV DataFrame
@@ -400,7 +420,7 @@ class RedfinSearcher:
         return (
             search_page_csvs.with_columns(
                 (pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)]))
-                .map_elements(listing_scraper.heating_amenities_scraper)
+                .map_elements(RedfinListingScraper.heating_amenities_scraper)
                 .cast(pl.List(pl.Utf8))
                 .alias("HEATING AMENITIES")
             )

@@ -1,13 +1,16 @@
-import polars as pl
-from redfin import Redfin
-from enum import StrEnum
-import requests
-import time
-import random
 import logging
+import random
+import time
+from enum import StrEnum
+
+import polars as pl
+import requests
+from redfin import Redfin
 
 
 class ASCIIColors(StrEnum):
+    """ASCII colors for use in printing colored text to the terminal."""
+
     GREY = "\x1b[38;20m"
     YELLOW = "\x1b[33;20m"
     RED = "\x1b[31;20m"
@@ -16,7 +19,7 @@ class ASCIIColors(StrEnum):
 
 
 def state_county_to_zip_df(state: str, county: str) -> pl.DataFrame:
-    """Takes in a state and county and returns the zip code constituents of that county.
+    """Take in a state and county and return the ZIP code constituents of that county.
 
     Args:
         state (str): the state
@@ -33,7 +36,7 @@ def state_county_to_zip_df(state: str, county: str) -> pl.DataFrame:
 
 
 def state_city_to_zip_df(state: str, city: str) -> pl.DataFrame:
-    """Takes in a state and city and returns the zip code constituents of that city.
+    """Take in a state and city and return the ZIP code constituents of that city.
 
     Args:
         state (str): the state
@@ -50,13 +53,17 @@ def state_city_to_zip_df(state: str, city: str) -> pl.DataFrame:
 
 
 def get_redfin_url_path(location: str) -> str:
-    """Will generate the path with the proprietary number for city, zipcode, and addresses.
+    """Generate the URL path with the proprietary Redfin number for the given city, ZIP code, or address.
+
+    Examples:
+        >>> get_redfin_url_path("Washington D.C")
+        "/city/12839/DC/Washington-DC"
 
     Args:
-        location (str): the geopolitical location
+        location (str): the location
 
     Returns:
-        str: returns path to city/county number, state, and city/county, like /city/20420/MA/Worcester
+        str: the path to the location
     """
     client = Redfin()
     response = client.search(location)
@@ -64,7 +71,7 @@ def get_redfin_url_path(location: str) -> str:
 
 
 def is_valid_zipcode(zip: int) -> bool:
-    """Checks if the given ZIP code is valid, base on a local file.
+    """Check if the given ZIP code is valid based on a local file.
 
     Args:
         zip (int): the ZIP code to check
@@ -79,16 +86,16 @@ def is_valid_zipcode(zip: int) -> bool:
 
 
 # when making class, init the csv and have it open in memory. not too much and saves on making the df every call
-def metro_name_to_zip_code_list(name: str) -> list[int]:
-    """Returns the constituent ZIP codes for a given Metropolitan Statistical Area.
+def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
+    """Return the constituent ZIP codes for the given Metropolitan Statistical Area.
 
     Args:
         name (str): name of the Metropolitan Statistical Area
 
     Returns:
-        list[int]: list of zip codes found. Is empty if MSA name is invalid
+        list[int]: list of ZIP codes found. Is empty if MSA name is invalid
     """
-    if name == "TEST":
+    if msa_name == "TEST":
         # return [55424] # good and small
         return [22067, 55424]  # nulls in sqft
         # return [22067, 55424, 33629] # nulls in sqft and large
@@ -97,18 +104,18 @@ def metro_name_to_zip_code_list(name: str) -> list[int]:
 
     # MSAs are what were looking for in this project. Some MSA are repeated. can use unique(), but using a select is faster and better
     return df.filter(
-        (df["METRO_NAME"] == name) & (df["LSAD"] == "Metropolitan Statistical Area")
+        (df["METRO_NAME"] == msa_name) & (df["LSAD"] == "Metropolitan Statistical Area")
     )["ZIP"].to_list()
 
 
 def zip_to_metro(zip: int) -> str:
-    """Finds the Metropolitan area name for the corresponding zipcode, or an empty string if it is not a part of a metropolitan
+    """Find the Metropolitan Statistical Area name for the specified ZIP code.
 
     Args:
-        zip (int): Zip code to look up
+        zip (int): the ZIP code to look up
 
     Returns:
-        str: the Metropolitan name
+        str: the Metropolitan name. Is empty if the ZIP code is not a part of a Metropolitan Statistical Area
     """
     df = pl.read_csv("./augmenting_data/master.csv")
 
@@ -121,7 +128,7 @@ def zip_to_metro(zip: int) -> str:
 
 
 def get_random_user_agent() -> str:
-    """Picks a user agent from a list of popular user agents.
+    """Pick a random user agent string from a list of popular user agents.
 
     Returns:
         str: user agent string
@@ -143,10 +150,10 @@ def get_random_user_agent() -> str:
 
 
 def req_get_wrapper(url: str) -> requests.Response:
-    """Wrapper for requests. Random short sleep and random user agent string.
+    """Wrapper for requests. Uses a random short sleep and random user agent string.
 
     Args:
-        url (str): url to pass to ``requests.get()``
+        url (str): url to pass to `requests.get()`
 
     Returns:
         requests.Response: the response object
@@ -176,7 +183,7 @@ def req_get_to_file(request: requests.Response) -> int:
 
 
 def df_to_file(df: pl.DataFrame):
-    """Writes a DataFrame to a unique file.
+    """Write a DataFrame to a unique file.
 
     Args:
         df (pl.DataFrame): the DataFrame to write
@@ -185,13 +192,13 @@ def df_to_file(df: pl.DataFrame):
 
 
 def _set_up_logger(level: int) -> logging.Logger:
-    """Setup logger with basic config.
+    """Setup a logger object with basic config.
 
     Args:
         level (int): Severity level
 
     Returns:
-        logging.Logger: logger
+        logging.Logger: logger object
     """
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
@@ -210,6 +217,3 @@ def _set_up_logger(level: int) -> logging.Logger:
 
 
 logger = _set_up_logger(logging.INFO)
-
-if __name__ == "__main__":
-    print(metro_name_to_zip_code_list("blarb"))

@@ -1,5 +1,5 @@
 /.venv
 /.vscode
 /__pycache__
-.env
-output/.$code_diagram.drawio.bkp
+/src/.env
+/src/__pycache__
