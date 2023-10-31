@@ -3,7 +3,7 @@ from enum import StrEnum
 
 import Helper as Helper
 import polars as pl
-import RedfinListingScraper
+from RedfinListingScraper import RedfinListingScraper
 import requests
 from bs4 import BeautifulSoup as btfs
 
@@ -415,15 +415,16 @@ class RedfinSearcher:
         """
         url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
         self.logger.info("Starting lookups on listing URLS")
+        rls = RedfinListingScraper()
         # might make two function argument to pass in address, so that logs can happen inside the amenities scrap func
         # if cant make two function arg, can build two cols into list and pass the list using
         return (
             search_page_csvs.with_columns(
                 (pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)]))
-                .map_elements(RedfinListingScraper.heating_amenities_scraper)
+                .map_elements(rls.get_heating_terms_from_listing)
                 .cast(pl.List(pl.Utf8))
                 .alias("HEATING AMENITIES")
             )
-            .filter(pl.col("HEATING AMENITIES").list.len().gt(pl.lit(0)))
+            # .filter(pl.col("HEATING AMENITIES").list.len().gt(pl.lit(0)))
             .drop(url_col_name)
         )

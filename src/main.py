@@ -1,3 +1,4 @@
+import time
 import polars as pl
 from RedfinSearcher import RedfinSearcher as rfs
 
@@ -12,8 +13,7 @@ if __name__ == "__main__":
             min_stories=rfs.Stories.ONE,
         )
     )
-
+    # takes about 1.7 seconds per listing
     house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST")
-
     with pl.Config(tbl_cols=10):
         print(house_data_df)

@@ -2,10 +2,6 @@
 
 Refer to the RedfinSearcher documentation on how to use the program.
 
-## Words on filters
-
-Some filters only work in combination with certain search modes. These are "For Sale" and "Sold". These will be correctly implemented in code, and will have feature parity with the redfin website.
-
 ## Rate Limiting
 
 Since searches can contain a high amount of houses, and therefore potentially requests, there is a rate limit. This can be adjusted if desired. I timed myself looking up and searching for heating information and came up with about 3 seconds per listing.
@@ -67,6 +63,7 @@ https://realtyna.com/mls-router-api/
 https://www.realestateapi.com/
 https://rapidapi.com/realtymole/api/realty-mole-property-api
 https://developer.batchdata.com/docs/batchdata/batchdata-v1%2Foperations%2Fcreate-a-property-lookup-all-attribute
+https://www.mlsgrid.com/resources
 
 # Energy
 

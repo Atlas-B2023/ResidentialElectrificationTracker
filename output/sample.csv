@@ -1,0 +1,46 @@
+ADDRESS,CITY,STATE OR PROVINCE,YEAR BUILT,ZIP OR POSTAL CODE,PRICE,SQUARE FEET,LATITUDE,LONGITUDE,HEATING AMENITIES
+1216 Suffield Dr,Mclean,VA,2022,22101,3690171,5610,38.938572,-77.159256,['Heating Fuel Type: Gas Public/Piped']
+6159 Hardy Dr,Mclean,VA,2022,22101,930000,4082,38.929497,-77.14982,['Heating Fuel Type: Gas Public/Piped']
+1525 Forest Villa Ln,Mc Lean,VA,2022,22101,1025000,4801,38.928505,-77.16054,['Heating Fuel Type: Gas Public/Piped']
+6620 Brawner St,Mclean,VA,2022,22101,1225000,5486,38.93395,-77.17231,['Heating Fuel Type: Gas Public/Piped']
+6025 Kellogg Ave,Edina,MN,2022,55424,1856556,,44.893513,-93.33753,"['Heating Information: Forced Air, Radiant Floor']"
+5501 Halifax Ln,Edina,MN,2022,55424,2848504,,44.903427,-93.329865,['Heating Information: Forced Air']
+5420 Oaklawn Ave,Edina,MN,2022,55424,2452714,,44.904316,-93.336975,['Heating Information: Forced Air']
+5932 Halifax Ave S,Edina,MN,2022,55424,2411223,,44.894302,-93.33139,['Heating Information: Forced Air']
+5909 Ashcroft Ave,Edina,MN,2022,55424,1590416,,44.895855,-93.34263,['Heating Information: Forced Air']
+5833 Fairfax Ave,Edina,MN,2022,55424,1459772,,44.89682,-93.34013,['Heating Information: Forced Air']
+5828 Brookview Ave,Edina,MN,2022,55424,1622867,,44.896954,-93.335686,['Heating Information: Forced Air']
+4440 Garrison Ln,Edina,MN,2022,55424,1408982,,44.890217,-93.3383,['Heating Information: Forced Air']
+5921 Kellogg Ave,Edina,MN,2022,55424,1620000,,44.89544,-93.337494,['Heating Information: Forced Air']
+2106 S Grady Ave,Tampa,FL,2022,33629,1186383,3478,27.926104,-82.50977,"['Heating Information: Central, Electric']"
+3622 W Palmira Ave,Tampa,FL,2022,33629,2612003,4733,27.922321,-82.50357,"['Heating Information: Central, Electric, Heat Pump, Zoned']"
+1511 S Church Ave,Tampa,FL,2022,33629,1200000,3004,27.929396,-82.50814,"['Heating Information: Central, Electric, Heat Pump']"
+3117 W Morrison Ave,Tampa,FL,2022,33629,3310000,6110,27.934063,-82.495285,"['Heating Information: Central, Electric, Zoned']"
+2304 S Cameron Ave,Tampa,FL,2022,33629,1452000,3715,27.924442,-82.512856,"['Heating Information: Central, Electric']"
+3617 W Royal Palm Cir,Tampa,FL,2022,33629,999000,2913,27.909065,-82.52212,"['Heating Information: Electric, Heat Pump']"
+3614 E Sterling Cir,Tampa,FL,2022,33629,2289547,4360,27.909435,-82.502556,"['Heating Information: Central, Heat Pump, Propane, Zoned']"
+3907 W San Obispo St,Tampa,FL,2022,33629,1750861,3500,27.923542,-82.508835,"['Heating Information: Central, Electric']"
+3513 W Tacon St,Tampa,FL,2022,33629,1525000,3349,27.916464,-82.501564,"['Heating Information: Central, Electric']"
+4114 W Corona St,Tampa,FL,2022,33629,2250000,4672,27.913824,-82.51336,['Heating Type: Forced Air']
+4823 W Sunset Blvd,Tampa,FL,2022,33629,3400000,6097,27.92245,-82.525986,"['Heating Information: Central, Electric']"
+3009 S West Shore Blvd,Tampa,FL,2022,33629,2950000,5389,27.917194,-82.526405,"['Heating Information: Central, Electric, Heat Pump, Zoned']"
+4008 W Watrous Ave,Tampa,FL,2022,33629,2085000,4550,27.931818,-82.51085,"['Heating Information: Central, Electric']"
+4012 W Morrison Ave,Tampa,FL,2022,33629,1490000,3904,27.933678,-82.5113,"['Heating Information: Central, Natural Gas']"
+3718 W Palmira Ave,Tampa,FL,2022,33629,2207058,4166,27.922333,-82.50543,"['Heating Information: Central, Electric']"
+4217 W Palmira Ave,Tampa,FL,2022,33629,2000000,4461,27.922834,-82.516,"['Heating Information: Electric, Exhaust Fan, Natural Gas, Zoned']"
+3405 W Morrison Ave,Tampa,FL,2022,33629,3550000,5007,27.934149,-82.50019,"['Heating Information: Electric, Natural Gas, Zoned']"
+3306 W Leona St,Tampa,FL,2022,33629,1717344,3935,27.914557,-82.49759,"['Heating Information: Central, Electric', 'Cooling Information: Central Air, Mini-Split Unit(s)']"
+4118 W Vasconia St,Tampa,FL,2022,33629,2300000,4557,27.912231,-82.51381,"['Heating Information: Central, Electric']"
+4103 W Zelar St,Tampa,FL,2022,33629,2296643,4476,27.931425,-82.51243,"['Heating Information: Central, Electric, Heat Pump, Zoned']"
+3405 W Corona St,Tampa,FL,2022,33629,2277223,5752,27.91424,-82.49951,['Heating Type: Forced Air']
+5117 W Poe Ave,Tampa,FL,2022,33629,8500000,6500,27.919771,-82.53351,"['Heating Information: Central, Electric']"
+4003 W San Juan St,Tampa,FL,2022,33629,967000,3051,27.918598,-82.51051,['Heating Information: Heat Pump']
+2207 S Church Ave,Tampa,FL,2022,33629,1767729,4372,27.925007,-82.50816,"['Heating Information: Central, Electric, Heat Pump, Natural Gas, Zoned']"
+4705 W Euclid Ave,Tampa,FL,2022,33629,1150000,2300,27.90908,-82.5249,"['Heating Information: Central, Electric, Exhaust Fan, Heat Pump, Zoned']"
+4605 W Leona St,Tampa,FL,2022,33629,2250000,4605,27.915537,-82.52144,"['Heating Information: Central, Natural Gas']"
+3912 W Leona St,Tampa,FL,2022,33629,2018689,4117,27.914637,-82.50949,"['Heating Information: Central, Electric, Heat Pump']"
+3603 S Renellie Dr,Tampa,FL,2022,33629,906599,3127,27.91048,-82.5247,"['Heating Information: Electric, Heat Pump']"
+4815 W Sunset Blvd,Tampa,FL,2022,33629,2277025,5077,27.922373,-82.525024,"['Heating Information: Central, Electric, Zoned']"
+3616 S Hesperides St,Tampa,FL,2022,33629,999000,3200,27.910156,-82.51958,"['Heating Information: Central, Electric']"
+3625 S Hesperides St,Tampa,FL,2022,33629,999000,3200,27.909344,-82.521355,"['Heating Information: Central, Electric']"
+1800 S Habana Ave,Tampa,FL,2022,33629,570000,4275,27.927963,-82.48896,['Heating Type: Forced Air']

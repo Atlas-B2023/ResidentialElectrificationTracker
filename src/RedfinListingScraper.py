@@ -1,160 +1,228 @@
 import re
+import itertools
+from typing import Any
 
 import Helper as Helper
 from bs4 import BeautifulSoup as btfs
 from bs4 import element
 
-logger = Helper.logger
-
-
+exclude_terms = [
+    # listings say things like "Electric: 200+ amps"
+    re.compile(r"^electric", re.I),
+    re.compile(r"(\bno).*electric", re.I),
+    re.compile(r"water", re.I),
+    re.compile(r"(utilities:)", re.I),
+]
+heating_related_property_details_headers = [
+    re.compile(r"heat", re.I),
+    re.compile(r"property", re.I),
+    re.compile(r"utilit", re.I),
+]
 heating_related_patterns = [
-    re.compile(r"fuel", re.I),
+    # * take forced out when doing the real project
+    # re.compile(r"forced\sair", re.I),
+    # re.compile(r"fuel", re.I),
     re.compile(r"furnace", re.I),
     re.compile(r"diesel", re.I),
-    re.compile(r"hot\swater", re.I),
+    re.compile(r"\bfuel\b.*\bhot\swater", re.I),
     re.compile(r"solar\sheat", re.I),  # Active Solar Heating
     re.compile(r"resist(?:ive|ance)", re.I),
     re.compile(r"space\sheater", re.I),
-    re.compile(r"burn", re.I),
     re.compile(r"hybrid\sheat", re.I),
-    re.compile(r"(natural)\s(gas)", re.I),
+    # have to check there there is no "no" in the line using (?<!\bno\s)
+    re.compile(r"natural\sgas", re.I),
     re.compile(r"gas", re.I),
     re.compile(r"oil", re.I),
     re.compile(r"electric", re.I),
-    re.compile(r"(heat)\s(pump)", re.I),
+    re.compile(r"heat\spump", re.I),
     re.compile(r"propane", re.I),
-    re.compile(r"base", re.I),
+    re.compile(r"baseboard", re.I),
     re.compile(r"mini[\s-]split", re.I),
     re.compile(r"pellet", re.I),
-    re.compile(r"wood", re.I),
-    re.compile(r"radiant", re.I),
+    # this tries to prevent matches like "Hardwood floors"
+    re.compile(r"\bfuel\b.*\bwood", re.I),
+    # re.compile(r"radiant", re.I),
 ]
 
 
-def amenity_item_to_str(tag: element.Tag) -> str:
-    """Extract amenity items from their <li> tag. Should be called when dealing with amenity groups.
+class RedfinListingScraper:
+    def __init__(self, listing_url: str | None = None):
+        # probably going to trip someone up if they make another function. just trying to allow you to set on object creation or not set
+        self.listing_url = listing_url
+        self.soup = None
+        if listing_url is not None:
+            self.soup = self.make_soup(listing_url)
+            self.listing_url = listing_url
+        self.logger = Helper.logger
 
-    Args:
-        tag (element.Tag): <li> tag
+    def make_soup(self, listing_url: str) -> btfs:
+        """Create `BeautifulSoup` object. Use output to set object's `self.soup`.
 
-    Returns:
-        str: string representation of amenity item
-    """
-    #! for our regex parse thing that will categorize , it will be after this. what should be returned from "get housing amenities" is a list
-    spans = tag.find("span")
-    if spans is None:
-        #! should probably error here
-        logger.critical("Blank <li> tag on listing page. investigate further")
-        return ""
+        Args:
+            listing_url (str): listing URL
 
-    # sometimes they have weird spacing, just normalizing
-    span_split_text = re.sub(r"\s+", " ", spans.text)
+        Returns:
+            btfs: the soup
+        """
+        self.logger.debug(f"Making soup for {listing_url = }")
+        req = Helper.req_get_wrapper(listing_url)
+        req.raise_for_status()
+        req.encoding = "utf-8"
+        html = req.text
+        soup = btfs(html, "html.parser")
+        if soup is None:
+            self.logger.error(
+                f"Soup is `None` for {listing_url = }, {req.status_code = }"
+            )
+        return soup
 
-    return span_split_text
+    def extract_heating_terms_from_list(self, terms_list: list[str]) -> list[str]:
+        """Extract a list of terms related to heating from the specified list.
 
+        Note:
+            Uses an include and exclude list, heating_related_patterns, exclude_terms, respectively.
 
-def extract_heating_terms_to_list(terms_list: list[str]) -> list[str]:
-    """Extract a list of terms related to heating from a list.
+        Args:
+            terms_list (list[str]): list of terms
 
-    Note:
-        TODO link to this
-        Strings are matched based on `heating_related_patterns`.
+        Returns:
+            list[str]: terms dealing with heating
+        """
 
-    Args:
-        raw_heating_info_dict (list[str]): list of terms to search through
+        # here we just care that anything matches, not categorizing yet
+        heating_terms_list = []
+        # have a and not any(excluded_terms)?
 
-    Returns:
-        list[str]: list of strings dealing with heating
-    """
+        for string in terms_list:
+            if any(
+                regex.findall(string) for regex in heating_related_patterns
+            ) and not any(regex.findall(string) for regex in exclude_terms):
+                heating_terms_list.append(string)
 
-    # here we just care that anything matches, not categorizing yet
-    heating_terms_list = []
+        return heating_terms_list
 
-    for string in terms_list:
-        if any(regex.findall(string) for regex in heating_related_patterns):
-            heating_terms_list.append(string)
+    def get_property_details(self) -> element.PageElement | None:
+        """Get the `propertyDetails-collapsible` div. This contains property details.
 
-    return heating_terms_list
+        Returns:
+            element.PageElement | None: the div
+        """
+        prop_details_container = self.soup.find("div", id="propertyDetails-collapsible")
 
+        if prop_details_container is None:
+            # TODO handle this
+            self.logger.info("Could not find property details")
+            return None
+        prop_details = prop_details_container.find("div", class_="amenities-container")  # type: ignore
+        if prop_details is None:
+            self.logger.info("Details not under Details pane. this shouldnt happen")
+            return None
+        # returns <div class="amenities-container">
+        return prop_details
 
-# TODO this only deals with a div that matches "Heating", but heating information can be in things like "utilities" or "interior"
-# Make this a tuple?
-def heating_amenities_scraper(address_and_listing_url_list: list[str]) -> list[str]:
-    """Scrape amenity info when given HTML of the form:
+    def get_amenity_super_groups(
+        self, amenities_container_elements: element.PageElement
+    ) -> list[str | element.PageElement | Any]:
+        """Take in the `amenities-container` and return `super-group-content`s and their corresponding titles batched together.
 
-    ```html
-    <div class="amenity-group>
-        <ul>
-            <div class="no-break-inside">
-                <div>Heating...</div>
-                <li>
-                    <span> *optional*<span> </span></span>
-                </li>
-                ...
-            </div>
-                <li class="entryItem">
-                    <span> *optional*<span> </span></span>
-                </li>
-        </ul>
-    </div>
-    ```
+        Args:
+            amenities_container_elements (element.PageElement): The `amenities-container`
 
-    Args:
-        add_url_list (list[str]): The first element is an address, and the second element is the listing page for said address
+        Returns:
+            _type_: title, contents of `super-group-content` divs
+        """
+        title_content_pairs = itertools.batched(
+            amenities_container_elements.children, 2
+        )
+        return [[title.text, content] for title, content in title_content_pairs]
 
-    Returns:
-        list[str]: list of heating amenities found
-    """
-    address, url = address_and_listing_url_list
-    req = Helper.req_get_wrapper(url)
-    req.raise_for_status()
-    html = req.text
-    soup = btfs(html, "html.parser")
-    #! make more robust? might have to loop over a select few amenity super groups
-    cur_elem = soup.find("div", string=re.compile(r"heating\b", re.I))
+    def get_probable_heating_amenity_groups(
+        self, super_group: element.PageElement
+    ) -> list[Any]:
+        """Take `super-group-content` div and return `amenity-group`s that likely have heating info.
 
-    if cur_elem is None:
-        # in production this should alert something to investigate. the local mls may have another format.
-        # the other option is there is no heating info.
-        # make search strings a list, then compile the list. use the string list here
-        logger.info('No div matching pattern "heating"')
-        return []
-        # raise ValueError("No heating information")
+        Note:
+            Uses `self.heating_related_property_details_headers` for matching names
+        Args:
+            super_group (element.PageElement): a `super-group-content` div
 
-    heating_list = []
-    # finding the heating amenity group.
-    for sibling in cur_elem.next_siblings:
-        if sibling.name == "li":  # type: ignore
-            # heating fuel: x, natural gas; has heating;
+        Returns:
+            list[Any]: list of `amenity-group` divs
+        """
+        list_of_amenity_groups = []
+        for amenity_group in super_group.children:
+            # check if the amenity group is related to heating
+            amenity_group_name = (
+                amenity_group.find("ul")
+                .find("div", class_="propertyDetailsHeader")
+                .text
+            )
+            if any(
+                [
+                    regex.findall(amenity_group_name)
+                    for regex in heating_related_property_details_headers
+                ]
+            ):
+                list_of_amenity_groups.append(amenity_group)
+        return list_of_amenity_groups
 
-            amenity_item = amenity_item_to_str(sibling)
-            if amenity_item != "":
-                heating_list.append(amenity_item)
+    def get_heating_terms_from_amenity_group(
+        self, amenity_group: element.PageElement
+    ) -> list[str]:
+        """Get a list of heating terms from the specified `amenity-group` div.
 
-    # handles the <ul>'s dangling <li> tags. Guards for the case when there is no <ul>
-    count = 0
-    while cur_elem.name != "ul":
-        cur_elem = cur_elem.parent
-        if cur_elem is None:
-            # not really sure what this is
-            logger.debug(f"How did we end up here? {cur_elem = }")
-            return heating_list
+        Args:
+            amenity_group (element.PageElement): the specified `amenity-group` div
 
-        count += 1
-        if count > 3:
-            # all of the amenities have been added to the dict. now we're in no man's land
-            return heating_list
+        Returns:
+            list[str]: list of heating terms
+        """
+        terms = [
+            term_span.text
+            for term_span in amenity_group.find_all("span", class_="entryItemContent")
+        ]
+        return self.extract_heating_terms_from_list(terms)
 
-    # we are now in the <ul>
-    for child in cur_elem.children:
-        if child.name == "li":
-            amenity_item = amenity_item_to_str(child)
-            if amenity_item != "":
-                heating_list.append(amenity_item)
+    def get_heating_terms_from_listing(
+        self, addr_and_listing_url: list[str]
+    ) -> list[str]:
+        """Find heating terms under the property details section of a Redfin listing.
 
-    cleaned_heating_info_list = extract_heating_terms_to_list(heating_list)
-    if len(cleaned_heating_info_list) == 0:
-        logger.info(f"{address} does not have heating information.")
-    else:
-        logger.info(f"{address} has heating information.")
-    return cleaned_heating_info_list
+        Args:
+            listing_url (str | None, optional): The listing url. Defaults to None.
+
+        Returns:
+            list[str]: list of heating terms
+        """
+        addr, self.listing_url = addr_and_listing_url
+        # this is actually kinda stupid
+        self.soup = self.make_soup(self.listing_url)
+        all_items = []
+        details = self.get_property_details()
+        if details is not None:
+            amenity_super_groups = self.get_amenity_super_groups(details)
+            if amenity_super_groups is not None:
+                for title, amenity_group in amenity_super_groups:  # type: ignore
+                    self.logger.debug(f"Getting terms from the super group: {title}")
+                    heating_amenity_groups = self.get_probable_heating_amenity_groups(
+                        amenity_group  # type: ignore
+                    )
+                    for heating_amenity_group in heating_amenity_groups:
+                        all_items.extend(
+                            self.get_heating_terms_from_amenity_group(
+                                heating_amenity_group
+                            )
+                        )
+            else:
+                self.logger.debug(
+                    f"No amenity super groups in valid details section. Investigate {self.listing_url}"
+                )
+        else:
+            self.logger.info(f"Could not find property details for {addr}.")
+
+        if len(all_items) == 0:
+            self.logger.info(f"{addr} did not have heating amenities.")
+        else:
+            self.logger.info(f"{addr} has heating amenities: {all_items}.")
+
+        return all_items

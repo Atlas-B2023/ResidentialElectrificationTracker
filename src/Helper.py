@@ -2,6 +2,7 @@ import logging
 import random
 import time
 from enum import StrEnum
+from pathlib import Path
 
 import polars as pl
 import requests
@@ -96,9 +97,9 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
         list[int]: list of ZIP codes found. Is empty if MSA name is invalid
     """
     if msa_name == "TEST":
-        # return [55424] # good and small
-        return [22067, 55424]  # nulls in sqft
-        # return [22067, 55424, 33629] # nulls in sqft and large
+        # return [55424]  # good and small
+        # return [22067, 55424]  # nulls in sqft
+        return [22067, 55424, 33629]  # nulls in sqft and large
 
     df = pl.read_csv("./augmenting_data/master.csv")
 
@@ -188,7 +189,16 @@ def df_to_file(df: pl.DataFrame):
     Args:
         df (pl.DataFrame): the DataFrame to write
     """
-    df.write_csv(f"{time.time()}_data_frame.csv", has_header=True)
+    file_path = Path("./output") / "{time.time()}_data_frame.csv"
+
+    if "HEATING AMENITIES" in df.schema:
+        df.with_columns(
+            pl.col("HEATING AMENITIES").map_elements(lambda x: str(x.to_list()))
+        ).write_csv(file_path, has_header=True)
+        print(f"Dataframe saved to {file_path.resolve()}")
+    else:
+        print(f"Dataframe saved to {file_path.resolve()}")
+        df.write_csv(file_path, has_header=True)
 
 
 def _set_up_logger(level: int) -> logging.Logger:
