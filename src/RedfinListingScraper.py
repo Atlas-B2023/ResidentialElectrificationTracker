@@ -189,7 +189,7 @@ class RedfinListingScraper:
         """Find heating terms under the property details section of a Redfin listing.
 
         Args:
-            listing_url (str | None, optional): The listing url. Defaults to None.
+            addr_and_listing_url (str | None, optional): The listing url. Defaults to None.
 
         Returns:
             list[str]: list of heating terms

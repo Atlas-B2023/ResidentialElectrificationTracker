@@ -91,7 +91,7 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
     """Return the constituent ZIP codes for the given Metropolitan Statistical Area.
 
     Args:
-        name (str): name of the Metropolitan Statistical Area
+        msa_name (str): name of the Metropolitan Statistical Area
 
     Returns:
         list[int]: list of ZIP codes found. Is empty if MSA name is invalid
@@ -173,7 +173,7 @@ def req_get_to_file(request: requests.Response) -> int:
     """Write the contents of a request response to a unique file.
 
     Args:
-        get_request (requests.Response): the request
+        request (requests.Response): the request
 
     Returns:
         int: the status code of the request
