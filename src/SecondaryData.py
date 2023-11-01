@@ -359,7 +359,7 @@ class CensusAPI:
         r = requests.get(url, timeout=15)
         if r.status_code == 400:
             return f"Unknown variable {r.text.split("variable ")[-1]}"
-        return r.json()
+        return r.text
         
 
     def get_race_makeup_by_zcta(self, zcta: str):

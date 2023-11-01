@@ -2,20 +2,22 @@ import re
 import itertools
 from typing import Any
 
-import Helper as Helper
+import Helper
 from bs4 import BeautifulSoup as btfs
 from bs4 import element
 
 exclude_terms = [
     # listings say things like "Electric: 200+ amps"
     re.compile(r"^electric", re.I),
-    re.compile(r"(\bno).*electric", re.I),
+    re.compile(r"no\b.*electric", re.I),
+    re.compile(r"no\b.*gas", re.I),
     re.compile(r"water", re.I),
-    re.compile(r"(utilities:)", re.I),
+    re.compile(r"utilities:", re.I),
 ]
 heating_related_property_details_headers = [
     re.compile(r"heat", re.I),
     re.compile(r"property", re.I),
+    # ies and y
     re.compile(r"utilit", re.I),
 ]
 heating_related_patterns = [
@@ -24,12 +26,11 @@ heating_related_patterns = [
     # re.compile(r"fuel", re.I),
     re.compile(r"furnace", re.I),
     re.compile(r"diesel", re.I),
-    re.compile(r"\bfuel\b.*\bhot\swater", re.I),
+    # re.compile(r"\bfuel\b.*\bhot\swater", re.I),
     re.compile(r"solar\sheat", re.I),  # Active Solar Heating
     re.compile(r"resist(?:ive|ance)", re.I),
     re.compile(r"space\sheater", re.I),
     re.compile(r"hybrid\sheat", re.I),
-    # have to check there there is no "no" in the line using (?<!\bno\s)
     re.compile(r"natural\sgas", re.I),
     re.compile(r"gas", re.I),
     re.compile(r"oil", re.I),
@@ -43,6 +44,30 @@ heating_related_patterns = [
     re.compile(r"\bfuel\b.*\bwood", re.I),
     # re.compile(r"radiant", re.I),
 ]
+regex_category_patterns = {
+    "Solar Heating": re.compile(r"solar", re.I),
+    "Natural Gas": re.compile(r"gas", re.I),
+    "Propane": re.compile(r"propane", re.I),
+    "Diesel": re.compile(r"diesel", re.I),
+    # fuel type is unknown, but still burns something
+    "Furnace": re.compile(r"furnace", re.I),
+    "Heating Oil": re.compile(r"oil", re.I),
+    "Wood/Pellet": re.compile(r"wood|pellet", re.I),
+    "Electric": re.compile(r"electric", re.I),
+    "Heat Pump": re.compile(r"heat pump", re.I),
+    "Baseboard": re.compile(r"baseboard", re.I),
+}
+column_dict = {
+    "Solar Heating": False,
+    "Natural Gas": False,
+    "Propane": False,
+    "Diesel": False,
+    "Heating Oil": False,
+    "Wood/Pellet": False,
+    "Electric": False,
+    "Heat Pump": False,
+    "Baseboard": False,
+}
 
 
 class RedfinListingScraper:
@@ -75,6 +100,46 @@ class RedfinListingScraper:
                 f"Soup is `None` for {listing_url = }, {req.status_code = }"
             )
         return soup
+
+    def heating_terms_list_to_categorized_df_dict(
+        self, my_list: list[str]
+    ) -> dict[str, bool]:
+        """Takes in a list of cleaned heating terms and produces a dict of categories of heater types
+
+        Args:
+            my_list (list[str]): clean heating terms list
+
+        Returns:
+            dict[str, bool]: the dict from column to the value mapping
+        """
+        master_dict = {
+            "Solar Heating": False,
+            "Natural Gas": False,
+            "Propane": False,
+            "Diesel": False,
+            "Heating Oil": False,
+            "Wood/Pellet": False,
+            "Electric": False,
+            "Heat Pump": False,
+            "Baseboard": False,
+        }
+        if len(my_list) == 0:
+            return master_dict
+
+        for input_string in my_list:
+            result = {}
+            for key, pattern in regex_category_patterns.items():
+                result[key] = bool(re.search(pattern, input_string))
+            if len(master_dict) == 0:
+                master_dict.update(result)
+            else:
+                for key, value in master_dict.items():
+                    master_dict[key] = result[key] | master_dict[key]
+
+        # youll have to df.unnest this
+        self.logger.info(my_list)
+        self.logger.info(master_dict)
+        return master_dict
 
     def extract_heating_terms_from_list(self, terms_list: list[str]) -> list[str]:
         """Extract a list of terms related to heating from the specified list.
@@ -183,9 +248,9 @@ class RedfinListingScraper:
         ]
         return self.extract_heating_terms_from_list(terms)
 
-    def get_heating_terms_from_listing(
+    def get_heating_terms_df_dict_from_listing(
         self, addr_and_listing_url: list[str]
-    ) -> list[str]:
+    ) -> dict[str, bool]:
         """Find heating terms under the property details section of a Redfin listing.
 
         Args:
@@ -197,9 +262,10 @@ class RedfinListingScraper:
         addr, self.listing_url = addr_and_listing_url
         # this is actually kinda stupid
         self.soup = self.make_soup(self.listing_url)
-        all_items = []
+        heating_terms = []
         details = self.get_property_details()
         if details is not None:
+            self.logger.info(f"Getting property details for {addr}.")
             amenity_super_groups = self.get_amenity_super_groups(details)
             if amenity_super_groups is not None:
                 for title, amenity_group in amenity_super_groups:  # type: ignore
@@ -208,7 +274,7 @@ class RedfinListingScraper:
                         amenity_group  # type: ignore
                     )
                     for heating_amenity_group in heating_amenity_groups:
-                        all_items.extend(
+                        heating_terms.extend(
                             self.get_heating_terms_from_amenity_group(
                                 heating_amenity_group
                             )
@@ -217,12 +283,9 @@ class RedfinListingScraper:
                 self.logger.debug(
                     f"No amenity super groups in valid details section. Investigate {self.listing_url}"
                 )
+                return column_dict
         else:
             self.logger.info(f"Could not find property details for {addr}.")
+            return column_dict
 
-        if len(all_items) == 0:
-            self.logger.info(f"{addr} did not have heating amenities.")
-        else:
-            self.logger.info(f"{addr} has heating amenities: {all_items}.")
-
-        return all_items
+        return self.heating_terms_list_to_categorized_df_dict(heating_terms)

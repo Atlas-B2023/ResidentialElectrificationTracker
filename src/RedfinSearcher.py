@@ -290,11 +290,9 @@ class RedfinSearcher:
         if download_link_tag is None:
             # should be handled in caller
             # randomly gives this error. investigate, if truly just random, retry in one second
-            self.logger.debug(
-                f"Finding download button failed for {url = }. {req.status_code = }, {len(html) = }"
-            )
+            Helper.req_get_to_file(req)
             raise TypeError(
-                "Could not find CSV download. Check if the html downloaded is correct, or if the download button id has changed"
+                f"Could not find CSV download. Check if the html downloaded is correct, or if the download button id has changed, or if there are listings available. Info: {url = }. {req.status_code = }, {len(html) = }"
             )
 
         download_link = download_link_tag.get("href")  # type: ignore
@@ -416,15 +414,13 @@ class RedfinSearcher:
         url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
         self.logger.info("Starting lookups on listing URLS")
         rls = RedfinListingScraper()
-        # might make two function argument to pass in address, so that logs can happen inside the amenities scrap func
-        # if cant make two function arg, can build two cols into list and pass the list using
+
         return (
             search_page_csvs.with_columns(
-                (pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)]))
-                .map_elements(rls.get_heating_terms_from_listing)
-                .cast(pl.List(pl.Utf8))
-                .alias("HEATING AMENITIES")
+                pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)])
+                .map_elements(rls.get_heating_terms_df_dict_from_listing)
+                .alias("nest")
             )
-            # .filter(pl.col("HEATING AMENITIES").list.len().gt(pl.lit(0)))
             .drop(url_col_name)
+            .unnest("nest")
         )

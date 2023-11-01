@@ -1,5 +1,5 @@
-import time
-import polars as pl
+import polars as pl 
+import Helper
 from RedfinSearcher import RedfinSearcher as rfs
 
 if __name__ == "__main__":
@@ -14,8 +14,7 @@ if __name__ == "__main__":
         )
     )
     # takes about 1.7 seconds per listing
-    start = time.time()
     house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST")
-    print(f"{time.time()-start = }")
-    with pl.Config(tbl_cols=10):
+    with pl.Config(tbl_cols=-1):
         print(house_data_df)
+        Helper.df_to_file(house_data_df)
