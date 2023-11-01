@@ -14,6 +14,8 @@ if __name__ == "__main__":
         )
     )
     # takes about 1.7 seconds per listing
+    start = time.time()
     house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST")
+    print(f"{time.time()-start = }")
     with pl.Config(tbl_cols=10):
         print(house_data_df)

@@ -8,7 +8,7 @@ import polars as pl
 import requests
 from redfin import Redfin
 
-
+session = requests.Session()
 class ASCIIColors(StrEnum):
     """ASCII colors for use in printing colored text to the terminal."""
 
@@ -160,7 +160,7 @@ def req_get_wrapper(url: str) -> requests.Response:
         requests.Response: the response object
     """
     time.sleep(random.uniform(0.6, 1.1))
-    req = requests.get(
+    req = session.get(
         url,
         headers={"User-Agent": get_random_user_agent()},
         timeout=17,

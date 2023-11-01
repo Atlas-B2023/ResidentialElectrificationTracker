@@ -1,4 +1,6 @@
 site_name: Heating Tracker Backend Docs
+repo_url: https://github.com/example/repository/
+site_url: https://atlas-b2023.github.io/ResidentialElectrificationTracker/
 extra_css:
   - stylesheets/extra.css
 theme:

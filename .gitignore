@@ -1,5 +1,5 @@
 /.venv
 /.vscode
-/__pycache__
-/src/.env
-/src/__pycache__
+**/.env
+/site/*
+**/__pycache__

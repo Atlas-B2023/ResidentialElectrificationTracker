@@ -5,6 +5,7 @@ from typing import Any
 
 import Helper as Helper
 import polars as pl
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -348,34 +349,23 @@ class EIADataRetriever:
                 raise NotImplementedError(f"Unsupported energy type: {energy_type}")
 
 
+class CensusAPI:
+    def __init__(self) -> None:
+        self.base_url = "https://data.census.gov/"
+        # https://api.census.gov/data/2021/acs/acs5/profile/variables.html
+        self.api_key = os.getenv("CENSUS_API_KEY")
+
+    def get(self, url: str) -> str | Any:
+        r = requests.get(url, timeout=15)
+        if r.status_code == 400:
+            return f"Unknown variable {r.text.split("variable ")[-1]}"
+        return r.json()
+        
+
+    def get_race_makeup_by_zcta(self, zcta: str):
+        #get white, black, american indian/native alaskan, asian, NH/PI, other. note that these are estimates, margin of error can be had with "M"
+        return self.get(f"https://api.census.gov/data/2021/acs/acs5/profile?get=DP05_0064E,DP05_0065E,DP05_0066E,DP05_0067E,DP05_0068E,DP05_0069E&for=zip%20code%20tabulation%20area:{zcta}&key={self.api_key}")
+
+
 if __name__ == "__main__":
-    data_retriever = EIADataRetriever()
-
-    elec = data_retriever.monthly_price_per_btu_by_energy_type(
-        data_retriever.EnergyTypes.ELECTRICITY,
-        "NY",
-        datetime.date(2022, 1, 1),
-        datetime.date(2023, 1, 1),
-    )
-    prop = data_retriever.monthly_price_per_btu_by_energy_type(
-        data_retriever.EnergyTypes.PROPANE,
-        "NY",
-        datetime.date(2022, 1, 1),
-        datetime.date(2023, 1, 1),
-    )
-    oil = data_retriever.monthly_price_per_btu_by_energy_type(
-        data_retriever.EnergyTypes.HEATING_OIL,
-        "NY",
-        datetime.date(2022, 1, 1),
-        datetime.date(2023, 1, 1),
-    )
-    ng = data_retriever.monthly_price_per_btu_by_energy_type(
-        data_retriever.EnergyTypes.NATURAL_GAS,
-        "NY",
-        datetime.date(2022, 1, 1),
-        datetime.date(2023, 1, 1),
-    )
-
-    print(
-        f"electricity: {elec}\nheating oil: {oil}\npropane: {prop}\nnatural gas: {ng}"
-    )
+    print(CensusAPI().get_race_makeup_by_zcta("90715"))
