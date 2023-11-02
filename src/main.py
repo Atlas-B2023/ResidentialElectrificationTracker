@@ -1,4 +1,5 @@
 import polars as pl
+import Helper
 from RedfinSearcher import RedfinSearcher as rfs
 
 if __name__ == "__main__":
@@ -13,7 +14,8 @@ if __name__ == "__main__":
         )
     )
     # takes about 1.7 seconds per listing
-    house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST")
+    house_data_df = redfin_searcher.load_house_attributes_from_metro("Niles, MI")
     with pl.Config(tbl_cols=-1):
         print(house_data_df)
-        # Helper.df_to_file(house_data_df)
+        if house_data_df.height != 0:
+            Helper.df_to_file(house_data_df)

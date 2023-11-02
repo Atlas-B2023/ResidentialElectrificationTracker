@@ -1,3 +1,4 @@
+import copy
 import re
 import itertools
 from typing import Any
@@ -6,6 +7,7 @@ import Helper
 from bs4 import BeautifulSoup as btfs
 from bs4 import element
 
+# TODO these get finalized on monday with meeting with zack
 exclude_terms = [
     # listings say things like "Electric: 200+ amps"
     re.compile(r"^electric", re.I),
@@ -14,7 +16,7 @@ exclude_terms = [
     # hot water related things. the water has to get heated somehow...
     re.compile(r"water", re.I),
     re.compile(r"utilities:", re.I),
-    #if you want to disable collection of cooling un-comment
+    # if you want to disable collection of cooling un-comment
     # re.compile(r"cool", re.I),
 ]
 heating_related_property_details_headers = [
@@ -24,54 +26,40 @@ heating_related_property_details_headers = [
     re.compile(r"utilit", re.I),
 ]
 heating_related_patterns = [
-    re.compile(r"furnace", re.I),
-    re.compile(r"diesel", re.I),
-    re.compile(r"solar\sheat", re.I),  # Active Solar Heating
-    re.compile(r"resist(?:ive|ance)", re.I),
-    re.compile(r"space\sheater", re.I),
-    re.compile(r"hybrid\sheat", re.I),
-    re.compile(r"natural\sgas", re.I),
-    re.compile(r"gas", re.I),
-    re.compile(r"oil", re.I),
+    # organize by fuel, then appliance
     re.compile(r"electric", re.I),
-    re.compile(r"heat\spump", re.I),
+    re.compile(r"resist(?:ive|ance)", re.I),
+    re.compile(r"diesel|oil", re.I),
     re.compile(r"propane", re.I),
-    re.compile(r"baseboard", re.I),
-    re.compile(r"mini[\s-]split", re.I),
+    re.compile(r"gas", re.I),
+    re.compile(r"solar", re.I),
+    # Only match wood if it comes after fuel, or before stove or burner
+    re.compile(r"fuel\b.*\bwood|wood(en)* stove|wood(en)* burner", re.I),
     re.compile(r"pellet", re.I),
-    # this tries to prevent matches like "Hardwood floors"
-    re.compile(r"\bfuel\b.*\bwood", re.I),
-    re.compile(r"swamp", re.I),
+    re.compile(r"boiler", re.I),
+    re.compile(r"baseboard", re.I),
+    re.compile(r"furnace", re.I),
+    re.compile(r"heat\spump", re.I),
+    re.compile(r"mini[\s-]split", re.I),
+    re.compile(r"radiator", re.I),
     re.compile(r"radiant", re.I),
 ]
 regex_category_patterns = {
-    "Solar Heating": re.compile(r"solar", re.I),
+    "Electricity": re.compile(r"electric", re.I),
     "Natural Gas": re.compile(r"gas", re.I),
     "Propane": re.compile(r"propane", re.I),
-    "Diesel": re.compile(r"diesel", re.I),
-    # fuel type is unknown, but still burns something
-    "Furnace": re.compile(r"furnace", re.I),
-    "Heating Oil": re.compile(r"oil", re.I),
+    "Diesel/Heating Oil": re.compile(r"diesel|oil", re.I),
     "Wood/Pellet": re.compile(r"wood|pellet", re.I),
-    "Electric": re.compile(r"electric", re.I),
-    "Heat Pump": re.compile(r"heat pump", re.I),
+    "Solar Heating": re.compile(r"solar", re.I),
+    # ask zack about the central electric match being a heat pump
+    # central.*electric  #(?!.*mini-split)
+    "Heat Pump": re.compile(r"heat pump|mini[\s-]split", re.I),
     "Baseboard": re.compile(r"baseboard", re.I),
-    "Swamp Coolers": re.compile(r"swamp", re.I),
+    "Furnace": re.compile(r"furnace", re.I),
+    "Boiler": re.compile(r"boiler", re.I),
+    # test regex for radiator and floor
+    "Radiator": re.compile(r"radiator", re.I),
     "Radiant Floor": re.compile(r"radiant", re.I),
-}
-column_dict = {
-    "Solar Heating": False,
-    "Furnace": False,
-    "Natural Gas": False,
-    "Propane": False,
-    "Diesel": False,
-    "Heating Oil": False,
-    "Wood/Pellet": False,
-    "Electric": False,
-    "Heat Pump": False,
-    "Baseboard": False,
-    "Swamp Coolers": False,
-    "Radiant Floor": False,
 }
 
 
@@ -84,6 +72,7 @@ class RedfinListingScraper:
             self.soup = self.make_soup(listing_url)
             self.listing_url = listing_url
         self.logger = Helper.logger
+        self.column_dict = {key:False for key in regex_category_patterns.keys()}
 
     def make_soup(self, listing_url: str) -> btfs:
         """Create `BeautifulSoup` object. Use output to set object's `self.soup`.
@@ -95,7 +84,7 @@ class RedfinListingScraper:
             btfs: the soup
         """
         self.logger.debug(f"Making soup for {listing_url = }")
-        req = Helper.req_get_wrapper(listing_url)
+        req = self.req(listing_url)
         req.raise_for_status()
         req.encoding = "utf-8"
         html = req.text
@@ -117,23 +106,24 @@ class RedfinListingScraper:
         Returns:
             dict[str, bool]: the dict from column to the value mapping
         """
-        master_dict = column_dict
+        master_dict = copy.deepcopy(self.column_dict)
         if len(my_list) == 0:
             return master_dict
-
+        self.logger.debug(f"master dict {master_dict = }")
         for input_string in my_list:
+            self.logger.debug(f"{input_string = }")
             result = {}
             for key, pattern in regex_category_patterns.items():
-                result[key] = bool(re.search(pattern, input_string))
-            if len(master_dict) == 0:
-                master_dict.update(result)
-            else:
-                for key, value in master_dict.items():
-                    master_dict[key] = result[key] | master_dict[key]
+                if bool(re.search(pattern, input_string)):
+                    result[key] = True
+                    self.logger.debug(f"Pattern matched on {key, pattern = }")
+                self.logger.debug(f"Pattern did not match on {key, pattern = }")
+            for key in result.keys():
+                master_dict[key] = result[key] | master_dict[key]
 
-        # youll have to df.unnest this
-        self.logger.info(my_list)
-        self.logger.info(master_dict)
+        # You'll have to df.unnest this for use in a dataframe
+        self.logger.debug(my_list)
+        self.logger.debug(master_dict)
         return master_dict
 
     def extract_heating_terms_from_list(self, terms_list: list[str]) -> list[str]:
@@ -170,12 +160,10 @@ class RedfinListingScraper:
         prop_details_container = self.soup.find("div", id="propertyDetails-collapsible")
 
         if prop_details_container is None:
-            # TODO handle this
-            self.logger.info("Could not find property details")
             return None
         prop_details = prop_details_container.find("div", class_="amenities-container")  # type: ignore
         if prop_details is None:
-            self.logger.info("Details not under Details pane. this shouldnt happen")
+            self.logger.warning("Details not under Details pane. this shouldnt happen")
             return None
         # returns <div class="amenities-container">
         return prop_details
@@ -278,9 +266,9 @@ class RedfinListingScraper:
                 self.logger.debug(
                     f"No amenity super groups in valid details section. Investigate {self.listing_url}"
                 )
-                return column_dict
+                return self.column_dict
         else:
             self.logger.info(f"Could not find property details for {addr}.")
-            return column_dict
+            return self.column_dict
 
         return self.heating_terms_list_to_categorized_df_dict(heating_terms)

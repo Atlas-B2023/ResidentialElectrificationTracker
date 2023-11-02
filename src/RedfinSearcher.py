@@ -1,5 +1,9 @@
 from datetime import datetime, timedelta
 from enum import StrEnum
+import random
+import time
+from urllib.error import HTTPError
+import requests
 
 import Helper as Helper
 import polars as pl
@@ -25,73 +29,6 @@ class RedfinSearcher:
         >>> rfs.set_filters_path(filters)
         shape(3,3)
     """
-
-    def __init__(self, filters_path: str | None = None) -> None:
-        self.REDFIN_BASE_URL = "https://www.redfin.com"
-        if filters_path is None:
-            self.filters_path = self.generate_filters_path(
-                sort=self.Sort.MOST_RECENTLY_SOLD,
-                property_type=self.PropertyType.HOUSE,
-                min_year_built=(datetime.now() - timedelta(weeks=52 * 5)).year,
-                include=self.Include.LAST_5_YEAR,
-                min_stories=self.Stories.ONE,
-            )
-        else:
-            self.filters_path = filters_path
-        self.LISTING_SCHEMA = {
-            "LATITUDE": pl.Float32,
-            "LONGITUDE": pl.Float32,
-            "ADDRESS": str,
-            "CITY": str,
-            "STATE OR PROVINCE": str,
-            "ZIP OR POSTAL CODE": pl.UInt16,
-            "PRICE": pl.UInt32,
-            "YEAR BUILT": pl.UInt16,
-            "SQUARE FEET": pl.UInt32,
-            "HEATING AMENITIES": list[str],
-        }
-        self.FULL_CSV_SCHEMA = {
-            "SALE TYPE": pl.Utf8,
-            "SOLD DATE": pl.Utf8,
-            "PROPERTY TYPE": pl.Utf8,
-            "ADDRESS": pl.Utf8,
-            "CITY": pl.Utf8,
-            "STATE OR PROVINCE": pl.Utf8,
-            "ZIP OR POSTAL CODE": pl.UInt16,
-            "PRICE": pl.UInt32,
-            "BEDS": pl.UInt8,
-            "BATHS": pl.Float32,
-            "LOCATION": pl.Utf8,
-            "SQUARE FEET": pl.UInt32,
-            "LOT SIZE": pl.UInt32,
-            "YEAR BUILT": pl.UInt16,
-            "DAYS ON MARKET": pl.UInt32,
-            "$/SQUARE FEET": pl.Float32,
-            "HOA/MONTH": pl.Float32,
-            "STATUS": pl.Utf8,
-            "NEXT OPEN HOUSE START TIME": pl.Utf8,
-            "NEXT OPEN HOUSE END TIME": pl.Utf8,
-            "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)": pl.Utf8,
-            "SOURCE": pl.Utf8,
-            "MLS#": pl.Utf8,
-            "FAVORITE": pl.Utf8,
-            "INTERESTED": pl.Utf8,
-            "LATITUDE": pl.Float32,
-            "LONGITUDE": pl.Float32,
-        }
-        self.CSV_SCHEMA = {
-            "ADDRESS": str,
-            "CITY": str,
-            "STATE OR PROVINCE": str,
-            "YEAR BUILT": pl.UInt16,
-            "ZIP OR POSTAL CODE": pl.UInt16,
-            "PRICE": pl.UInt32,
-            "SQUARE FEET": pl.UInt32,
-            "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)": str,
-            "LATITUDE": pl.Float32,
-            "LONGITUDE": pl.Float32,
-        }
-        self.logger = Helper.logger
 
     class PropertyType(StrEnum):
         """Properties of the `property-type` filter."""
@@ -183,6 +120,95 @@ class RedfinSearcher:
         SQFT = "hi-sqft"
         LOT_SIZE = "hi-lot-sqf"
         PRICE_PER_SQFT = "lo-dollarsqft"
+
+    def __init__(self, filters_path: str | None = None) -> None:
+        self.REDFIN_BASE_URL = "https://www.redfin.com"
+        if filters_path is None:
+            self.filters_path = self.generate_filters_path(
+                sort=self.Sort.MOST_RECENTLY_SOLD,
+                property_type=self.PropertyType.HOUSE,
+                min_year_built=(datetime.now() - timedelta(weeks=52 * 5)).year,
+                include=self.Include.LAST_5_YEAR,
+                min_stories=self.Stories.ONE,
+            )
+        else:
+            self.filters_path = filters_path
+        self.LISTING_SCHEMA = {
+            "LATITUDE": pl.Float32,
+            "LONGITUDE": pl.Float32,
+            "ADDRESS": str,
+            "CITY": str,
+            "STATE OR PROVINCE": str,
+            "ZIP OR POSTAL CODE": pl.UInt16,
+            "PRICE": pl.UInt32,
+            "YEAR BUILT": pl.UInt16,
+            "SQUARE FEET": pl.UInt32,
+            "HEATING AMENITIES": list[str],
+        }
+        self.FULL_CSV_SCHEMA = {
+            "SALE TYPE": pl.Utf8,
+            "SOLD DATE": pl.Utf8,
+            "PROPERTY TYPE": pl.Utf8,
+            "ADDRESS": pl.Utf8,
+            "CITY": pl.Utf8,
+            "STATE OR PROVINCE": pl.Utf8,
+            "ZIP OR POSTAL CODE": pl.UInt16,
+            "PRICE": pl.UInt32,
+            "BEDS": pl.UInt8,
+            "BATHS": pl.Float32,
+            "LOCATION": pl.Utf8,
+            "SQUARE FEET": pl.UInt32,
+            "LOT SIZE": pl.UInt32,
+            "YEAR BUILT": pl.UInt16,
+            "DAYS ON MARKET": pl.UInt32,
+            "$/SQUARE FEET": pl.Float32,
+            "HOA/MONTH": pl.Float32,
+            "STATUS": pl.Utf8,
+            "NEXT OPEN HOUSE START TIME": pl.Utf8,
+            "NEXT OPEN HOUSE END TIME": pl.Utf8,
+            "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)": pl.Utf8,
+            "SOURCE": pl.Utf8,
+            "MLS#": pl.Utf8,
+            "FAVORITE": pl.Utf8,
+            "INTERESTED": pl.Utf8,
+            "LATITUDE": pl.Float32,
+            "LONGITUDE": pl.Float32,
+        }
+        self.CSV_SCHEMA = {
+            "ADDRESS": str,
+            "CITY": str,
+            "STATE OR PROVINCE": str,
+            "YEAR BUILT": pl.UInt16,
+            "ZIP OR POSTAL CODE": pl.UInt16,
+            "PRICE": pl.UInt32,
+            "SQUARE FEET": pl.UInt32,
+            "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)": str,
+            "LATITUDE": pl.Float32,
+            "LONGITUDE": pl.Float32,
+        }
+        self.logger = Helper.logger
+
+    def req_wrapper(self, url: str) -> requests.Response:
+        time.sleep(random.uniform(0.6,1.1))
+        req = requests.get(
+            url,
+            headers= self.get_gen_headers())
+        
+        
+        return req
+
+    def get_gen_headers(self) -> dict[str, str]:
+        return {
+            "User-Agent": Helper.get_random_user_agent(),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-GPC": "1",
+            "Sec-Fetch-Site": "none",
+            "Upgrade-Insecure-Requests" : "1"
+        }
 
     def set_filters_path(self, filters_path: str) -> None:
         """Set the search filters for all searches made with this RedfinSearcher object.
@@ -283,7 +309,7 @@ class RedfinSearcher:
         Returns:
             pl.DataFrame | None: the DataFrame. Is None if there are no listings for the given filters. Is None if the CSV download link is not available
         """
-        req = Helper.req_get_wrapper(url)
+        req = self.req_wrapper(url)
         req.raise_for_status()
 
         html = req.content
@@ -295,7 +321,9 @@ class RedfinSearcher:
             # randomly gives this error. investigate, if truly just random, retry in one second. 11/2 think i fixed it
             if req.status_code == 200:
                 # 200 is given when you search a valid zip code but no results show. 404 is given when you search a fake zip code
-                self.logger.info(f"No heating information with the specified filters for {url}")
+                self.logger.info(
+                    f"No heating information with the specified filters for {url}"
+                )
                 return None
             elif req.status_code == 404:
                 self.logger.info(f"Zip code does not exist {url}")
@@ -318,20 +346,27 @@ class RedfinSearcher:
                     f"<a> tag with id {download_button_id} has multiple values"
                 )
 
-        return pl.read_csv(
-            source=f"{self.REDFIN_BASE_URL}{download_link}", dtypes=self.FULL_CSV_SCHEMA
-        ).select(
-            "ADDRESS",
-            "CITY",
-            "STATE OR PROVINCE",
-            "YEAR BUILT",
-            "ZIP OR POSTAL CODE",
-            "PRICE",
-            "SQUARE FEET",
-            "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
-            "LATITUDE",
-            "LONGITUDE",
-        )
+        try:
+            df = pl.read_csv(
+                source=f"{self.REDFIN_BASE_URL}{download_link}",
+                dtypes=self.FULL_CSV_SCHEMA,
+            ).select(
+                "ADDRESS",
+                "CITY",
+                "STATE OR PROVINCE",
+                "YEAR BUILT",
+                "ZIP OR POSTAL CODE",
+                "PRICE",
+                "SQUARE FEET",
+                "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
+                "LATITUDE",
+                "LONGITUDE",
+            )
+        except HTTPError as e:
+            print(e)
+            self.logger.error(f"Download for {url} has been moved. Skipping this ZIP")
+            return None
+        return df
 
     def zips_to_search_page_csvs(self, zip_codes: list[int]) -> pl.DataFrame | None:
         """Return a DataFrame produced by concatenating all of the specified ZIP codes' search page CSVs.
@@ -367,9 +402,11 @@ class RedfinSearcher:
                     f"The download link for {zip_code}'s search page is not available"
                 )
                 continue
-
             list_of_csv_dfs.append(redfin_csv_df)
-        return pl.concat(list_of_csv_dfs)
+        if len(list_of_csv_dfs) == 0:
+            return None
+        else:
+            pl.concat(list_of_csv_dfs)
 
     def load_house_attributes_from_metro(
         self, metro_name: str, filters_path: str | None = None
@@ -425,6 +462,12 @@ class RedfinSearcher:
         """
         url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
         self.logger.info("Starting lookups on listing URLS")
+        self.logger.info(
+            f"Unique ZIP codes: {search_page_csvs["ZIP OR POSTAL CODE"].n_unique()}"
+        )
+        self.logger.info(
+            f"Estimated completion time: {search_page_csvs.height * 1.7} seconds"
+        )
         rls = RedfinListingScraper()
 
         return (

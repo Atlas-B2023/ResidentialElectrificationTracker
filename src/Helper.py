@@ -98,9 +98,8 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
     """
     if msa_name == "TEST":
         # return [55424]  # good and small
-        # return [55424]  # good and small
         # return [22067, 55424]  # nulls in sqft
-        return [10101, 90037, 55426, 33617]  # nulls in sqft and large
+        return [10101, 90037, 55424, 33617]  # nulls in sqft and large
 
     df = pl.read_csv("./augmenting_data/master.csv")
 

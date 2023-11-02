@@ -1,0 +1,52 @@
+ADDRESS,CITY,STATE OR PROVINCE,YEAR BUILT,ZIP OR POSTAL CODE,PRICE,SQUARE FEET,LATITUDE,LONGITUDE,Electricity,Natural Gas,Propane,Diesel/Heating Oil,Wood/Pellet,Solar Heating,Heat Pump,Baseboard,Furnace,Boiler,Radiator,Radiant Floor
+27754 Swamp St,Dowagiac,MI,2022,49047,300000,,42.028046,-86.1025,false,false,false,false,false,false,false,false,false,false,false,false
+207 Arlington Ln,Niles,MI,2022,49120,430000,2840,41.82597,-86.29611,false,false,false,false,false,false,false,false,false,false,false,false
+1496 Valley View Dr,Niles,MI,2022,49120,287295,2060,41.854374,-86.276566,false,false,false,false,false,false,false,false,false,false,false,false
+71451 Old Paddock,Niles,MI,2022,49120,1660000,6302,41.760983,-86.17763,false,false,false,false,false,false,false,false,false,false,false,false
+141 Poppy,Niles,MI,2022,49120,676035,4783,41.81834,-86.29623,false,false,false,false,false,false,false,false,false,false,false,false
+2436 Craig St,Niles,MI,2022,49120,325000,1924,41.857494,-86.30858,false,false,false,false,false,false,false,false,false,false,false,false
+131 Turfway Park,Niles,MI,2022,49120,390000,2393,41.825466,-86.29667,false,false,false,false,false,false,false,false,false,false,false,false
+2436 Elizabeth St,Niles,MI,2022,49120,342150,1792,41.85921,-86.30979,false,false,false,false,false,false,false,false,false,false,false,false
+145 Poppy Ct,Niles,MI,2022,49120,404960,2326,41.81773,-86.29629,false,false,false,false,false,false,false,false,false,false,false,false
+213 Arlington Ln,Niles,MI,2022,49120,349900,1870,41.825718,-86.29557,false,false,false,false,false,false,false,false,false,false,false,false
+144 Poppy Ct,Niles,MI,2022,49120,477050,2244,41.817406,-86.29696,false,false,false,false,false,false,false,false,false,false,false,false
+14150 Spring Valley Ct,Niles,MI,2022,49120,435000,1806,41.86184,-86.34848,false,false,false,false,false,false,false,false,false,false,false,false
+2420 Elizabeth St,Niles,MI,2022,49120,278500,1660,41.860798,-86.30728,false,false,false,false,false,false,false,false,false,false,false,false
+2416 Elizabeth St,Niles,MI,2022,49120,277500,1660,41.861126,-86.30677,false,false,false,false,false,false,false,false,false,false,false,false
+578 Waters Way Ln,Watervliet,MI,2022,49098,275990,2018,42.192265,-86.250595,false,false,false,false,false,false,false,false,false,false,false,false
+525 Dogwood Ln,Watervliet,MI,2022,49098,267990,2010,42.191856,-86.25012,false,false,false,false,false,false,false,false,false,false,false,false
+3859 Watertown Dr,Watervliet,MI,2022,49098,295000,2060,42.18152,-86.26708,false,false,false,false,false,false,false,false,false,false,false,false
+3941 Sumner Dr,Watervliet,MI,2022,49098,274900,2060,42.183113,-86.26819,false,false,false,false,false,false,false,false,false,false,false,false
+3875 Watertown Dr,Watervliet,MI,2022,49098,282675,1735,42.181877,-86.26705,false,false,false,false,false,false,false,false,false,false,false,false
+4017 Sumner Dr,Watervliet,MI,2022,49098,249900,1735,42.184505,-86.26824,false,false,false,false,false,false,false,false,false,false,false,false
+3988 Watertown Dr,Watervliet,MI,2022,49098,337848,2818,42.18394,-86.26776,false,false,false,false,false,false,false,false,false,false,false,false
+557 Cygnet Lake Drive North,Benton Harbor,MI,2022,49022,327815,2060,42.06298,-86.44306,false,false,false,false,false,false,false,false,false,false,false,false
+587 Trumpeter Bay,Benton Harbor,MI,2022,49022,349900,1822,42.06162,-86.4434,false,false,false,false,false,false,false,false,false,false,false,false
+565 Cygnet Lake Dr,Benton Harbor,MI,2022,49022,319900,2060,42.06299,-86.4427,false,false,false,false,false,false,false,false,false,false,false,false
+569 N Cygnet Lake Dr N,Benton Harbor,MI,2022,49022,324900,1822,42.062992,-86.44251,false,false,false,false,false,false,false,false,false,false,false,false
+9038 Second St,Baroda,MI,2022,49101,296001,1200,41.95499,-86.48735,false,false,false,false,false,false,false,false,false,false,false,false
+5972 Vrana Dr,Berrien Springs,MI,2022,49103,398400,2818,41.909225,-86.313576,false,false,false,false,false,false,false,false,false,false,false,false
+10177 California Rd,Bridgman,MI,2022,49106,329900,2060,41.932693,-86.5522,false,false,false,false,false,false,false,false,false,false,false,false
+10177 California Rd,Lake Twp,MI,2022,49106,329900,1120,41.93255,-86.55182,false,true,false,false,false,false,false,false,true,false,false,false
+10147 California Rd,Bridgman,MI,2022,49106,338795,2060,41.93296,-86.55181,false,false,false,false,false,false,false,false,false,false,false,false
+10147 California Rd,Lake Twp,MI,2022,49106,338795,1120,41.93297,-86.55182,false,true,false,false,false,false,false,false,false,false,false,false
+19086 White Pine Dr #10,New Buffalo,MI,2022,49117,1100000,3353,41.77282,-86.77748,false,false,false,false,false,false,false,false,false,false,false,false
+4134 Choctaw Trl,New Buffalo,MI,2022,49117,875000,2440,41.762367,-86.80626,false,false,false,false,false,false,false,false,false,false,false,false
+18727 Leonard Ct,New Buffalo,MI,2022,49117,550000,2393,41.780407,-86.77369,false,false,false,false,false,false,false,false,false,false,false,false
+18776 Leonard Ct,New Buffalo,MI,2022,49117,722805,2981,41.780525,-86.77484,false,false,false,false,false,false,false,false,false,false,false,false
+19103 White Pine Dr #8,New Buffalo,MI,2022,49117,925000,3090,41.77324,-86.77705,false,false,false,false,false,false,false,false,false,false,false,false
+18748 Leonard Ct,New Buffalo,MI,2022,49117,540730,2498,41.780952,-86.774414,false,false,false,false,false,false,false,false,false,false,false,false
+11133 Strawberry Fields Rd,New Buffalo Twp,MI,2022,49117,652000,2108,41.8001,-86.723404,false,true,false,false,false,false,false,false,false,false,false,false
+11133 Strawberry Fields Rd,New Buffalo,MI,2022,49117,652000,2108,41.8001,-86.723404,false,false,false,false,false,false,false,false,false,false,false,false
+17668 Summerhill Ln,New Buffalo,MI,2022,49117,585000,2240,41.800236,-86.72635,false,false,false,false,false,false,false,false,false,false,false,false
+18524 Dunecrest Dr,New Buffalo,MI,2022,49117,180000,4500,41.784298,-86.77164,false,false,false,false,false,false,false,false,false,false,false,false
+6183 Comiskey Rd,Stevensville,MI,2022,49127,499900,2393,42.005707,-86.50002,false,false,false,false,false,false,false,false,false,false,false,false
+6199 Comiskey Rd,Stevensville,MI,2022,49127,592547,3751,42.005455,-86.50002,false,false,false,false,false,false,false,false,false,false,false,false
+2603 Bell Cir,Stevensville,MI,2022,49127,529900,2393,42.001656,-86.51704,false,false,false,false,false,false,false,false,false,false,false,false
+2561 Bell Cir,Stevensville,MI,2022,49127,430590,2278,42.0021,-86.51726,false,false,false,false,false,false,false,false,false,false,false,false
+6128 Longhorn Trl,Stevensville,MI,2022,49127,479860,2393,42.006546,-86.50002,false,false,false,false,false,false,false,false,false,false,false,false
+6076 Longhorn Trl,Stevensville,MI,2022,49127,514900,2735,42.007404,-86.502,false,false,false,false,false,false,false,false,false,false,false,false
+6244 Comiskey Rd,Stevensville,MI,2022,49127,357264,1903,42.004635,-86.50085,false,false,false,false,false,false,false,false,false,false,false,false
+205 Cherry St,Three Oaks,MI,2022,49128,25900,1320,41.803448,-86.60892,false,false,false,false,false,false,false,false,false,false,false,false
+17154 River Bluff Dr,New Buffalo,MI,2022,49117,1595000,4001,41.80857,-86.68996,false,false,false,false,false,false,false,false,false,false,false,false
+23 National Pkwy,Union Pier,MI,2022,49129,75000,,41.83398,-86.677895,false,false,false,false,false,false,false,false,false,false,false,false
