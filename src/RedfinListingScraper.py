@@ -11,8 +11,11 @@ exclude_terms = [
     re.compile(r"^electric", re.I),
     re.compile(r"no\b.*electric", re.I),
     re.compile(r"no\b.*gas", re.I),
+    # hot water related things. the water has to get heated somehow...
     re.compile(r"water", re.I),
     re.compile(r"utilities:", re.I),
+    #if you want to disable collection of cooling un-comment
+    # re.compile(r"cool", re.I),
 ]
 heating_related_property_details_headers = [
     re.compile(r"heat", re.I),
@@ -21,12 +24,8 @@ heating_related_property_details_headers = [
     re.compile(r"utilit", re.I),
 ]
 heating_related_patterns = [
-    # * take forced out when doing the real project
-    # re.compile(r"forced\sair", re.I),
-    # re.compile(r"fuel", re.I),
     re.compile(r"furnace", re.I),
     re.compile(r"diesel", re.I),
-    # re.compile(r"\bfuel\b.*\bhot\swater", re.I),
     re.compile(r"solar\sheat", re.I),  # Active Solar Heating
     re.compile(r"resist(?:ive|ance)", re.I),
     re.compile(r"space\sheater", re.I),
@@ -42,7 +41,8 @@ heating_related_patterns = [
     re.compile(r"pellet", re.I),
     # this tries to prevent matches like "Hardwood floors"
     re.compile(r"\bfuel\b.*\bwood", re.I),
-    # re.compile(r"radiant", re.I),
+    re.compile(r"swamp", re.I),
+    re.compile(r"radiant", re.I),
 ]
 regex_category_patterns = {
     "Solar Heating": re.compile(r"solar", re.I),
@@ -56,9 +56,12 @@ regex_category_patterns = {
     "Electric": re.compile(r"electric", re.I),
     "Heat Pump": re.compile(r"heat pump", re.I),
     "Baseboard": re.compile(r"baseboard", re.I),
+    "Swamp Coolers": re.compile(r"swamp", re.I),
+    "Radiant Floor": re.compile(r"radiant", re.I),
 }
 column_dict = {
     "Solar Heating": False,
+    "Furnace": False,
     "Natural Gas": False,
     "Propane": False,
     "Diesel": False,
@@ -67,6 +70,8 @@ column_dict = {
     "Electric": False,
     "Heat Pump": False,
     "Baseboard": False,
+    "Swamp Coolers": False,
+    "Radiant Floor": False,
 }
 
 
@@ -112,17 +117,7 @@ class RedfinListingScraper:
         Returns:
             dict[str, bool]: the dict from column to the value mapping
         """
-        master_dict = {
-            "Solar Heating": False,
-            "Natural Gas": False,
-            "Propane": False,
-            "Diesel": False,
-            "Heating Oil": False,
-            "Wood/Pellet": False,
-            "Electric": False,
-            "Heat Pump": False,
-            "Baseboard": False,
-        }
+        master_dict = column_dict
         if len(my_list) == 0:
             return master_dict
 

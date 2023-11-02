@@ -274,11 +274,14 @@ class RedfinSearcher:
         Note:
             The schema of this DataFrame is listed in `RedfinSearcher.CSV_SCHEMA`.
 
+        Raises:
+            TypeError: if the csv cant find the download link button and there are listings available
+
         Args:
             url (str): the URL of the search page
 
         Returns:
-            pl.DataFrame | None: the DataFrame. Is empty if there are no listings for the given filters. Is None if the CSV download link is not available
+            pl.DataFrame | None: the DataFrame. Is None if there are no listings for the given filters. Is None if the CSV download link is not available
         """
         req = Helper.req_get_wrapper(url)
         req.raise_for_status()
@@ -289,11 +292,19 @@ class RedfinSearcher:
         download_link_tag = soup.find("a", id=download_button_id)
         if download_link_tag is None:
             # should be handled in caller
-            # randomly gives this error. investigate, if truly just random, retry in one second
-            Helper.req_get_to_file(req)
-            raise TypeError(
-                f"Could not find CSV download. Check if the html downloaded is correct, or if the download button id has changed, or if there are listings available. Info: {url = }. {req.status_code = }, {len(html) = }"
-            )
+            # randomly gives this error. investigate, if truly just random, retry in one second. 11/2 think i fixed it
+            if req.status_code == 200:
+                # 200 is given when you search a valid zip code but no results show. 404 is given when you search a fake zip code
+                self.logger.info(f"No heating information with the specified filters for {url}")
+                return None
+            elif req.status_code == 404:
+                self.logger.info(f"Zip code does not exist {url}")
+                return None
+            else:
+                Helper.req_get_to_file(req)
+                raise TypeError(
+                    f"Could not find CSV download. Check if the html downloaded is correct, or if the download button id has changed. Info: {url = }. {req.status_code = }, {len(html) = }"
+                )
 
         download_link = download_link_tag.get("href")  # type: ignore
 
@@ -345,10 +356,11 @@ class RedfinSearcher:
                 redfin_csv_df = self.df_from_search_page_csv(search_page_url)
             except requests.HTTPError as e:
                 #! this also gave random error
-                self.logger.error(
-                    f"{search_page_url = } gave an invalid zip code (possible its something else) error.\n{e}"
+                self.logger.warning(
+                    f"{search_page_url = }, {zip_code = } gave an invalid zip code (possible its something else) error.\n{e}"
                 )
-                return None
+                # return None
+                continue
 
             if redfin_csv_df is None:
                 self.logger.info(

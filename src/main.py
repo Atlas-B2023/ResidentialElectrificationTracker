@@ -1,5 +1,4 @@
-import polars as pl 
-import Helper
+import polars as pl
 from RedfinSearcher import RedfinSearcher as rfs
 
 if __name__ == "__main__":
@@ -17,4 +16,4 @@ if __name__ == "__main__":
     house_data_df = redfin_searcher.load_house_attributes_from_metro("TEST")
     with pl.Config(tbl_cols=-1):
         print(house_data_df)
-        Helper.df_to_file(house_data_df)
+        # Helper.df_to_file(house_data_df)
