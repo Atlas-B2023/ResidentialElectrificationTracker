@@ -9,6 +9,8 @@ import requests
 from redfin import Redfin
 
 session = requests.Session()
+
+
 class ASCIIColors(StrEnum):
     """ASCII colors for use in printing colored text to the terminal."""
 
@@ -101,7 +103,9 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
         # return [22067, 55424]  # nulls in sqft
         return [10101, 90037, 55424, 33617]  # nulls in sqft and large
 
-    df = pl.read_csv("./augmenting_data/master.csv")
+    df = pl.read_csv(
+        "./augmenting_data/master.csv", columns=["ZIP", "METRO_NAME", "LSAD"]
+    )
 
     # MSAs are what were looking for in this project. Some MSA are repeated. can use unique(), but using a select is faster and better
     return df.filter(

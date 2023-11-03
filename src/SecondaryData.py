@@ -360,11 +360,12 @@ class CensusAPI:
         if r.status_code == 400:
             return f"Unknown variable {r.text.split("variable ")[-1]}"
         return r.text
-        
 
     def get_race_makeup_by_zcta(self, zcta: str):
-        #get white, black, american indian/native alaskan, asian, NH/PI, other. note that these are estimates, margin of error can be had with "M"
-        return self.get(f"https://api.census.gov/data/2021/acs/acs5/profile?get=DP05_0064E,DP05_0065E,DP05_0066E,DP05_0067E,DP05_0068E,DP05_0069E&for=zip%20code%20tabulation%20area:{zcta}&key={self.api_key}")
+        # get white, black, american indian/native alaskan, asian, NH/PI, other. note that these are estimates, margin of error can be had with "M"
+        return self.get(
+            f"https://api.census.gov/data/2021/acs/acs5/profile?get=DP05_0064E,DP05_0065E,DP05_0066E,DP05_0067E,DP05_0068E,DP05_0069E&for=zip%20code%20tabulation%20area:{zcta}&key={self.api_key}"
+        )
 
 
 if __name__ == "__main__":

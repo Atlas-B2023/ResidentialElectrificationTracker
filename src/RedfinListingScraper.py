@@ -2,6 +2,9 @@ import copy
 import re
 import itertools
 from typing import Any
+import time
+import random
+import requests
 
 import Helper
 from bs4 import BeautifulSoup as btfs
@@ -72,7 +75,29 @@ class RedfinListingScraper:
             self.soup = self.make_soup(listing_url)
             self.listing_url = listing_url
         self.logger = Helper.logger
-        self.column_dict = {key:False for key in regex_category_patterns.keys()}
+        self.column_dict = {key: False for key in regex_category_patterns.keys()}
+        self.session = None
+
+    def req_wrapper(self, url: str) -> requests.Response:
+        if self.session is None:
+            self.session = requests.Session()
+        time.sleep(random.uniform(0.6, 1.1))
+        req = self.session.get(url, headers=self.get_gen_headers())
+        return req
+
+    def get_gen_headers(self) -> dict[str, str]:
+        return {
+            "User-Agent": Helper.get_random_user_agent(),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.6",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-GPC": "1",
+            "Sec-Fetch-Site": "same-origin",
+            "Upgrade-Insecure-Requests": "1",
+            "Cache-Control": "max-age=0",
+        }
 
     def make_soup(self, listing_url: str) -> btfs:
         """Create `BeautifulSoup` object. Use output to set object's `self.soup`.
@@ -84,7 +109,7 @@ class RedfinListingScraper:
             btfs: the soup
         """
         self.logger.debug(f"Making soup for {listing_url = }")
-        req = self.req(listing_url)
+        req = self.req_wrapper(listing_url)
         req.raise_for_status()
         req.encoding = "utf-8"
         html = req.text
@@ -163,7 +188,9 @@ class RedfinListingScraper:
             return None
         prop_details = prop_details_container.find("div", class_="amenities-container")  # type: ignore
         if prop_details is None:
-            self.logger.warning("Details not under Details pane. this shouldnt happen")
+            self.logger.warning(
+                "Details not under Details pane. this should not happen"
+            )
             return None
         # returns <div class="amenities-container">
         return prop_details

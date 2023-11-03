@@ -4,11 +4,11 @@ import random
 import time
 from urllib.error import HTTPError
 import requests
+import io
 
 import Helper as Helper
 import polars as pl
 from RedfinListingScraper import RedfinListingScraper
-import requests
 from bs4 import BeautifulSoup as btfs
 
 # PURPOSE: this file
@@ -187,14 +187,13 @@ class RedfinSearcher:
             "LONGITUDE": pl.Float32,
         }
         self.logger = Helper.logger
+        self.session = None
 
     def req_wrapper(self, url: str) -> requests.Response:
-        time.sleep(random.uniform(0.6,1.1))
-        req = requests.get(
-            url,
-            headers= self.get_gen_headers())
-        
-        
+        if self.session is None:
+            self.session = requests.Session()
+        time.sleep(random.uniform(0.6, 1.1))
+        req = self.session.get(url, headers=self.get_gen_headers())
         return req
 
     def get_gen_headers(self) -> dict[str, str]:
@@ -207,7 +206,7 @@ class RedfinSearcher:
             "Sec-Fetch-Mode": "navigate",
             "Sec-GPC": "1",
             "Sec-Fetch-Site": "none",
-            "Upgrade-Insecure-Requests" : "1"
+            "Upgrade-Insecure-Requests": "1",
         }
 
     def set_filters_path(self, filters_path: str) -> None:
@@ -316,12 +315,13 @@ class RedfinSearcher:
         soup = btfs(html, "html.parser")
         download_button_id = "download-and-save"
         download_link_tag = soup.find("a", id=download_button_id)
+
         if download_link_tag is None:
             # should be handled in caller
             # randomly gives this error. investigate, if truly just random, retry in one second. 11/2 think i fixed it
             if req.status_code == 200:
                 # 200 is given when you search a valid zip code but no results show. 404 is given when you search a fake zip code
-                self.logger.info(
+                self.logger.debug(
                     f"No heating information with the specified filters for {url}"
                 )
                 return None
@@ -346,25 +346,32 @@ class RedfinSearcher:
                     f"<a> tag with id {download_button_id} has multiple values"
                 )
 
+        req = self.req_wrapper(f"{self.REDFIN_BASE_URL}{download_link}")
         try:
+            req.raise_for_status()
+            csv = req.text
             df = pl.read_csv(
-                source=f"{self.REDFIN_BASE_URL}{download_link}",
+                io.StringIO(csv, newline="\n"),
+                columns=[
+                    "ADDRESS",
+                    "CITY",
+                    "STATE OR PROVINCE",
+                    "YEAR BUILT",
+                    "ZIP OR POSTAL CODE",
+                    "PRICE",
+                    "SQUARE FEET",
+                    "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
+                    "LATITUDE",
+                    "LONGITUDE",
+                ],
                 dtypes=self.FULL_CSV_SCHEMA,
-            ).select(
-                "ADDRESS",
-                "CITY",
-                "STATE OR PROVINCE",
-                "YEAR BUILT",
-                "ZIP OR POSTAL CODE",
-                "PRICE",
-                "SQUARE FEET",
-                "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)",
-                "LATITUDE",
-                "LONGITUDE",
             )
+
         except HTTPError as e:
             print(e)
-            self.logger.error(f"Download for {url} has been moved. Skipping this ZIP")
+            self.logger.error(
+                f"Download for {url} returned a {req.status_code} status code. Most likely download has been moved."
+            )
             return None
         return df
 
@@ -399,14 +406,16 @@ class RedfinSearcher:
 
             if redfin_csv_df is None:
                 self.logger.info(
-                    f"The download link for {zip_code}'s search page is not available"
+                    f"The download link for {zip_code}'s search page is not available."
                 )
                 continue
+
+            self.logger.info(f"Found download link for {zip_code}'s search page.")
             list_of_csv_dfs.append(redfin_csv_df)
         if len(list_of_csv_dfs) == 0:
             return None
         else:
-            pl.concat(list_of_csv_dfs)
+            return pl.concat(list_of_csv_dfs)
 
     def load_house_attributes_from_metro(
         self, metro_name: str, filters_path: str | None = None
