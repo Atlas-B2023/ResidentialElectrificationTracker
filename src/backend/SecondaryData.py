@@ -12,6 +12,16 @@ load_dotenv()
 
 
 class EIADataRetriever:
+    """https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
+
+    Raises:
+        TypeError: _description_
+        NotImplementedError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+
     # Propane and Heating oil:
     #   *per month is per heating month*
     class EnergyTypes(Enum):
@@ -351,18 +361,41 @@ class CensusAPI:
         # https://api.census.gov/data/2021/acs/acs5/profile/variables.html
         self.api_key = os.getenv("CENSUS_API_KEY")
 
-    def get(self, url: str) -> str | Any:
+    def get(self, url: str) -> requests.Response | str:
         r = requests.get(url, timeout=15)
         if r.status_code == 400:
             return f"Unknown variable {r.text.split("variable ")[-1]}"
-        return r.text
+        return r
 
     def get_race_makeup_by_zcta(self, zcta: str):
         # get white, black, american indian/native alaskan, asian, NH/PI, other. note that these are estimates, margin of error can be had with "M"
-        return self.get(
+        req = self.get(
             f"https://api.census.gov/data/2021/acs/acs5/profile?get=DP05_0064E,DP05_0065E,DP05_0066E,DP05_0067E,DP05_0068E,DP05_0069E&for=zip%20code%20tabulation%20area:{zcta}&key={self.api_key}"
         )
+        if isinstance(req, str):
+            return req
+        return req.text
+
+    def get_table_to_group_name(self, table: str, year: str):
+        req = self.get(
+            f"https://api.census.gov/data/{year}/acs/acs5/profile/groups/{table}.json"
+        )
+
+        if isinstance(req, str):
+            return req
+
+        req.raise_for_status()
+
+        return req.json()["variables"]
+
+    def get_table_row_label(self, table: str, year: str, table_and_row: str):
+        req_json = self.get_table_to_group_name(table, year)
+        return req_json[table_and_row]["label"]
+        # df = pl.DataFrame(req_json)
+        # # return req_json
+        # return df.with_columns()
 
 
 if __name__ == "__main__":
-    print(CensusAPI().get_race_makeup_by_zcta("90715"))
+    r = CensusAPI()
+    print(r.get_table_row_label("DP05", "2021", "DP05_0025PEA"))
