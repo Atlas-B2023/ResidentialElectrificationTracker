@@ -1,0 +1,45 @@
+ADDRESS,CITY,STATE OR PROVINCE,ZIP OR POSTAL CODE,PRICE,SQUARE FEET,YEAR BUILT,LATITUDE,LONGITUDE,Electricity,Natural Gas,Propane,Diesel/Heating Oil,Wood/Pellet,Solar Heating,Heat Pump,Baseboard,Furnace,Boiler,Radiator,Radiant Floor
+191 Weathervane,Slippery Rock Twp - But,PA,16057,,,,41.049004,-80.02987,false,false,false,false,false,false,false,false,false,false,false,false
+110 Sassafras Dr,Slippery Rock Boro,PA,16057,,2296,2022,41.07404,-80.06401,false,false,false,false,false,false,false,false,false,false,false,false
+00 Coaltown Rd,Cherry Twp,PA,16057,,1680,2022,41.05491,-79.96487,false,false,false,false,false,false,false,false,false,false,false,false
+115 Sassafras Dr,Slippery Rock,PA,16057,55700,2595,2022,41.0748,-80.06375,false,false,false,false,false,false,false,false,false,false,false,false
+153 Venango Trl,Slippery Rock,PA,16057,63500,2720,2022,41.041405,-80.00978,false,false,false,false,false,false,false,false,false,false,false,false
+153 Miller Rd,Slippery Rock,PA,16057,60500,3328,2022,41.063663,-80.075775,false,false,false,false,false,false,false,false,false,false,false,false
+9720 Grove Ct,Windham,OH,44288,249900,1720,2022,41.235863,-81.03921,false,true,true,false,false,false,false,false,false,false,false,false
+12813 Greenbower St NE,Alliance,OH,44601,432500,1740,2022,40.974415,-81.15086,false,true,false,false,false,false,false,false,false,false,false,false
+15232 Woodsong Dr,Middlefield,OH,44062,365000,1636,2022,41.453987,-81.09353,false,true,false,false,false,false,false,false,false,false,false,false
+3056 Wayland Rd,Diamond,OH,44412,44000,2346,2022,41.07225,-81.06893,false,false,false,false,false,false,false,true,false,false,false,false
+19520 Heisler Rd,North Benton,OH,44449,430000,1820,2022,40.970654,-81.025536,true,false,false,false,false,false,true,false,false,false,false,false
+316 Nicklaus Ct,Liberty Twp,PA,16127,,,,41.13966,-80.1143,false,false,false,false,false,false,false,false,false,false,false,false
+17702 Jersey St,Lake Milton,OH,44429,150000,,2022,41.10865,-80.98933,false,true,false,false,false,false,false,false,false,false,false,false
+95 SE River Rd,Lake Milton,OH,44429,25100,1152,2022,41.093494,-80.97469,false,false,false,false,false,false,false,false,false,false,false,false
+949 Apache Trl,Coolspring Twp,PA,16137,605000,,2022,41.26918,-80.190834,true,true,false,false,false,false,false,false,false,false,false,false
+2754 SE River Rd,Lake Milton,OH,44429,1539000,2906,2022,41.07746,-80.96865,false,true,false,false,false,false,false,false,false,false,false,true
+7246 Lee,Brookfield,OH,44403,385000,1715,2022,41.237328,-80.55701,false,true,false,false,false,false,false,false,false,false,false,false
+7256 Lee Rd NE,Brookfield,OH,44403,377000,1885,2022,41.23737,-80.55672,false,true,false,false,false,false,false,false,false,false,false,false
+6416 Klines Dr,Girard,OH,44420,309900,,2022,41.191807,-80.66176,false,true,false,false,false,false,false,false,false,false,false,false
+273 Potters Cir,Girard,OH,44420,297700,,2022,41.190006,-80.65969,false,true,false,false,false,false,false,false,false,false,false,false
+1141 Sulphur Springs Ln,Mineral Ridge,OH,44440,369000,1823,2022,41.1361,-80.77613,false,true,false,false,false,false,false,false,false,false,false,false
+10125 Carrie Ct,New Middletown,OH,44442,,,,40.968895,-80.56881,false,false,false,false,false,false,false,false,false,false,false,false
+10115 Carrie Ct,New Middletown,OH,44442,,1654,2007,40.96851,-80.5688,false,false,false,false,false,false,false,false,false,false,false,false
+5367 Skye Dr,New Middletown,OH,44442,305500,1534,2022,40.953064,-80.55012,false,true,false,false,false,false,false,false,false,false,false,false
+9 Sycamore St,New Middletown,OH,44442,55000,1056,2022,40.979385,-80.55272,false,true,false,false,false,false,false,false,false,false,false,false
+1910 Carnegie Hts,Niles,OH,44446,289900,,2022,41.183506,-80.72951,false,true,false,false,false,false,false,false,false,false,false,false
+262 Fawn Meadows Ave,North Jackson,OH,44451,448500,2400,2022,41.103466,-80.85599,false,true,false,false,false,false,false,false,false,false,false,false
+374 Maplecroft Rd Lot 9,North Lima,OH,44452,42000,784,2022,40.98359,-80.65177,false,true,false,false,false,false,false,false,false,false,false,false
+374 Maplecroft Rd Lot 11,North Lima,OH,44452,47500,896,2022,40.98359,-80.65177,false,true,false,false,false,false,false,false,false,false,false,false
+3323 Mae Dr SW,Warren,OH,44481,75000,924,2022,41.141575,-80.88131,false,true,false,false,false,false,false,false,false,false,false,false
+385 Oak Hollow Dr NW,Champion,OH,44481,389900,2000,2022,41.325737,-80.845955,false,true,false,false,false,false,false,false,false,false,false,false
+2709 Virginia Dr,Warren,OH,44481,375000,1875,2022,41.168552,-80.8399,false,true,false,false,false,false,false,false,false,false,false,false
+2075 Weir Rd #46,Warren,OH,44483,64330,747,2022,41.261402,-80.79379,false,true,false,false,false,false,false,false,false,false,false,false
+2075 Weir Rd #94,Warren,OH,44483,69200,1056,2022,41.261402,-80.79379,false,true,false,false,false,false,false,false,false,false,false,false
+774 Dalton Dr NW,Warren,OH,44481,25000,1558,2022,41.284348,-80.86229,false,true,false,false,false,false,false,true,false,false,false,false
+95 Muirfield Dr,Howland,OH,44484,425000,1975,2022,41.229706,-80.729454,false,true,false,false,false,false,false,false,false,false,false,false
+99 Muirfield Dr,Warren,OH,44484,453221,,2022,41.22963,-80.72595,false,true,false,false,false,false,false,false,false,false,false,false
+503 Berklee,Boardman,OH,44514,349000,1700,2022,40.988472,-80.68141,false,true,false,false,false,false,false,false,false,false,false,false
+1805 E Western Reserve Rd #79,Poland,OH,44514,432000,1880,2022,40.98541,-80.62138,false,true,false,false,false,false,false,false,false,false,false,false
+7490 Cobblers Run,Poland,OH,44514,,2380,2022,41.009293,-80.58495,false,false,false,false,false,false,false,false,false,false,false,false
+7102 Virginia Pl,Poland,OH,44514,,,,41.01384,-80.58146,false,false,false,false,false,false,false,false,false,false,false,false
+1365 NE Meadowood Cir E,Poland,OH,44514,599444,3111,2022,40.993576,-80.63024,false,true,false,false,false,false,false,false,false,false,false,false
+7117 Garden Pl,Poland,OH,44514,,1990,2021,41.014015,-80.58194,false,false,false,false,false,false,false,false,false,false,false,false
+3699 Polo Blvd,Youngstown,OH,44514,195000,3354,2022,40.993233,-80.58022,false,false,false,false,false,false,false,false,false,false,false,false

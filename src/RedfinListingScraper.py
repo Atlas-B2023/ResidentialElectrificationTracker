@@ -189,7 +189,7 @@ class RedfinListingScraper:
         prop_details = prop_details_container.find("div", class_="amenities-container")  # type: ignore
         if prop_details is None:
             self.logger.warning(
-                "Details not under Details pane. this should not happen"
+                "Details not under Details pane. This should not happen unless local laws require signing into redfin to view data. Common in PA"
             )
             return None
         # returns <div class="amenities-container">

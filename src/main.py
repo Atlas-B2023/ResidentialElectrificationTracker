@@ -14,7 +14,9 @@ if __name__ == "__main__":
         )
     )
     # takes about 1.7 seconds per listing
-    house_data_df = redfin_searcher.load_house_attributes_from_metro("Niles, MI")
+    house_data_df = redfin_searcher.load_house_attributes_from_metro(
+        "Youngstown-Warren-Boardman, OH-PA"
+    )
     with pl.Config(tbl_cols=-1):
         print(house_data_df)
         if house_data_df.height != 0:
