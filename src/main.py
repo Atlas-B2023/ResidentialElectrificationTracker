@@ -1,6 +1,6 @@
 import polars as pl
-import Helper
-from RedfinSearcher import RedfinSearcher as rfs
+from backend import Helper
+from backend.RedfinSearcher import RedfinSearcher as rfs
 
 if __name__ == "__main__":
     redfin_searcher = rfs(

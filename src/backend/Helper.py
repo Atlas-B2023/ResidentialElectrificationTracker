@@ -215,8 +215,6 @@ def _set_up_logger(level: int) -> logging.Logger:
     )
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
-
-    # Add the handler to the logger
     logger.addHandler(handler)
     logger.propagate = False
 

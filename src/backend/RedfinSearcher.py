@@ -11,14 +11,7 @@ import polars as pl
 from RedfinListingScraper import RedfinListingScraper
 from bs4 import BeautifulSoup as btfs
 
-# PURPOSE: this file
 
-# this will probably be called by main. will need a dataframe parameter?
-# all urls in code will not have a trailing forward slash in urls
-# can either preform url checks before, or wait until everything is formed and do lots of path tracing when we bounce from the endpoint
-
-
-# look at ways to decuple this class from redfin?
 class RedfinSearcher:
     """
     Scrape Redfin and make use of their stingray API for retrieving housing information.

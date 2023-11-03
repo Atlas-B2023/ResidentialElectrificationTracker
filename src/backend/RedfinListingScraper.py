@@ -16,7 +16,8 @@ exclude_terms = [
     re.compile(r"^electric", re.I),
     re.compile(r"no\b.*electric", re.I),
     re.compile(r"no\b.*gas", re.I),
-    # hot water related things. the water has to get heated somehow...
+    # hot water related things. the water has to get heated somehow... This might get rid of some strings that have all utilities listed together.
+    # still leaven tho because a lot list how their hot water is heated
     re.compile(r"water", re.I),
     re.compile(r"utilities:", re.I),
     # if you want to disable collection of cooling un-comment
@@ -29,7 +30,6 @@ heating_related_property_details_headers = [
     re.compile(r"utilit", re.I),
 ]
 heating_related_patterns = [
-    # organize by fuel, then appliance
     re.compile(r"electric", re.I),
     re.compile(r"resist(?:ive|ance)", re.I),
     re.compile(r"diesel|oil", re.I),
@@ -60,13 +60,14 @@ regex_category_patterns = {
     "Baseboard": re.compile(r"baseboard", re.I),
     "Furnace": re.compile(r"furnace", re.I),
     "Boiler": re.compile(r"boiler", re.I),
-    # test regex for radiator and floor
     "Radiator": re.compile(r"radiator", re.I),
     "Radiant Floor": re.compile(r"radiant", re.I),
 }
 
 
 class RedfinListingScraper:
+    """Scraper for Redfin listing pages."""
+
     def __init__(self, listing_url: str | None = None):
         # probably going to trip someone up if they make another function. just trying to allow you to set on object creation or not set
         self.listing_url = listing_url
@@ -79,6 +80,14 @@ class RedfinListingScraper:
         self.session = None
 
     def req_wrapper(self, url: str) -> requests.Response:
+        """A `request.get()` wrapper for connection pooling to Redfin's CSV download page
+
+        Args:
+            url (str): the url
+
+        Returns:
+            requests.Response: the `Response` object
+        """
         if self.session is None:
             self.session = requests.Session()
         time.sleep(random.uniform(0.6, 1.1))
@@ -86,6 +95,11 @@ class RedfinListingScraper:
         return req
 
     def get_gen_headers(self) -> dict[str, str]:
+        """Generate headers for a connection to the Redfin CSV download page
+
+        Returns:
+            dict[str, str]: headers
+        """
         return {
             "User-Agent": Helper.get_random_user_agent(),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -182,14 +196,17 @@ class RedfinListingScraper:
         Returns:
             element.PageElement | None: the div
         """
-        prop_details_container = self.soup.find("div", id="propertyDetails-collapsible")
+        if self.soup is None:
+            self.logger.error("Soup is None for this listing.")
+            # not sure how to handle, should not happen though
+        prop_details_container = self.soup.find("div", id="propertyDetails-collapsible") # type: ignore
 
         if prop_details_container is None:
             return None
         prop_details = prop_details_container.find("div", class_="amenities-container")  # type: ignore
         if prop_details is None:
             self.logger.warning(
-                "Details not under Details pane. This should not happen unless local laws require signing into redfin to view data. Common in PA"
+                "Details not under details pane. This should not happen unless local laws require signing into Redfin to view data."
             )
             return None
         # returns <div class="amenities-container">
@@ -204,10 +221,11 @@ class RedfinListingScraper:
             amenities_container_elements (element.PageElement): The `amenities-container`
 
         Returns:
-            _type_: title, contents of `super-group-content` divs
+            list[str | element.PageElement | Any]: title, contents of `super-group-content` divs
         """
         title_content_pairs = itertools.batched(
-            amenities_container_elements.children, 2
+            amenities_container_elements.children,  # type: ignore
+            2,
         )
         return [[title.text, content] for title, content in title_content_pairs]
 
@@ -225,7 +243,7 @@ class RedfinListingScraper:
             list[Any]: list of `amenity-group` divs
         """
         list_of_amenity_groups = []
-        for amenity_group in super_group.children:
+        for amenity_group in super_group.children:  # type: ignore
             # check if the amenity group is related to heating
             amenity_group_name = (
                 amenity_group.find("ul")
@@ -254,7 +272,7 @@ class RedfinListingScraper:
         """
         terms = [
             term_span.text
-            for term_span in amenity_group.find_all("span", class_="entryItemContent")
+            for term_span in amenity_group.find_all("span", class_="entryItemContent")  # type: ignore
         ]
         return self.extract_heating_terms_from_list(terms)
 

@@ -4,12 +4,17 @@ from pathlib import Path
 
 import mkdocs_gen_files
 
+#maybe take main out later when we have the gui, but for now its not needed.
+exclude_words = ["__init__", "csv_merge", "main"]
+
 for path in sorted(Path("src").rglob("*.py")):
     filename = path.with_suffix("")
     rel_filename = path.relative_to("src").with_suffix("")
     
     filename_parts = filename.parts
 
+    if [elem for elem in exclude_words if elem in [part for part in filename_parts]]:
+        continue
     with mkdocs_gen_files.open(rel_filename.with_suffix(".md"), "w") as fd:
         print("::: " + ".".join(filename_parts), file=fd)
 

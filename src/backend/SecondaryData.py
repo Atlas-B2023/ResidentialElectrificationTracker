@@ -12,12 +12,8 @@ load_dotenv()
 
 
 class EIADataRetriever:
-    # Electricity:
-    #   can get by month per state
     # Propane and Heating oil:
     #   *per month is per heating month*
-    #   can get by month per PAD, or by us average
-    #   can get by week per tracked state
     class EnergyTypes(Enum):
         PROPANE = 1
         NATURAL_GAS = 2

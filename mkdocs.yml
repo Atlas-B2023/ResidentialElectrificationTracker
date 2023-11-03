@@ -65,7 +65,11 @@ plugins:
       - docs/gen_ref_pages.py
   - mkdocstrings:
       custom_templates: "null"
-      default_handler: python
+      # default_handler: python
+      handlers:
+        python:
+          paths: [src]
+
       enable_inventory: null
 
 copyright: |
