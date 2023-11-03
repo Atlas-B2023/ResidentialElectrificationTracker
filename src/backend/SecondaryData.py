@@ -376,7 +376,29 @@ class CensusAPI:
             return req
         return req.text
 
-    def get_table_to_group_name(self, table: str, year: str):
+    def get_table_to_group_name(self, table: str, year: str) -> str | Any:
+        """Get a JSON representation of a table's attributes.
+
+        Note:
+            Each table_row_modifier entry will look similar to:
+            ```json
+            "DP05_0037M": {
+                "label": "Margin of Error!!RACE!!Total population!!One race!!White",
+                "concept": "ACS DEMOGRAPHIC AND HOUSING ESTIMATES",
+                "predicateType": "int",
+                "group": "DP05",
+                "limit": 0,
+                "predicateOnly": true
+            }
+            ```
+
+        Args:
+            table (str): the table to lookup
+            year (str): which acs5 year to look up
+
+        Returns:
+            str | Any: json object
+        """
         req = self.get(
             f"https://api.census.gov/data/{year}/acs/acs5/profile/groups/{table}.json"
         )
@@ -388,14 +410,24 @@ class CensusAPI:
 
         return req.json()["variables"]
 
-    def get_table_row_label(self, table: str, year: str, table_and_row: str):
+    def get_table_row_label(self, table_and_row: str, year: str) -> str | Any:
+        """Gets the label name for a table and group row for the acs5 surveys.
+
+        Args:
+            table_and_row (str): the table and row, along with selector at the end
+            year (str): the year
+
+        Returns:
+            str | Any: _description_
+        """
+        sep = "_"
+        table, row = table_and_row.split(sep)
         req_json = self.get_table_to_group_name(table, year)
-        return req_json[table_and_row]["label"]
-        # df = pl.DataFrame(req_json)
-        # # return req_json
-        # return df.with_columns()
+        if isinstance(req_json, str):
+            return req_json
+        return req_json[f"{table}{sep}{row}"]["label"]
 
 
 if __name__ == "__main__":
     r = CensusAPI()
-    print(r.get_table_row_label("DP05", "2021", "DP05_0025PEA"))
+    print(r.get_table_row_label("DP05_0025PEA", "2021"))
