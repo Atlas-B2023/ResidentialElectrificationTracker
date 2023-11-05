@@ -84,7 +84,8 @@ def lookup(val, field: Optional[str] = None, use_cache: bool = True) -> Optional
             val = val.upper()
             field = "abbr"
         else:
-            return None
+            val = val.title()
+            field = "name"
 
     # see if result is in cache
     cache_key = f"{field}:{val}"

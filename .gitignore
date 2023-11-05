@@ -3,3 +3,4 @@
 **/.env
 /site/*
 **/__pycache__
+**/.cache

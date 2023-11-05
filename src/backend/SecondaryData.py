@@ -2,13 +2,18 @@ import datetime
 import os
 from enum import Enum, StrEnum
 from typing import Any
+import json
 
+import us.states as sts
 import Helper as Helper
 import polars as pl
+import polars.selectors as cs
 import requests
 from dotenv import load_dotenv
+# import csv
 
 load_dotenv()
+logger = Helper.logger
 
 
 class EIADataRetriever:
@@ -361,26 +366,27 @@ class CensusAPI:
         # https://api.census.gov/data/2021/acs/acs5/profile/variables.html
         self.api_key = os.getenv("CENSUS_API_KEY")
 
-    def get(self, url: str) -> requests.Response | str:
+    def get(self, url: str) -> requests.Response | None:
         r = requests.get(url, timeout=15)
         if r.status_code == 400:
-            return f"Unknown variable {r.text.split("variable ")[-1]}"
+            logger.info(f"Unknown variable {r.text.split("variable ")[-1]}")
+            return None
         return r
 
-    def get_race_makeup_by_zcta(self, zcta: str):
+    def get_race_makeup_by_zcta(self, zcta: str) -> str | None:
         # get white, black, american indian/native alaskan, asian, NH/PI, other. note that these are estimates, margin of error can be had with "M"
         req = self.get(
             f"https://api.census.gov/data/2021/acs/acs5/profile?get=DP05_0064E,DP05_0065E,DP05_0066E,DP05_0067E,DP05_0068E,DP05_0069E&for=zip%20code%20tabulation%20area:{zcta}&key={self.api_key}"
         )
-        if isinstance(req, str):
-            return req
+        if req is None:
+            return None
         return req.text
 
     def get_table_to_group_name(self, table: str, year: str) -> str | Any:
         """Get a JSON representation of a table's attributes.
 
         Note:
-            Each table_row_modifier entry will look similar to:
+            Returned object will have entries similar to:
             ```json
             "DP05_0037M": {
                 "label": "Margin of Error!!RACE!!Total population!!One race!!White",
@@ -399,35 +405,99 @@ class CensusAPI:
         Returns:
             str | Any: json object
         """
+        # check cache. file name is {year}-acs-groups-{table}
+        # make cache a func
+        cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}.cache{os.sep}{year}-acs-groups-{table}.json"
+        if os.path.exists(cache_file_rel_path):
+            with open(cache_file_rel_path, "r") as f:
+                logger.debug(f"cache for {cache_file_rel_path} being read.")
+                return json.load(f)["variables"]
+
+        logger.debug(f"making request and caching {cache_file_rel_path}.")
         req = self.get(
             f"https://api.census.gov/data/{year}/acs/acs5/profile/groups/{table}.json"
         )
-
-        if isinstance(req, str):
-            return req
-
+        if req is None:
+            return None
         req.raise_for_status()
+        req_json = req.json()
+        with open(cache_file_rel_path, "w") as f:
+            json.dump(req_json, f)
 
-        return req.json()["variables"]
+        return req_json["variables"]
 
-    def get_table_row_label(self, table_and_row: str, year: str) -> str | Any:
+    def translate_unique_groups_to_labels_for_header_list(
+        self, headers: list[str], table: str, year: str
+    ) -> str | Any:
         """Gets the label name for a table and group row for the acs5 surveys.
 
         Args:
-            table_and_row (str): the table and row, along with selector at the end
+            table_and_row (str): the presumed table and row, along with selector at the end
             year (str): the year
 
         Returns:
             str | Any: _description_
         """
-        sep = "_"
-        table, row = table_and_row.split(sep)
+        # is going to read the file multiple times, save last req as {"table": req_json[table]...} for this?
         req_json = self.get_table_to_group_name(table, year)
-        if isinstance(req_json, str):
+        if req_json is None:
             return req_json
-        return req_json[f"{table}{sep}{row}"]["label"]
+        for idx, header in enumerate(headers):
+            new_head_dict = req_json.get(header)
+            if new_head_dict is None:
+                # returns none if not in dict, means we have custom name and can continue
+                continue
+            new_head = new_head_dict["label"]
+            if new_head not in headers[:idx]:
+                headers[idx] = new_head
+
+    def get_table_group_for_zcta_by_state_by_year(
+        self, table: str, year: str, state: str
+    ):
+        """csv output
+
+        Args:
+            table (str): census demo acs5 table
+            year (str): year to search
+            state (str): state
+        """
+        state_enum = sts.lookup(state.title(), field="name")
+        if state_enum is None:
+            logger.error("Could not find state")
+            return False
+        state_fips = state_enum.fips
+        # has to be 2019
+        url = f"https://api.census.gov/data/{year}/acs/acs5/profile?get=group({table})&for=zip%20code%20tabulation%20area:*&in=state:{state_fips}"
+        req = self.get(url)
+        if req is None:
+            logger.info(f"{req = }")
+            return False
+        my_csv_json = req.json()
+        # list of lists, where header is first list
+        self.translate_unique_groups_to_labels_for_header_list(
+            my_csv_json[0], table, year
+        )
+        # return my_csv_json[0]
+        df = pl.DataFrame(my_csv_json, orient="row")
+        df = (
+            df.rename(df.head(1).to_dicts().pop())
+            .slice(1)  # type: ignore
+            .drop("NAME", cs.matches("[Aa]nnotation"), cs.matches(f"{table}.*A\b"))
+            .rename({"zip code tabulation area": "ZCTA", "state": "STATE_FIPS"})
+            #     # might wanna make these schema overrides
+            .cast(
+                {
+                    cs.matches("!!"): pl.Float32,
+                    "STATE_FIPS": pl.Int32,
+                    "ZCTA": pl.Int32,
+                }
+            )
+        )
+        return df
+        # return True
 
 
 if __name__ == "__main__":
     r = CensusAPI()
-    print(r.get_table_row_label("DP05_0025PEA", "2021"))
+    print(r.get_table_group_for_zcta_by_state_by_year("DP05", "2019", "california"))
+    # print(r.get_table_row_label("DP05_0064PE", "2019"))
