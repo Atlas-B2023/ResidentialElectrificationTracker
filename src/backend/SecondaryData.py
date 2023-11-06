@@ -260,7 +260,7 @@ class EIADataRetriever:
 
         return monthly_avg_price
 
-    def _monthly_heating_season_propane_price_per_gal(
+    def monthly_heating_season_propane_price_per_gal(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> pl.DataFrame:
         """Get a participating state's average propane price in dollars per gal.
@@ -325,7 +325,7 @@ class EIADataRetriever:
             case self.EnergyTypes.PROPANE:
                 return self._price_per_btu_converter(
                     self.price_to_clean_dict(
-                        self._monthly_heating_season_propane_price_per_gal(
+                        self.monthly_heating_season_propane_price_per_gal(
                             state, start_date, end_date
                         ),
                         energy_type,
@@ -543,7 +543,8 @@ class CensusAPI:
 
 
 if __name__ == "__main__":
-    r = CensusAPI()
+    r = EIADataRetriever()
+    print(r.monthly_price_per_btu_by_energy_type(EIADataRetriever.EnergyTypes.HEATING_OIL, "MA", datetime.datetime(2022,1,1),datetime.datetime(2023,1,1)))
     # path = pathlib.Path(os.path.dirname(__file__)).parent.parent / "output"
     # print(path)
     # print(r.get_table_group_for_zcta_by_state_by_year("DP05", "2019", "california"))
