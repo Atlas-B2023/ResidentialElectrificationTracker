@@ -61,6 +61,9 @@ class EIADataRetriever:
     def __init__(self):
         self.eia_base_url = "https://api.eia.gov/v2"
         self.api_key = os.getenv("EIA_API_KEY")
+        if self.api_key is None:
+            logger.critical("No Census API key found in a .env file in project directory. please request a key at https://www.eia.gov/opendata/register.php")
+            exit()
 
     # normalize prices
     #!this should be failing?
@@ -366,6 +369,9 @@ class CensusAPI:
         self.base_url = "https://data.census.gov/"
         # https://api.census.gov/data/2021/acs/acs5/profile/variables.html
         self.api_key = os.getenv("CENSUS_API_KEY")
+        if self.api_key is None:
+            logger.critical("No Census API key found in a .env file in project directory. please request a key at https://api.census.gov/data/key_signup.html")
+            exit()
 
     def get(self, url: str) -> requests.Response | None:
         r = requests.get(url, timeout=15)
@@ -375,6 +381,17 @@ class CensusAPI:
         return r
 
     def get_race_makeup_by_zcta(self, zcta: str) -> str | None:
+        """Get race make up by zcta from
+
+        Note:
+            use `get_table_group_for_zcta_by_state_by_year`
+
+        Args:
+            zcta (str): zcta
+
+        Returns:
+            str | None: text or none
+        """
         # get white, black, american indian/native alaskan, asian, NH/PI, other. note that these are estimates, margin of error can be had with "M"
         req = self.get(
             f"https://api.census.gov/data/2021/acs/acs5/profile?get=DP05_0064E,DP05_0065E,DP05_0066E,DP05_0067E,DP05_0068E,DP05_0069E&for=zip%20code%20tabulation%20area:{zcta}&key={self.api_key}"
@@ -406,8 +423,12 @@ class CensusAPI:
         Returns:
             str | Any: json object
         """
-        # check cache. file name is {year}-acs-groups-{table}
         # make cache a func
+        cache_file = ".cache"
+
+        if not os.path.exists(cache_file):
+            os.makedirs(cache_file)
+
         cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}.cache{os.sep}{year}-acs-groups-{table}.json"
         if os.path.exists(cache_file_rel_path):
             with open(cache_file_rel_path, "r") as f:
@@ -429,15 +450,15 @@ class CensusAPI:
 
     def translate_unique_groups_to_labels_for_header_list(
         self, headers: list[str], table: str, year: str
-    ) -> str | Any:
-        """Gets the label name for a table and group row for the acs5 surveys.
+    ) -> None:
+        """Gets the label name for a table and row for the acs5 surveys.
 
         Args:
             table_and_row (str): the presumed table and row, along with selector at the end
             year (str): the year
 
         Returns:
-            str | Any: _description_
+            None: translates the list of table_row_selector to its english label
         """
         # is going to read the file multiple times, save last req as {"table": req_json[table]...} for this?
         req_json = self.get_table_to_group_name(table, year)
@@ -455,7 +476,7 @@ class CensusAPI:
     def get_table_group_for_zcta_by_state_by_year(
         self, table: str, year: str, state: str
     ):
-        """csv output
+        """csv output of acs 5 year survey table
 
         Args:
             table (str): census demo acs5 table
@@ -469,6 +490,12 @@ class CensusAPI:
         state_fips = state_enum.fips
 
         my_csv_json = None
+
+        cache_file = ".cache"
+
+        if not os.path.exists(cache_file):
+            os.makedirs(cache_file)
+
         cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}.cache{os.sep}{year}-acs-table-{table}-for-state-{state_fips}.json"
 
         if os.path.exists(cache_file_rel_path):
@@ -499,7 +526,6 @@ class CensusAPI:
             .slice(1)  # type: ignore
             .drop("NAME", cs.matches("[Aa]nnotation"), cs.matches(f"{table}.*A\b"))
             .rename({"zip code tabulation area": "ZCTA", "state": "STATE_FIPS"})
-            # might wanna make these schema overrides
             .cast(
                 {
                     cs.matches("!!"): pl.Float32,
@@ -520,5 +546,5 @@ if __name__ == "__main__":
     r = CensusAPI()
     # path = pathlib.Path(os.path.dirname(__file__)).parent.parent / "output"
     # print(path)
-    print(r.get_table_group_for_zcta_by_state_by_year("DP05", "2019", "california"))
+    # print(r.get_table_group_for_zcta_by_state_by_year("DP05", "2019", "california"))
     # print(r.get_table_row_label("DP05_0064PE", "2019"))
