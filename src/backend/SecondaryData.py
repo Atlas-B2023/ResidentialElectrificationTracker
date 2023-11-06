@@ -3,6 +3,7 @@ import os
 from enum import Enum, StrEnum
 from typing import Any
 import json
+import pathlib
 
 import us.states as sts
 import Helper as Helper
@@ -382,7 +383,7 @@ class CensusAPI:
             return None
         return req.text
 
-    def get_table_to_group_name(self, table: str, year: str) -> str | Any:
+    def get_table_to_group_name(self, table: str, year: str) -> dict[str, Any] | Any:
         """Get a JSON representation of a table's attributes.
 
         Note:
@@ -466,25 +467,39 @@ class CensusAPI:
             logger.error("Could not find state")
             return False
         state_fips = state_enum.fips
-        # has to be 2019
-        url = f"https://api.census.gov/data/{year}/acs/acs5/profile?get=group({table})&for=zip%20code%20tabulation%20area:*&in=state:{state_fips}"
-        req = self.get(url)
-        if req is None:
-            logger.info(f"{req = }")
+
+        my_csv_json = None
+        cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}.cache{os.sep}{year}-acs-table-{table}-for-state-{state_fips}.json"
+
+        if os.path.exists(cache_file_rel_path):
+            with open(cache_file_rel_path, "r") as f:
+                logger.debug(f"cache for {cache_file_rel_path} being read.")
+                my_csv_json = json.load(f)
+        else:
+            # has to be 2019
+            url = f"https://api.census.gov/data/{year}/acs/acs5/profile?get=group({table})&for=zip%20code%20tabulation%20area:*&in=state:{state_fips}"
+            req = self.get(url)
+            if req is None:
+                logger.info(f"{req = }")
+                return False
+            my_csv_json = req.json()
+            with open(cache_file_rel_path, "w") as f:
+                json.dump(my_csv_json, f)
+
+        if my_csv_json is None:
+            logger.info(f"{my_csv_json = }")
             return False
-        my_csv_json = req.json()
         # list of lists, where header is first list
         self.translate_unique_groups_to_labels_for_header_list(
             my_csv_json[0], table, year
         )
-        # return my_csv_json[0]
         df = pl.DataFrame(my_csv_json, orient="row")
         df = (
             df.rename(df.head(1).to_dicts().pop())
             .slice(1)  # type: ignore
             .drop("NAME", cs.matches("[Aa]nnotation"), cs.matches(f"{table}.*A\b"))
             .rename({"zip code tabulation area": "ZCTA", "state": "STATE_FIPS"})
-            #     # might wanna make these schema overrides
+            # might wanna make these schema overrides
             .cast(
                 {
                     cs.matches("!!"): pl.Float32,
@@ -493,11 +508,17 @@ class CensusAPI:
                 }
             )
         )
-        return df
-        # return True
+        parent_path = pathlib.Path(os.path.dirname(__file__)).parent.parent
+        df.write_csv(
+            f"{parent_path}{os.sep}output{os.sep}acs5-group-{table}-zcta-state-{state_fips}.csv"
+        )
+        # return df
+        return True
 
 
 if __name__ == "__main__":
     r = CensusAPI()
+    # path = pathlib.Path(os.path.dirname(__file__)).parent.parent / "output"
+    # print(path)
     print(r.get_table_group_for_zcta_by_state_by_year("DP05", "2019", "california"))
     # print(r.get_table_row_label("DP05_0064PE", "2019"))
