@@ -4,6 +4,7 @@ from enum import Enum, StrEnum
 from typing import Any
 import json
 import pathlib
+import re
 
 from .us import states as sts
 from backend import Helper
@@ -15,7 +16,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 logger = Helper.logger
-
+# https://www.dcf.ks.gov/services/PPS/Documents/PPM_Forms/Section_5000_Forms/PPS5460_Instr.pdf                
+replace_dict = {
+    "PercentMarginOfError": "PME",
+    "Estimate": "EST",
+    "Percent": "PCT",
+    "MarginOfError": "MOE",
+    "AnnotationOf": "ann", #have to mess with select logic later down the line to get this shorter
+    "AmericanIndian": "_A_",
+    "BlackOrAfricanAmerica": "_B_",
+    "PacificIslanderIncludingNativeHawaiian": "_P_",
+    "Asian": "_S_",
+    "White": "_W_",
+    "Unknown": "_O_",
+    "HispanicOrLatino": "_H_",
+    "NotHispanicOrLatino": "_N_",
+    "TotalPopulation": "TPOP",
+    "OrMore" : "plus",
+    "AndOver": "plus",
+    "One": "1",
+    "Two": "2",
+    "Three": "3",
+}
 
 class EIADataRetriever:
     """https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
@@ -376,6 +398,7 @@ class CensusAPI:
                 "No Census API key found in a .env file in project directory. please request a key at https://api.census.gov/data/key_signup.html"
             )
             exit()
+        self.MAX_COL_NAME_LENGTH = 80
 
     def get(self, url: str) -> requests.Response | None:
         r = requests.get(url, timeout=15)
@@ -452,7 +475,7 @@ class CensusAPI:
 
         return req_json["variables"]
 
-    def translate_unique_groups_to_labels_for_header_list(
+    def translate_and_truncate_unique_groups_to_labels_for_header_list(
         self, headers: list[str], table: str, year: str
     ) -> None:
         """Gets the label name for a table and row for the acs5 surveys.
@@ -468,14 +491,30 @@ class CensusAPI:
         req_json = self.get_table_to_group_name(table, year)
         if req_json is None:
             return req_json
+        
         for idx, header in enumerate(headers):
-            new_head_dict = req_json.get(header)
-            if new_head_dict is None:
+            new_col_name_dict = req_json.get(header)
+            if new_col_name_dict is None:
                 # returns none if not in dict, means we have custom name and can continue
                 continue
-            new_head = new_head_dict["label"]
-            if new_head not in headers[:idx]:
-                headers[idx] = new_head
+            new_col_name = new_col_name_dict["label"]
+            #qgis doesnt allow field names of 80+ chars. massage into form, then cut off
+            #delimiter for table subsection
+            new_col_name = re.sub("!!", " ", new_col_name)
+            new_col_name = re.sub(r"\s+", " ", new_col_name)
+            # easier to read
+            new_col_name_parts = new_col_name.split(" ")
+            for idy, no_format in enumerate(new_col_name_parts):
+                new_col_name_parts[idy] = no_format.capitalize()
+            new_col_name = "".join(new_col_name_parts)
+            #shortenings to fit length requirement
+            for key, value in replace_dict.items():
+                new_col_name = re.sub(key, value, new_col_name)
+            # limiter 
+            new_col_name = new_col_name[:min(len(new_col_name), self.MAX_COL_NAME_LENGTH)]
+
+            if new_col_name not in headers[:idx]:
+                headers[idx] = new_col_name
 
     def get_table_group_for_zcta_by_state_by_year(
         self, table: str, year: str, state: str
@@ -521,14 +560,14 @@ class CensusAPI:
             logger.info(f"{my_csv_json = }")
             return False
         # list of lists, where header is first list
-        self.translate_unique_groups_to_labels_for_header_list(
+        self.translate_and_truncate_unique_groups_to_labels_for_header_list(
             my_csv_json[0], table, year
         )
         df = pl.DataFrame(my_csv_json, orient="row")
         df = (
             df.rename(df.head(1).to_dicts().pop())
             .slice(1)  # type: ignore
-            .drop("NAME", cs.matches("[Aa]nnotation"), cs.matches(f"{table}.*A\b"))
+            .drop("NAME", cs.matches("(?i)^(ann)"), cs.matches(f"{table}.*A\b"))
             .rename({"zip code tabulation area": "ZCTA", "state": "STATE_FIPS"})
             .cast(
                 {

@@ -1,7 +1,8 @@
 # import polars as pl
 # from backend import Helper
+from backend.SecondaryData import CensusAPI
 # from backend.RedfinSearcher import RedfinSearcher as rfs
-from gui import app
+# from gui import app
 if __name__ == "__main__":
     # redfin_searcher = rfs(
     #     filters_path=rfs.generate_filters_path(
@@ -21,5 +22,7 @@ if __name__ == "__main__":
     #     print(house_data_df)
     #     if house_data_df.height != 0:
     #         Helper.df_to_file(house_data_df)
-    gui_app = app.App()
-    gui_app.mainloop()
+    # gui_app = app.App()
+    # gui_app.mainloop()
+    c = CensusAPI()
+    c.get_table_group_for_zcta_by_state_by_year("DP05", "2019", "california")
