@@ -1,7 +1,9 @@
 import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from CTkListbox import CTkListbox
+from tkinter import Event
 import re
+import polars as pl
 
 # import os
 # import sys
@@ -15,7 +17,9 @@ class SearchPage(ctk.CTkFrame):
         super().__init__(master, **kwargs)
         self.label_font = ctk.CTkFont("Roboto", 34)
         self.MATCHES_TO_DISPLAY = 20  # performance and practicality
-        self.auto_complete_list = get_unique_attrib_from_master_csv("METRO_NAME")
+        self.auto_complete_series = get_unique_attrib_from_master_csv("METRO_NAME")
+        self.current_auto_complete_series = None
+        self.prev_search_bar_len = 0
         self.create_widgets()
 
         # self.redfin_filters = RedfinFiltersWindow(takefocus=True)
@@ -41,9 +45,9 @@ class SearchPage(ctk.CTkFrame):
         )
         self.suggestion_list_box = CTkListbox(
             master=self,
-            text_color=("gray10", "#DCE4EE"), # type: ignore
+            text_color=("gray10", "#DCE4EE"),  # type: ignore
             border_width=2,
-            command=lambda x: self.update_entry_on_autocomplete_select(x),  
+            command=lambda x: self.update_entry_on_autocomplete_select(x),
         )
         self.search_button = ctk.CTkButton(
             self,
@@ -80,31 +84,34 @@ class SearchPage(ctk.CTkFrame):
         )
         # self.suggestion_list_box.bind("<ListboxSelection>", lambda x: self.update_entry_on_autocomplete_select(x))
 
-    def update_suggestions_listbox(self, x):
+    def update_suggestions_listbox(self, x: Event):
         cur_text = self.search_bar.get()
         if cur_text == "":
+            # only gets called when all text has been deleted
+            self.current_auto_complete_series = self.auto_complete_series
             self.suggestion_list_box.grid_remove()
         else:
             self.suggestion_list_box.delete("all")
-            matches = [
-                re.search(rf"\b{cur_text}", msa, re.I)
-                for msa in self.auto_complete_list
-            ]
+            if self.current_auto_complete_series is None or len(cur_text) < self.prev_search_bar_len:
+                self.current_auto_complete_series = self.auto_complete_series.filter(
+                    self.auto_complete_series.str.contains(rf"(?i)^{cur_text}")
+                )
+            else: 
+                self.current_auto_complete_series = self.current_auto_complete_series.filter(
+                    self.current_auto_complete_series.str.contains(rf"(?i)^{cur_text}")
+                )
             self.suggestion_list_box.grid()
-            count = 0
-            for match in matches:
-                if match is not None:
-                    if count == self.MATCHES_TO_DISPLAY:
-                        break
-                    count = count + 1
-                    self.suggestion_list_box.insert(
-                        "end",
-                        match.string,
-                        border_width=2,
-                        border_color="gray",
-                    )
+            self.current_auto_complete_series.head(self.MATCHES_TO_DISPLAY).map_elements(
+                lambda msa: self.suggestion_list_box.insert(
+                    "end", msa, border_width=2, border_color="gray"
+                ), return_dtype=pl.Utf8
+            )
+        self.prev_search_bar_len = len(cur_text)
 
     def update_entry_on_autocomplete_select(self, x):
         self.search_bar.delete(0, ctk.END)
         self.search_bar.insert(0, x)
         self.update_suggestions_listbox(None)
+
+    def print_test(self, x):
+        print(x)

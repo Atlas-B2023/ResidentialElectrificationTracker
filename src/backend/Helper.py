@@ -202,8 +202,8 @@ def df_to_file(df: pl.DataFrame):
     df.write_csv(file_path, has_header=True)
 
 
-def get_unique_attrib_from_master_csv(attrib: str) -> list[Any]:
-    return master_df[attrib].unique().to_list()
+def get_unique_attrib_from_master_csv(attrib: str) -> pl.Series:
+    return master_df[attrib].unique()
 
 
 def _set_up_logger(level: int) -> logging.Logger:
