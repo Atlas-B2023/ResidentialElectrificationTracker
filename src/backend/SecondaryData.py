@@ -5,8 +5,8 @@ from typing import Any
 import json
 import pathlib
 
-import us.states as sts
-import Helper as Helper
+from .us import states as sts
+from backend import Helper
 import polars as pl
 import polars.selectors as cs
 import requests
@@ -62,7 +62,9 @@ class EIADataRetriever:
         self.eia_base_url = "https://api.eia.gov/v2"
         self.api_key = os.getenv("EIA_API_KEY")
         if self.api_key is None:
-            logger.critical("No Census API key found in a .env file in project directory. please request a key at https://www.eia.gov/opendata/register.php")
+            logger.critical(
+                "No Census API key found in a .env file in project directory. please request a key at https://www.eia.gov/opendata/register.php"
+            )
             exit()
 
     # normalize prices
@@ -370,7 +372,9 @@ class CensusAPI:
         # https://api.census.gov/data/2021/acs/acs5/profile/variables.html
         self.api_key = os.getenv("CENSUS_API_KEY")
         if self.api_key is None:
-            logger.critical("No Census API key found in a .env file in project directory. please request a key at https://api.census.gov/data/key_signup.html")
+            logger.critical(
+                "No Census API key found in a .env file in project directory. please request a key at https://api.census.gov/data/key_signup.html"
+            )
             exit()
 
     def get(self, url: str) -> requests.Response | None:
@@ -540,12 +544,3 @@ class CensusAPI:
         )
         # return df
         return True
-
-
-if __name__ == "__main__":
-    r = EIADataRetriever()
-    print(r.monthly_price_per_btu_by_energy_type(EIADataRetriever.EnergyTypes.HEATING_OIL, "MA", datetime.datetime(2022,1,1),datetime.datetime(2023,1,1)))
-    # path = pathlib.Path(os.path.dirname(__file__)).parent.parent / "output"
-    # print(path)
-    # print(r.get_table_group_for_zcta_by_state_by_year("DP05", "2019", "california"))
-    # print(r.get_table_row_label("DP05_0064PE", "2019"))

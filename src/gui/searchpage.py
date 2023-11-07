@@ -2,6 +2,11 @@ import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from CTkListbox import CTkListbox
 import re
+
+# import os
+# import sys
+
+from backend.Helper import get_unique_attrib_from_master_csv
 # from filters import RedfinFiltersWindow
 
 
@@ -9,16 +14,8 @@ class SearchPage(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         self.label_font = ctk.CTkFont("Roboto", 34)
-        self.entry_str_var = ctk.StringVar()
-        self.auto_complete_list = [
-            "hi",
-            "there",
-            "obiwan",
-            "new yourk",
-            "new York",
-            "new jersy",
-            "new jersey",
-        ]
+        self.MATCHES_TO_DISPLAY = 20  # performance and practicality
+        self.auto_complete_list = get_unique_attrib_from_master_csv("METRO_NAME")
         self.create_widgets()
 
         # self.redfin_filters = RedfinFiltersWindow(takefocus=True)
@@ -43,7 +40,10 @@ class SearchPage(ctk.CTkFrame):
             self, height=40, corner_radius=40, placeholder_text="Search for an MSA"
         )
         self.suggestion_list_box = CTkListbox(
-            master=self, text_color=("gray10", "#DCE4EE"), border_width=2
+            master=self,
+            text_color=("gray10", "#DCE4EE"), # type: ignore
+            border_width=2,
+            command=lambda x: self.update_entry_on_autocomplete_select(x),  
         )
         self.search_button = ctk.CTkButton(
             self,
@@ -69,7 +69,7 @@ class SearchPage(ctk.CTkFrame):
 
         self.search_bar.grid(column=1, row=1, sticky="ew")
 
-        self.suggestion_list_box.grid(column=1, row=2, sticky="new")
+        self.suggestion_list_box.grid(column=1, row=2, sticky="new", pady=(10, 0))
 
         self.search_button.grid(column=2, row=1, padx=(40, 0), sticky="w")
 
@@ -78,6 +78,7 @@ class SearchPage(ctk.CTkFrame):
         self.search_bar.bind(
             "<KeyRelease>", command=lambda x: self.update_suggestions_listbox(x)
         )
+        # self.suggestion_list_box.bind("<ListboxSelection>", lambda x: self.update_entry_on_autocomplete_select(x))
 
     def update_suggestions_listbox(self, x):
         cur_text = self.search_bar.get()
@@ -90,12 +91,20 @@ class SearchPage(ctk.CTkFrame):
                 for msa in self.auto_complete_list
             ]
             self.suggestion_list_box.grid()
-            print(matches)
+            count = 0
             for match in matches:
                 if match is not None:
+                    if count == self.MATCHES_TO_DISPLAY:
+                        break
+                    count = count + 1
                     self.suggestion_list_box.insert(
                         "end",
                         match.string,
                         border_width=2,
                         border_color="gray",
                     )
+
+    def update_entry_on_autocomplete_select(self, x):
+        self.search_bar.delete(0, ctk.END)
+        self.search_bar.insert(0, x)
+        self.update_suggestions_listbox(None)

@@ -3,12 +3,18 @@ import random
 import time
 from enum import StrEnum
 from pathlib import Path
+import os
+from typing import Any
 
 import polars as pl
 import requests
 from redfin import Redfin
 
 session = requests.Session()
+
+master_df = pl.read_csv(
+    f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}master.csv"
+)
 
 
 class ASCIIColors(StrEnum):
@@ -122,14 +128,12 @@ def zip_to_metro(zip: int) -> str:
     Returns:
         str: the Metropolitan name. Is empty if the ZIP code is not a part of a Metropolitan Statistical Area
     """
-    df = pl.read_csv("./augmenting_data/master.csv")
-
-    result = df.filter(df["ZIP"] == zip)["METRO_NAME"]
+    result = master_df.filter(master_df["ZIP"] == zip)["METRO_NAME"]
 
     if len(result) > 0:
         return result[0]
     else:
-        return "    "
+        return ""  # should this be none?
 
 
 def get_random_user_agent() -> str:
@@ -196,6 +200,10 @@ def df_to_file(df: pl.DataFrame):
     file_path = Path("./output") / f"{time.time()}_data_frame.csv"
     print(f"Dataframe saved to {file_path.resolve()}")
     df.write_csv(file_path, has_header=True)
+
+
+def get_unique_attrib_from_master_csv(attrib: str) -> list[Any]:
+    return master_df[attrib].unique().to_list()
 
 
 def _set_up_logger(level: int) -> logging.Logger:

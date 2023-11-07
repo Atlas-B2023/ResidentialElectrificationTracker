@@ -1,6 +1,6 @@
 import customtkinter as ctk
 
-from searchpage import SearchPage
+from .searchpage import SearchPage
 # from filters import RedfinFiltersWindow
 # from datapage import Datapage
 

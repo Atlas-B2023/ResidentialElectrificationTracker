@@ -6,9 +6,16 @@ from urllib.error import HTTPError
 import requests
 import io
 
-import Helper as Helper
+from backend import (
+    logger,
+    get_random_user_agent,
+    get_redfin_url_path,
+    req_get_to_file,
+    ASCIIColors,
+    metro_name_to_zip_code_list,
+)
 import polars as pl
-from RedfinListingScraper import RedfinListingScraper
+from backend import RedfinListingScraper
 from bs4 import BeautifulSoup as btfs
 
 
@@ -179,7 +186,7 @@ class RedfinSearcher:
             "LATITUDE": pl.Float32,
             "LONGITUDE": pl.Float32,
         }
-        self.logger = Helper.logger
+        self.logger = logger
         self.session = None
 
     def req_wrapper(self, url: str) -> requests.Response:
@@ -191,7 +198,7 @@ class RedfinSearcher:
 
     def get_gen_headers(self) -> dict[str, str]:
         return {
-            "User-Agent": Helper.get_random_user_agent(),
+            "User-Agent": get_random_user_agent(),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "en-US,en;q=0.5",
@@ -228,9 +235,7 @@ class RedfinSearcher:
             return f"/zipcode/{zip_code_or_city_and_state_or_address}"
 
         # Cache this to a json or something
-        path_url = (
-            f"{Helper.get_redfin_url_path(zip_code_or_city_and_state_or_address)}"
-        )
+        path_url = f"{get_redfin_url_path(zip_code_or_city_and_state_or_address)}"
         return path_url
 
     @staticmethod
@@ -322,7 +327,7 @@ class RedfinSearcher:
                 self.logger.info(f"Zip code does not exist {url}")
                 return None
             else:
-                Helper.req_get_to_file(req)
+                req_get_to_file(req)
                 raise TypeError(
                     f"Could not find CSV download. Check if the html downloaded is correct, or if the download button id has changed. Info: {url = }. {req.status_code = }, {len(html) = }"
                 )
@@ -430,11 +435,11 @@ class RedfinSearcher:
         """
         if filters_path is not None:
             self.logger.info(
-                f"Filter path was supplied, overwriting filter string {Helper.ASCIIColors.YELLOW}{self.filters_path}{Helper.ASCIIColors.RESET} with {Helper.ASCIIColors.YELLOW}{filters_path}{Helper.ASCIIColors.RESET}"
+                f"Filter path was supplied, overwriting filter string {ASCIIColors.YELLOW}{self.filters_path}{ASCIIColors.RESET} with {ASCIIColors.YELLOW}{filters_path}{ASCIIColors.RESET}"
             )
             self.set_filters_path(filters_path)
             self.logger.debug(f"Metro is using filter string: {self.filters_path}")
-        zip_codes = Helper.metro_name_to_zip_code_list(metro_name)
+        zip_codes = metro_name_to_zip_code_list(metro_name)
 
         if len(zip_codes) == 0:
             self.logger.debug("no zip codes returned from metro name conversion")

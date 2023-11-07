@@ -6,7 +6,7 @@ import time
 import random
 import requests
 
-import Helper
+from backend import logger, get_random_user_agent
 from bs4 import BeautifulSoup as btfs
 from bs4 import element
 
@@ -75,7 +75,7 @@ class RedfinListingScraper:
         if listing_url is not None:
             self.soup = self.make_soup(listing_url)
             self.listing_url = listing_url
-        self.logger = Helper.logger
+        self.logger = logger
         self.column_dict = {key: False for key in regex_category_patterns.keys()}
         self.session = None
 
@@ -101,7 +101,7 @@ class RedfinListingScraper:
             dict[str, str]: headers
         """
         return {
-            "User-Agent": Helper.get_random_user_agent(),
+            "User-Agent": get_random_user_agent(),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "en-US,en;q=0.6",
@@ -199,7 +199,7 @@ class RedfinListingScraper:
         if self.soup is None:
             self.logger.error("Soup is None for this listing.")
             # not sure how to handle, should not happen though
-        prop_details_container = self.soup.find("div", id="propertyDetails-collapsible") # type: ignore
+        prop_details_container = self.soup.find("div", id="propertyDetails-collapsible")  # type: ignore
 
         if prop_details_container is None:
             return None
