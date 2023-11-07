@@ -1,8 +1,8 @@
 import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from CTkListbox import CTkListbox
+from CTkMessagebox import CTkMessagebox
 from tkinter import Event
-import re
 import polars as pl
 
 # import os
@@ -57,6 +57,7 @@ class SearchPage(ctk.CTkFrame):
             corner_radius=10,
             border_width=2,
             text_color=("gray10", "#DCE4EE"),
+            command=self.validate_entry_box,
         )
 
         # make 2 rows, 3 cols
@@ -84,7 +85,7 @@ class SearchPage(ctk.CTkFrame):
         )
         # self.suggestion_list_box.bind("<ListboxSelection>", lambda x: self.update_entry_on_autocomplete_select(x))
 
-    def update_suggestions_listbox(self, x: Event):
+    def update_suggestions_listbox(self, x: Event | None):
         cur_text = self.search_bar.get()
         if cur_text == "":
             # only gets called when all text has been deleted
@@ -92,26 +93,48 @@ class SearchPage(ctk.CTkFrame):
             self.suggestion_list_box.grid_remove()
         else:
             self.suggestion_list_box.delete("all")
-            if self.current_auto_complete_series is None or len(cur_text) < self.prev_search_bar_len:
+            if (
+                self.current_auto_complete_series is None
+                or len(cur_text) < self.prev_search_bar_len
+            ):
                 self.current_auto_complete_series = self.auto_complete_series.filter(
                     self.auto_complete_series.str.contains(rf"(?i)^{cur_text}")
                 )
-            else: 
-                self.current_auto_complete_series = self.current_auto_complete_series.filter(
-                    self.current_auto_complete_series.str.contains(rf"(?i)^{cur_text}")
+            else:
+                self.current_auto_complete_series = (
+                    self.current_auto_complete_series.filter(
+                        self.current_auto_complete_series.str.contains(
+                            rf"(?i)^{cur_text}"
+                        )
+                    )
                 )
             self.suggestion_list_box.grid()
-            self.current_auto_complete_series.head(self.MATCHES_TO_DISPLAY).map_elements(
+            self.current_auto_complete_series.head(
+                self.MATCHES_TO_DISPLAY
+            ).map_elements(
                 lambda msa: self.suggestion_list_box.insert(
                     "end", msa, border_width=2, border_color="gray"
-                ), return_dtype=pl.Utf8
+                ),
+                return_dtype=pl.Utf8,
             )
         self.prev_search_bar_len = len(cur_text)
 
-    def update_entry_on_autocomplete_select(self, x):
+    def update_entry_on_autocomplete_select(self, x: Event):
         self.search_bar.delete(0, ctk.END)
         self.search_bar.insert(0, x)
         self.update_suggestions_listbox(None)
 
-    def print_test(self, x):
-        print(x)
+    def validate_entry_box(self):
+        cur_text = self.search_bar.get()
+        if len(cur_text) == 0:
+            cur_text = r"!^"
+        if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
+            print("success")
+            # pass to searcher
+        else:
+            CTkMessagebox(
+                self,
+                title="Error",
+                message="Inputted name is not in MSA name list!",
+                icon="warning",
+            )

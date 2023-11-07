@@ -4,7 +4,6 @@ import time
 from enum import StrEnum
 from pathlib import Path
 import os
-from typing import Any
 
 import polars as pl
 import requests
