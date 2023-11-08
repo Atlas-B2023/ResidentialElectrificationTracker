@@ -1,6 +1,7 @@
 import customtkinter as ctk
 
 from .searchpage import SearchPage
+from .datapage import DataPage
 # from filters import RedfinFiltersWindow
 # from datapage import Datapage
 
@@ -21,10 +22,10 @@ class App(ctk.CTk):
     def create_widgets(self):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        self.search_page_frame = SearchPage(master=self)
-        self.search_page_frame.grid(row=0, column=0, sticky="nsew")
-
-
-if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+        self.searchpage_frame = SearchPage(master=self)
+        self.datapage_frame = DataPage(master=self)
+        self.searchpage_frame.set_datapage(self.datapage_frame)
+        self.datapage_frame.set_searchpage(self.searchpage_frame)
+        self.datapage_frame.grid(row=0, column=0, sticky="nsew")
+        self.searchpage_frame.grid(row=0, column=0, sticky="nsew")
+        self.datapage_frame.grid_remove()

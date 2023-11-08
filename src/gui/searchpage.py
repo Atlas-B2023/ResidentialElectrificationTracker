@@ -13,8 +13,9 @@ from backend.Helper import get_unique_attrib_from_master_csv
 
 
 class SearchPage(ctk.CTkFrame):
-    def __init__(self, master, **kwargs):
+    def __init__(self, master: ctk.CTk, **kwargs):
         super().__init__(master, **kwargs)
+        self.datapage = None
         self.label_font = ctk.CTkFont("Roboto", 34)
         self.MATCHES_TO_DISPLAY = 20  # performance and practicality
         self.auto_complete_series = get_unique_attrib_from_master_csv("METRO_NAME")
@@ -129,8 +130,7 @@ class SearchPage(ctk.CTkFrame):
         if len(cur_text) == 0:
             cur_text = r"!^"
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
-            print("success")
-            # pass to searcher
+            self.go_to_data_page()
         else:
             CTkMessagebox(
                 self,
@@ -138,3 +138,11 @@ class SearchPage(ctk.CTkFrame):
                 message="Inputted name is not in MSA name list!",
                 icon="warning",
             )
+
+    def go_to_data_page(self):
+        if self.datapage is not None:
+            self.grid_remove()
+            self.datapage.grid()
+
+    def set_datapage(self, datapage):
+        self.datapage = datapage
