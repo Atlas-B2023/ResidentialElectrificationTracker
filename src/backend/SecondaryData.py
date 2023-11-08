@@ -567,11 +567,11 @@ class CensusAPI:
         df = (
             df.rename(df.head(1).to_dicts().pop())
             .slice(1)  # type: ignore
-            .drop("NAME", cs.matches("(?i)^(ann)"), cs.matches(f"{table}.*A\b"))
+            .drop("NAME", cs.matches("(?i)^(ann)"), cs.matches(f"(?i){table}"))
             .rename({"zip code tabulation area": "ZCTA", "state": "STATE_FIPS"})
             .cast(
                 {
-                    cs.matches("!!"): pl.Float32,
+                    # cs.matches(""): pl.Float32, find new way to do this
                     "STATE_FIPS": pl.Int32,
                     "ZCTA": pl.Int32,
                 }

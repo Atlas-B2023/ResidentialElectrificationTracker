@@ -67,7 +67,7 @@ class SearchPage(ctk.CTkFrame):
         self.columnconfigure((0, 2), weight=1)
         self.columnconfigure(1, weight=4)
         self.rowconfigure(0, weight=10)
-        self.rowconfigure(1, weight=1)
+        self.rowconfigure(1, weight=4)
         self.rowconfigure(2, weight=10)
 
         # put widgets in grid
@@ -132,8 +132,9 @@ class SearchPage(ctk.CTkFrame):
         if len(cur_text) == 0:
             cur_text = r"!^"
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
-            self.search_metros_threaded(cur_text)
-            self.go_to_data_page()
+            # self.search_metros_threaded(cur_text)
+            print(cur_text)
+            self.go_to_data_page(cur_text)
         else:
             CTkMessagebox(
                 self,
@@ -142,10 +143,11 @@ class SearchPage(ctk.CTkFrame):
                 icon="warning",
             )
 
-    def go_to_data_page(self):
+    def go_to_data_page(self, msa_name: str):
         if self.datapage is not None:
             self.grid_remove()
             self.datapage.grid()
+            self.datapage.set_msa_name(msa_name)
 
     def set_datapage(self, datapage):
         self.datapage = datapage

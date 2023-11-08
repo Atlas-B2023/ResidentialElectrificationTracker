@@ -206,6 +206,8 @@ def df_to_file(df: pl.DataFrame):
 def get_unique_attrib_from_master_csv(attrib: str) -> pl.Series:
     return master_df[attrib].unique()
 
+def get_states_in_metro(msa_name: str) -> list[str]:
+    return master_df.select(pl.col("STATE_ID"), pl.col("METRO_NAME")).filter(pl.col("METRO_NAME").eq(msa_name)).get_column("STATE_ID").unique().to_list()
 
 def _set_up_logger(level: int) -> logging.Logger:
     """Setup a logger object with basic config.
