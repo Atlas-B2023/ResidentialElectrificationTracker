@@ -4,6 +4,8 @@ from CTkListbox import CTkListbox
 from CTkMessagebox import CTkMessagebox
 from tkinter import Event
 import polars as pl
+import threading
+from backend.RedfinSearcher import RedfinSearcher as rfs
 
 # import os
 # import sys
@@ -58,7 +60,7 @@ class SearchPage(ctk.CTkFrame):
             corner_radius=10,
             border_width=2,
             text_color=("gray10", "#DCE4EE"),
-            command=self.validate_entry_box,
+            command=self.validate_entry_box_and_search,
         )
 
         # make 2 rows, 3 cols
@@ -125,11 +127,12 @@ class SearchPage(ctk.CTkFrame):
         self.search_bar.insert(0, x)
         self.update_suggestions_listbox(None)
 
-    def validate_entry_box(self):
+    def validate_entry_box_and_search(self):
         cur_text = self.search_bar.get()
         if len(cur_text) == 0:
             cur_text = r"!^"
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
+            self.search_metros_threaded(cur_text)
             self.go_to_data_page()
         else:
             CTkMessagebox(
@@ -146,3 +149,19 @@ class SearchPage(ctk.CTkFrame):
 
     def set_datapage(self, datapage):
         self.datapage = datapage
+
+    def search_metros_threaded(self, metro_name: str):
+        # get filters . submit button will validate them
+        redfin_searcher = rfs(
+            filters_path=rfs.generate_filters_path(
+                sort=rfs.Sort.MOST_RECENTLY_SOLD,
+                property_type=rfs.PropertyType.HOUSE,
+                min_year_built=2022,
+                max_year_built=2022,
+                include=rfs.Include.LAST_5_YEAR,
+                min_stories=rfs.Stories.ONE,
+            )
+        )
+        lock = threading.Lock()
+        with lock:
+            my_thread = threading.Thread(target=redfin_searcher.load_house_attributes_from_metro, args=("TEST",)).start()

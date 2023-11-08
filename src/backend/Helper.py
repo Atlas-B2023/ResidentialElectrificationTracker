@@ -88,9 +88,9 @@ def is_valid_zipcode(zip: int) -> bool:
         bool: if ZIP code is valid
     """
     # zip codes are stored as numbers in the csv as of 10/28/23
-    df = pl.read_csv("./augmenting_data/uszips.csv")
-
-    return zip in df["ZIP"]
+    if isinstance(zip, str):
+        zip = int(zip)
+    return zip in master_df["ZIP"]
 
 
 # when making class, init the csv and have it open in memory. not too much and saves on making the df every call
@@ -104,13 +104,15 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
         list[int]: list of ZIP codes found. Is empty if MSA name is invalid
     """
     if msa_name == "TEST":
-        # return [55424]  # good and small
+        return [55424]  # good and small
         # return [22067, 55424]  # nulls in sqft
-        return [10101, 90037, 55424, 33617]  # nulls in sqft and large
+        # return [10101, 90037, 55424, 33617]  # nulls in sqft and large
+    # path = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}uszips.csv"
 
-    df = pl.read_csv(
-        "./augmenting_data/master.csv", columns=["ZIP", "METRO_NAME", "LSAD"]
-    )
+    df = master_df.select("ZIP", "METRO_NAME", "LSAD") 
+    # pl.read_csv(
+    #     "./augmenting_data/master.csv", columns=["ZIP", "METRO_NAME", "LSAD"]
+    # )
 
     # MSAs are what were looking for in this project. Some MSA are repeated. can use unique(), but using a select is faster and better
     return df.filter(
