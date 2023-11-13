@@ -11,6 +11,9 @@ if __name__ == "__main__":
     print(
         c.get_acs5_subject_table_group_for_zcta_by_year("S1901", "2019")
     )
+    print(
+        c.get_acs5_profile_table_group_for_zcta_by_year("DP05", "2019")
+    )
     # print(
     #     c.get_acs5_profile_table_group_for_zcta_by_state_by_year(
     #         "DP05", "2019", "california"

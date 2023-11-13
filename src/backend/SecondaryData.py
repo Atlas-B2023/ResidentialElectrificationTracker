@@ -6,7 +6,6 @@ import json
 import pathlib
 import re
 
-from .us import states as sts
 from backend import Helper
 import polars as pl
 import polars.selectors as cs
@@ -16,6 +15,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 logger = Helper.logger
+cache_dir_path = f"{os.path.dirname(__file__)}{os.sep}.cache"
+output_dir_path = (
+    f"{pathlib.Path(os.path.dirname(__file__)).parent.parent}{os.sep}output"
+)
+
 # https://www.dcf.ks.gov/services/PPS/Documents/PPM_Forms/Section_5000_Forms/PPS5460_Instr.pdf
 replace_dict = {
     "PercentMarginOfError": "PME",
@@ -404,11 +408,52 @@ class CensusAPI:
         self.MAX_COL_NAME_LENGTH = 80
 
     def get(self, url: str) -> requests.Response | None:
-        r = requests.get(url, timeout=15)
+        r = requests.get(url, timeout=65)
         if r.status_code == 400:
             logger.info(f"Unknown variable {r.text.split("variable ")[-1]}")
             return None
         return r
+
+    def get_and_cache_data(
+        self, file_name: str, url_to_lookup_on_miss: str
+    ) -> dict[str, str] | bool:
+        """Cache files in the .cache folder
+
+        Args:
+            file_name (str): file name to save/lookup
+            url_to_lookup_on_miss (str): the Census url to lookup
+
+        Returns:
+            bool | dict[str, str] | None | Any: the dict of tablename:label or
+        """
+        try:
+            os.mkdir(cache_dir_path)
+        except FileExistsError:
+            logger.debug("Cache folder exists.")
+        except FileNotFoundError:
+            logger.debug("Parent folder for cache folder does not exist.")
+
+        my_json = None
+
+        try:
+            with open(f"{cache_dir_path}{os.sep}{file_name}", mode="r") as f:
+                logger.debug(f"Reading {file_name}")
+                try:
+                    my_json = json.load(f)
+                except json.JSONDecodeError:
+                    logger.error("Could not decode cached file")
+                    return False
+        except FileNotFoundError:
+            req = self.get(url_to_lookup_on_miss)
+            if req is None:
+                logger.info(f"{req = }")
+                return False
+            req.raise_for_status()
+            my_json = req.json()
+            with open(f"{cache_dir_path}{os.sep}{file_name}", "w") as f:
+                json.dump(my_json, f)
+
+        return my_json
 
     def get_race_makeup_by_zcta(self, zcta: str) -> str | None:
         """Get race make up by zcta from
@@ -432,7 +477,7 @@ class CensusAPI:
 
     def get_acs5_profile_table_to_group_name(
         self, table: str, year: str
-    ) -> dict[str, Any] | Any:
+    ) -> dict[str, Any] | None:
         """Get a JSON representation of a table's attributes.
 
         Note:
@@ -462,34 +507,17 @@ class CensusAPI:
         Returns:
             str | Any: json object
         """
-        # make cache a func
-        cache_file = ".cache"
-
-        try:
-            os.mkdir(cache_file)
-        except FileExistsError:
-            logger.debug("Cache folder exists.")
-        except FileNotFoundError:
-            logger.debug("Parent folder for cache folder does not exist.")
-
-        cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}{cache_file}{os.sep}{year}-acs5-profile-groups-{table}.json"
-        if os.path.exists(cache_file_rel_path):
-            with open(cache_file_rel_path, "r") as f:
-                logger.debug(f"cache for {cache_file_rel_path} being read.")
-                return json.load(f)["variables"]
-
-        logger.debug(f"making request and caching {cache_file_rel_path}.")
-        req = self.get(
+        cache_file_rel_path = f"{year}-acs5-profile-groups-{table}.json"
+        groups_url = (
             f"https://api.census.gov/data/{year}/acs/acs5/profile/groups/{table}.json"
         )
-        if req is None:
+        groups_to_label_translation = self.get_and_cache_data(
+            cache_file_rel_path, groups_url
+        )
+        if groups_to_label_translation is False:
+            logger.warning("Something is wrong with groups label dict")
             return None
-        req.raise_for_status()
-        req_json = req.json()
-        with open(cache_file_rel_path, "w") as f:
-            json.dump(req_json, f)
-
-        return req_json["variables"]
+        return groups_to_label_translation["variables"]  # type: ignore
 
     def translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
         self, headers: list[str], table: str, year: str
@@ -504,12 +532,15 @@ class CensusAPI:
             None: translates the list of table_row_selector to its english label
         """
         # is going to read the file multiple times, save last req as {"table": req_json[table]...} for this?
-        req_json = self.get_acs5_profile_table_to_group_name(table, year)
-        if req_json is None:
-            return req_json
+        groups_to_label_translation_dict = self.get_acs5_profile_table_to_group_name(
+            table, year
+        )
+        if groups_to_label_translation_dict is None:
+            logger.warning("Could not translate headers")
+            return groups_to_label_translation_dict
 
         for idx, header in enumerate(headers):
-            new_col_name_dict = req_json.get(header)
+            new_col_name_dict = groups_to_label_translation_dict.get(header)
             if new_col_name_dict is None:
                 # returns none if not in dict, means we have custom name and can continue
                 continue
@@ -534,8 +565,8 @@ class CensusAPI:
             if new_col_name not in headers[:idx]:
                 headers[idx] = new_col_name
 
-    def get_acs5_profile_table_group_for_zcta_by_state_by_year(
-        self, table: str, year: str, state: str
+    def get_acs5_profile_table_group_for_zcta_by_year(
+        self, table: str, year: str
     ) -> bool:
         """csv output of a acs 5 year profile survey table
 
@@ -544,72 +575,51 @@ class CensusAPI:
             year (str): year to search
             state (str): state
         """
-        state_enum = sts.lookup(state.title(), field="name")
-        if state_enum is None:
-            logger.error("Could not find state")
+        cache_file_rel_path = f"{os.sep}{year}-acs-profile-table-{table}.json"
+        url = f"https://api.census.gov/data/{year}/acs/acs5/profile?get=group({table})&for=zip%20code%20tabulation%20area:*"
+        list_of_list_table_json = self.get_and_cache_data(cache_file_rel_path, url)
+
+        if list_of_list_table_json is False:
+            logger.warning(
+                f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file."
+            )
             return False
-        state_fips = state_enum.fips
 
-        my_csv_json = None
-
-        cache_file = ".cache"
-
-        if not os.path.exists(cache_file):
-            os.makedirs(cache_file)
-
-        cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}.cache{os.sep}{year}-acs-profile-table-{table}-for-state-{state_fips}.json"
-
-        if os.path.exists(cache_file_rel_path):
-            with open(cache_file_rel_path, "r") as f:
-                logger.debug(f"cache for {cache_file_rel_path} being read.")
-                my_csv_json = json.load(f)
-        else:
-            # has to be 2019
-            url = f"https://api.census.gov/data/{year}/acs/acs5/profile?get=group({table})&for=zip%20code%20tabulation%20area:*&in=state:{state_fips}"
-            req = self.get(url)
-            if req is None:
-                logger.info(f"{req = }")
-                return False
-            my_csv_json = req.json()
-            with open(cache_file_rel_path, "w") as f:
-                json.dump(my_csv_json, f)
-
-        if my_csv_json is None:
-            logger.info(f"{my_csv_json = }")
-            return False
-        # list of lists, where header is first list
         self.translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
-            my_csv_json[0], table, year
+            list_of_list_table_json[0], # type: ignore
+            table,
+            year,  # type: ignore
         )
-        df = pl.DataFrame(my_csv_json, orient="row")
+
+        df = pl.DataFrame(list_of_list_table_json, orient="row")
+        # funky stuff to get the first list to be the name of the columns
         df = (
             df.rename(df.head(1).to_dicts().pop())
             .slice(1)  # type: ignore
             .drop("NAME", cs.matches("(?i)^(ann)"), cs.matches(f"(?i){table}"))
-            .rename({"zip code tabulation area": "ZCTA", "state": "STATE_FIPS"})
+            .rename({"zip code tabulation area": "ZCTA"})
             .cast(
                 {
-                    # cs.matches(""): pl.Float32, find new way to do this
-                    "STATE_FIPS": pl.Int32,
                     "ZCTA": pl.Int32,
                 }
             )
         )
-        parent_path = pathlib.Path(os.path.dirname(__file__)).parent.parent
-        df.write_csv(
-            f"{parent_path}{os.sep}output{os.sep}acs5-profile-group-{table}-zcta-state-{state_fips}.csv"
-        )
-        # return df
+        df.write_csv(f"{output_dir_path}{os.sep}acs5-profile-group-{table}-zcta.csv")
         return True
 
     # b
     def get_acs5_subject_table_to_group_name(
         self, table: str, year: str
-    ) -> dict[str, Any] | Any:
+    ) -> dict[str, Any] | None:
         """Get a JSON representation of a table's attributes.
 
         Note:
-            Tables must be chosen from https://api.census.gov/data/2021/acs/acs5/subject/groups.json.
+            Tables must be:
+                * DP02
+                * DP02PR
+                * DP03
+                * DP04
+                * DP05
 
             Returned object will have entries similar to:
             ```json
@@ -630,34 +640,17 @@ class CensusAPI:
         Returns:
             str | Any: json object
         """
-        # make cache a func
-        cache_file = ".cache"
-
-        try:
-            os.mkdir(cache_file)
-        except FileExistsError:
-            logger.debug("Cache folder exists.")
-        except FileNotFoundError:
-            logger.debug("Parent folder for cache folder does not exist.")
-
-        cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}{cache_file}{os.sep}{year}-acs5-subject-groups-{table}.json"
-        if os.path.exists(cache_file_rel_path):
-            with open(cache_file_rel_path, "r") as f:
-                logger.debug(f"cache for {cache_file_rel_path} being read.")
-                return json.load(f)["variables"]
-
-        logger.debug(f"making request and caching {cache_file_rel_path}.")
-        req = self.get(
+        cache_file_rel_path = f"{year}-acs5-subject-groups-{table}.json"
+        groups_url = (
             f"https://api.census.gov/data/{year}/acs/acs5/subject/groups/{table}.json"
         )
-        if req is None:
+        groups_to_label_translation = self.get_and_cache_data(
+            cache_file_rel_path, groups_url
+        )
+        if groups_to_label_translation is False:
+            logger.warning("Something is wrong with groups label dict")
             return None
-        req.raise_for_status()
-        req_json = req.json()
-        with open(cache_file_rel_path, "w") as f:
-            json.dump(req_json, f)
-
-        return req_json["variables"]
+        return groups_to_label_translation["variables"]  # type: ignore
 
     def translate_and_truncate_unique_acs5_subject_groups_to_labels_for_header_list(
         self, headers: list[str], table: str, year: str
@@ -672,12 +665,15 @@ class CensusAPI:
             None: translates the list of table_row_selector to its english label
         """
         # is going to read the file multiple times, save last req as {"table": req_json[table]...} for this?
-        req_json = self.get_acs5_subject_table_to_group_name(table, year)
-        if req_json is None:
-            return req_json
+        groups_to_label_translation_dict = self.get_acs5_subject_table_to_group_name(
+            table, year
+        )
+        if groups_to_label_translation_dict is None:
+            logger.warning("Could not translate headers")
+            return groups_to_label_translation_dict
 
         for idx, header in enumerate(headers):
-            new_col_name_dict = req_json.get(header)
+            new_col_name_dict = groups_to_label_translation_dict.get(header)
             if new_col_name_dict is None:
                 # returns none if not in dict, means we have custom name and can continue
                 continue
@@ -705,50 +701,31 @@ class CensusAPI:
     def get_acs5_subject_table_group_for_zcta_by_year(
         self, table: str, year: str
     ) -> bool:
-        """csv output of an acs 5 year subject survey table
+        """csv output of a acs 5 year subject survey table
 
         Args:
             table (str): census demo acs5 table
             year (str): year to search
             state (str): state
         """
+        cache_file_rel_path = f"{os.sep}{year}-acs-subject-table-{table}.json"
+        url = f"https://api.census.gov/data/{year}/acs/acs5/subject?get=group({table})&for=zip%20code%20tabulation%20area:*"
+        list_of_list_table_json = self.get_and_cache_data(cache_file_rel_path, url)
 
-        my_csv_json = None
-
-        cache_file = ".cache"
-
-        try:
-            os.mkdir(cache_file)
-        except FileExistsError:
-            logger.debug("Cache folder exists.")
-        except FileNotFoundError:
-            logger.debug("Parent folder for cache folder does not exist.")
-
-        cache_file_rel_path = f"{os.path.dirname(__file__)}{os.sep}{cache_file}{os.sep}{year}-acs5-subject-table-{table}.json"
-
-        if os.path.exists(cache_file_rel_path):
-            with open(cache_file_rel_path, "r") as f:
-                logger.debug(f"cache for {cache_file_rel_path} being read.")
-                my_csv_json = json.load(f)
-        else:
-            # has to be 2019
-            url = f"https://api.census.gov/data/{year}/acs/acs5/subject?get=group({table})&for=zip%20code%20tabulation%20area:*"
-            req = self.get(url)
-            if req is None:
-                logger.info(f"{req = }")
-                return False
-            my_csv_json = req.json()
-            with open(cache_file_rel_path, "w") as f:
-                json.dump(my_csv_json, f)
-
-        if my_csv_json is None:
-            logger.info(f"{my_csv_json = }")
+        if list_of_list_table_json is False:
+            logger.warning(
+                f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file."
+            )
             return False
-        # list of lists, where header is first list
+
         self.translate_and_truncate_unique_acs5_subject_groups_to_labels_for_header_list(
-            my_csv_json[0], table, year
+            list_of_list_table_json[0], # type: ignore
+            table,
+            year,  # type: ignore
         )
-        df = pl.DataFrame(my_csv_json, orient="row")
+
+        df = pl.DataFrame(list_of_list_table_json, orient="row")
+        # funky stuff to get the first list to be the name of the columns
         df = (
             df.rename(df.head(1).to_dicts().pop())
             .slice(1)  # type: ignore
@@ -760,9 +737,5 @@ class CensusAPI:
                 }
             )
         )
-        parent_path = pathlib.Path(os.path.dirname(__file__)).parent.parent
-        df.write_csv(
-            f"{parent_path}{os.sep}output{os.sep}acs5-subject-group-{table}-zcta.csv"
-        )
-        # return df
+        df.write_csv(f"{output_dir_path}{os.sep}acs5-subject-group-{table}-zcta.csv")
         return True

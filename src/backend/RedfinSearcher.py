@@ -23,17 +23,7 @@ from backend import (
 )
 from bs4 import BeautifulSoup as btfs
 
-http_client.HTTPConnection.debuglevel = 1
-
-logging.basicConfig()
-logging.getLogger().setLevel(logging.DEBUG)
-requests_log = logging.getLogger("requests.packages.urllib3")
-requests_log.setLevel(logging.DEBUG)
-requests_log.propagate = True
-
-output_dir_path = (
-    f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}output{os.sep}"
-)
+output_dir_path = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}output"
 
 
 class RedfinSearcher:
@@ -511,7 +501,7 @@ class RedfinSearcher:
             zip_code_search_page_csvs_df
         )
 
-        output_metro_dir_path = Path(f"{output_dir_path}{metro_name}{os.sep}")
+        output_metro_dir_path = Path(f"{output_dir_path}{os.sep}{metro_name}{os.sep}")
 
         try:
             os.mkdir(output_metro_dir_path)

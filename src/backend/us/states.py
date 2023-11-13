@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 FIPS_RE = re.compile(r"^\d{2}$")
 ABBR_RE = re.compile(r"^[a-zA-Z]{2}$")
 
-DC_STATEHOOD = bool(1) #for census 
+DC_STATEHOOD = bool(1)  # for census
 
 
 _lookup_cache: Dict[str, "State"] = {}
@@ -68,7 +68,7 @@ def lookup(val, field: Optional[str] = None, use_cache: bool = True) -> Optional
       * two letters will search for state abbreviation
 
     Exact matches can be done on any attribute on State objects by passing
-    the `field` argument. This does an exact, case-sensitive comparison against 
+    the `field` argument. This does an exact, case-sensitive comparison against
     the specified field.
 
     This method caches non-None results, but can the cache can be bypassed
