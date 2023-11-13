@@ -26,14 +26,17 @@ replace_dict = {
     "Estimate": "EST",
     "Percent": "PCT",
     "MarginOfError": "MOE",
-    "AnnotationOf": "ann",  # have to mess with select logic later down the line to get this shorter
-    "AmericanIndian": "_A_",
-    "BlackOrAfricanAmerica": "_B_",
+    "AnnotationOf": "ann",
+    "AmericanIndianAndAlaskaNative": "_A_",
+    "AmericanIndianOrAlaskaNative": "_A_",
+    "BlackOrAfricanAmerican": "_B_",
     "PacificIslanderIncludingNativeHawaiian": "_P_",
+    "NativeHawaiianAndOtherPacificIslander": "_P_",
     "Asian": "_S_",
     "White": "_W_",
     "Unknown": "_O_",
-    "(?<!Not)HispanicOrLatino": "_H_",  # make sure the way were doing this doesnt cause some race condition
+    "SomeOtherRace": "_O_",
+    "(?<!Not)HispanicOrLatino": "_H_",
     "NotHispanicOrLatino": "_N_",
     "TotalPopulation": "TPOP",
     "OrMore": "plus",
@@ -567,7 +570,7 @@ class CensusAPI:
 
     def get_acs5_profile_table_group_for_zcta_by_year(
         self, table: str, year: str
-    ) -> bool:
+    ) -> str:
         """csv output of a acs 5 year profile survey table
 
         Args:
@@ -583,10 +586,10 @@ class CensusAPI:
             logger.warning(
                 f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file."
             )
-            return False
+            return ""
 
         self.translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
-            list_of_list_table_json[0], # type: ignore
+            list_of_list_table_json[0],  # type: ignore
             table,
             year,  # type: ignore
         )
@@ -604,8 +607,9 @@ class CensusAPI:
                 }
             )
         )
-        df.write_csv(f"{output_dir_path}{os.sep}acs5-profile-group-{table}-zcta.csv")
-        return True
+        file_path = f"{output_dir_path}{os.sep}acs5-profile-group-{table}-zcta.csv"
+        df.write_csv(file_path)
+        return file_path
 
     # b
     def get_acs5_subject_table_to_group_name(
@@ -700,7 +704,7 @@ class CensusAPI:
 
     def get_acs5_subject_table_group_for_zcta_by_year(
         self, table: str, year: str
-    ) -> bool:
+    ) -> str:
         """csv output of a acs 5 year subject survey table
 
         Args:
@@ -716,10 +720,10 @@ class CensusAPI:
             logger.warning(
                 f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file."
             )
-            return False
+            return ""
 
         self.translate_and_truncate_unique_acs5_subject_groups_to_labels_for_header_list(
-            list_of_list_table_json[0], # type: ignore
+            list_of_list_table_json[0],  # type: ignore
             table,
             year,  # type: ignore
         )
@@ -737,5 +741,6 @@ class CensusAPI:
                 }
             )
         )
-        df.write_csv(f"{output_dir_path}{os.sep}acs5-subject-group-{table}-zcta.csv")
-        return True
+        file_path = f"{output_dir_path}{os.sep}acs5-subject-group-{table}-zcta.csv"
+        df.write_csv(file_path)
+        return file_path

@@ -164,7 +164,7 @@ def get_random_user_agent() -> str:
 
 
 def req_get_wrapper(url: str) -> requests.Response:
-    """Wrapper for requests. Uses a random short sleep and random user agent string.
+    """Wrapper for requests. Uses a random short sleep and random user agent string. DO NOT USE
 
     Args:
         url (str): url to pass to `requests.get()`
@@ -173,7 +173,7 @@ def req_get_wrapper(url: str) -> requests.Response:
         requests.Response: the response object
     """
     time.sleep(random.uniform(0.6, 1.1))
-    req = session.get(
+    req = redfin_session.get(
         url,
         headers={"User-Agent": get_random_user_agent()},
         timeout=17,

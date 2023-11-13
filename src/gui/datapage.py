@@ -1,14 +1,21 @@
 import customtkinter as ctk
 from datetime import datetime
+import polars as pl
+import polars.selectors as cs
 from backend import Helper
+from backend.SecondaryData import CensusAPI
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 
 class DataPage(ctk.CTkFrame):
-    def __init__(self, master: ctk.CTk, **kwargs):
+    def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
-        self.searchpage = None
         self.msa_name = None
+        self.income_df = None
+        self.demog_df = None
         self.create_widgets()
+        self.update_state_income_figure()
 
     def create_widgets(self):
         # copy paste for state metro and zip
@@ -47,24 +54,40 @@ class DataPage(ctk.CTkFrame):
             str(cur_year - 3),
             str(cur_year - 4),
         ]
-        # can make helper for get state in metros,
+        # state "pane"
+        self.state_select_state_label = ctk.CTkLabel(
+            self.state_dropdown_frame, text="Select State"
+        )
         self.state_select_state_dropdown_button = ctk.CTkOptionMenu(
             self.state_dropdown_frame,
             values=None,
         )
+        self.state_select_year_label = ctk.CTkLabel(
+            self.state_dropdown_frame, text="Select Year"
+        )
         self.state_select_year_dropdown_button = ctk.CTkOptionMenu(
             self.state_dropdown_frame, values=years
+        )
+        self.metro_select_year_label = ctk.CTkLabel(
+            self.metro_dropdown_frame, text="Select Year"
         )
         self.metro_select_year_dropdown_button = ctk.CTkOptionMenu(
             self.metro_dropdown_frame, values=years
         )
+        self.zip_select_zip_label = ctk.CTkLabel(
+            self.zip_dropdown_frame, text="Select ZIP"
+        )
         self.zip_select_zip_dropdown_button = ctk.CTkOptionMenu(
             self.zip_dropdown_frame, values=None
+        )
+        self.zip_select_year_label = ctk.CTkLabel(
+            self.zip_dropdown_frame, text="Select Year"
         )
         self.zip_select_year_dropdown_button = ctk.CTkOptionMenu(
             self.zip_dropdown_frame, values=years
         )
 
+        self.state_income_figure_frame = ctk.CTkFrame(self.state_frame, border_width=2)
         self.progress_bar_frame = ctk.CTkFrame(self, border_width=2)
         self.progress_bar = ctk.CTkProgressBar(
             self.progress_bar_frame, orientation="horizontal"
@@ -91,6 +114,8 @@ class DataPage(ctk.CTkFrame):
         self.metro_dropdown_frame.columnconfigure(0, weight=1)
         self.zip_dropdown_frame.columnconfigure((0, 1), weight=1)
 
+        self.state_income_figure_frame.columnconfigure(0, weight=1)
+
         self.progress_bar_frame.columnconfigure(0, weight=50)
         self.progress_bar_frame.columnconfigure(1, weight=1)
         # row
@@ -100,9 +125,9 @@ class DataPage(ctk.CTkFrame):
         self.state_frame.rowconfigure(0, weight=1)
         self.state_frame.rowconfigure((1, 2, 3), weight=10)
         self.metro_frame.rowconfigure(0, weight=1)
-        self.metro_frame.rowconfigure((1, 2), weight=10)
+        self.metro_frame.rowconfigure((1, 2, 3), weight=10)
         self.zip_frame.rowconfigure(0, weight=1)
-        self.zip_frame.rowconfigure((1, 2), weight=10)
+        self.zip_frame.rowconfigure((1, 2, 3), weight=10)
 
         self.state_banner_frame.rowconfigure(0, weight=1)
         self.metro_banner_frame.rowconfigure(0, weight=1)
@@ -111,6 +136,8 @@ class DataPage(ctk.CTkFrame):
         self.state_dropdown_frame.rowconfigure((0, 1), weight=1)
         self.metro_dropdown_frame.rowconfigure(0, weight=1)
         self.zip_dropdown_frame.rowconfigure((0, 1), weight=1)
+
+        self.state_income_figure_frame.rowconfigure(0, weight=1)
 
         self.progress_bar_frame.rowconfigure(0, weight=1)
 
@@ -131,24 +158,25 @@ class DataPage(ctk.CTkFrame):
         self.metro_dropdown_frame.grid(column=1, row=0)
         self.zip_dropdown_frame.grid(column=1, row=0)
 
-        self.state_select_year_dropdown_button.grid(column=1, row=1)
+        self.state_select_state_label.grid(column=0, row=0)
+        self.state_select_year_label.grid(column=1, row=0)
         self.state_select_state_dropdown_button.grid(column=0, row=1)
+        self.state_select_year_dropdown_button.grid(column=1, row=1)
+
+        self.metro_select_year_label.grid(column=0, row=0)
         self.metro_select_year_dropdown_button.grid(column=0, row=1)
+
+        self.zip_select_zip_label.grid(column=0, row=0)
+        self.zip_select_year_label.grid(column=1, row=0)
         self.zip_select_zip_dropdown_button.grid(column=0, row=1)
         self.zip_select_year_dropdown_button.grid(column=1, row=1)
+
+        self.state_income_figure_frame.grid(column=1, row=3)
 
         self.progress_bar_frame.grid(row=1, column=0, columnspan=3, sticky="news")
         self.progress_bar.grid(column=0, row=0, sticky="we")
         self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
         # btn = ctk.CTkButton(self, text="Press me", command=self.go_back_to_search_page)
-
-    def go_back_to_search_page(self):
-        if self.searchpage is not None:
-            self.grid_remove()
-            self.searchpage.grid()
-
-    def set_searchpage(self, searchpage):
-        self.searchpage = searchpage
 
     def set_msa_name(self, msa_name: str):
         self.msa_name = msa_name
@@ -160,8 +188,44 @@ class DataPage(ctk.CTkFrame):
             values=Helper.get_states_in_msa(self.msa_name)
         )
 
-        zip_list = Helper.metro_name_to_zip_code_list(msa_name)
-        zip_list = [str(zip) for zip in zip_list]
-        self.zip_select_zip_dropdown_button.configure(values=zip_list)
-        if len(zip_list) > 0:
-            self.zip_select_zip_dropdown_button.set(zip_list[0])
+        self.zip_list = Helper.metro_name_to_zip_code_list(msa_name)
+        self.zip_list = [str(zip) for zip in self.zip_list]
+        self.zip_select_zip_dropdown_button.configure(values=self.zip_list)
+        if len(self.zip_list) > 0:
+            self.zip_select_zip_dropdown_button.set(self.zip_list[0])
+
+    def set_up_census_tables(self):
+        # stored as ints in file
+        c = CensusAPI()
+        # can make underlying functions async to do both at the same time
+        self.income_df = (
+            pl.scan_csv(
+                c.get_acs5_subject_table_group_for_zcta_by_year("S1901", "2019")
+            )
+            .filter(pl.col("ZCTA").is_in([int(zip) for zip in self.zip_list]))
+            .select(cs.matches(r"ESTHouseholdsTotal\$ZCTA"))
+            .collect()
+        )
+
+        self.demog_df = pl.scan_csv(
+            c.get_acs5_profile_table_group_for_zcta_by_year("DP05", "2019")
+        ).select(
+            cs.matches(r"(?i)PCTRaceAloneOrInCombinationWith1plusOtherRacesTPOP|ZCTA")
+        )
+
+    def update_state_income_figure(self):
+        stockListExp = ["AMZN", "AAPL", "JETS", "CCL", "NCLH"]
+        stockSplitExp = [15, 25, 40, 10, 10]
+        state_income_pie_chart_figure = Figure(facecolor="blue")
+        ax = state_income_pie_chart_figure.add_subplot(111)  # add an Axes to the figure
+        ax.pie(
+            stockSplitExp,
+            radius=1,
+            labels=stockListExp,
+            autopct="%0.2f%%",
+            shadow=False,
+        )
+        chart = FigureCanvasTkAgg(
+            state_income_pie_chart_figure, self.state_income_figure_frame
+        )
+        chart.get_tk_widget().grid(row=0, column=0)

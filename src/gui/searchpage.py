@@ -6,6 +6,7 @@ from tkinter import Event
 import polars as pl
 import threading
 from backend.RedfinSearcher import RedfinSearcher as rfs
+from .datapage import DataPage
 
 # import os
 # import sys
@@ -17,7 +18,8 @@ from backend.Helper import get_unique_msa_from_master
 class SearchPage(ctk.CTkFrame):
     def __init__(self, master: ctk.CTk, **kwargs):
         super().__init__(master, **kwargs)
-        self.datapage = None
+        self.master = master
+        # self.datapage = None
         self.label_font = ctk.CTkFont("Roboto", 34)
         self.MATCHES_TO_DISPLAY = 20  # performance and practicality
         self.auto_complete_series = get_unique_msa_from_master()
@@ -47,7 +49,7 @@ class SearchPage(ctk.CTkFrame):
             self, height=40, corner_radius=40, placeholder_text="Search for an MSA"
         )
         self.suggestion_list_box = CTkListbox(
-            master=self,
+            self,
             text_color=("gray10", "#DCE4EE"),  # type: ignore
             border_width=2,
             command=lambda x: self.update_entry_on_autocomplete_select(x),
@@ -81,12 +83,10 @@ class SearchPage(ctk.CTkFrame):
 
         self.search_button.grid(column=2, row=1, padx=(40, 0), sticky="w")
 
-        # misc
         self.suggestion_list_box.grid_remove()
         self.search_bar.bind(
             "<KeyRelease>", command=lambda x: self.update_suggestions_listbox(x)
         )
-        # self.suggestion_list_box.bind("<ListboxSelection>", lambda x: self.update_entry_on_autocomplete_select(x))
 
     def update_suggestions_listbox(self, x: Event | None):
         cur_text = self.search_bar.get()
@@ -132,7 +132,9 @@ class SearchPage(ctk.CTkFrame):
         if len(cur_text) == 0:
             cur_text = r"!^"
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
-            self.search_metros_threaded(cur_text)
+            self.datapage = DataPage(self.master)
+            self.datapage.grid(row=0, column=0, sticky="news")
+            # self.search_metros_threaded(cur_text)
             self.go_to_data_page(cur_text)
         else:
             CTkMessagebox(
@@ -147,9 +149,6 @@ class SearchPage(ctk.CTkFrame):
             self.grid_remove()
             self.datapage.grid()
             self.datapage.set_msa_name(msa_name)
-
-    def set_datapage(self, datapage):
-        self.datapage = datapage
 
     def search_metros_threaded(self, metro_name: str):
         # get filters . submit button will validate them
