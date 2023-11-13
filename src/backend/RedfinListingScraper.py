@@ -1,12 +1,13 @@
 import copy
-import re
 import itertools
-from typing import Any
-import time
 import random
-import requests
+import re
+import time
+from datetime import datetime
+from typing import Any
 
-from backend import logger, get_random_user_agent
+import requests
+from backend import get_random_user_agent, logger, redfin_session
 from bs4 import BeautifulSoup as btfs
 from bs4 import element
 
@@ -77,7 +78,7 @@ class RedfinListingScraper:
             self.listing_url = listing_url
         self.logger = logger
         self.column_dict = {key: False for key in regex_category_patterns.keys()}
-        self.session = None
+        self.session = requests.Session()
 
     def req_wrapper(self, url: str) -> requests.Response:
         """A `request.get()` wrapper for connection pooling to Redfin's CSV download page
@@ -88,29 +89,38 @@ class RedfinListingScraper:
         Returns:
             requests.Response: the `Response` object
         """
-        if self.session is None:
-            self.session = requests.Session()
-        time.sleep(random.uniform(0.6, 1.1))
-        req = self.session.get(url, headers=self.get_gen_headers())
+        time.sleep(random.uniform(1.1, 4))
+        redfin_session.headers = self.get_gen_headers(url)  # type: ignore
+        req = redfin_session.get(url)
+        self.logger.info(f"{req.cookies.keys() =}")
         return req
 
-    def get_gen_headers(self) -> dict[str, str]:
+    def get_gen_headers(self, url) -> dict[str, str]:
         """Generate headers for a connection to the Redfin CSV download page
 
         Returns:
             dict[str, str]: headers
         """
+        referer_num = random.choice([1, 2, 3])
+        referer = url
+        if referer_num == 1:
+            referer = "https://www.google.com/"
+        elif referer_num == 2:
+            referer = "https://ogs.google.com/"
+
         return {
             "User-Agent": get_random_user_agent(),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.6",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "max-age=0",
             "Sec-Fetch-Dest": "document",
             "Sec-Fetch-Mode": "navigate",
-            "Sec-GPC": "1",
             "Sec-Fetch-Site": "same-origin",
+            "Sec-GPC": "1",
             "Upgrade-Insecure-Requests": "1",
-            "Cache-Control": "max-age=0",
+            # you can make this more complicated, like coming from a listing page, or something like https://www.redfin.com/city/14825/MI/New-Buffalo
+            "Referer": referer,
         }
 
     def make_soup(self, listing_url: str) -> btfs:
@@ -200,8 +210,16 @@ class RedfinListingScraper:
             self.logger.error("Soup is None for this listing.")
             # not sure how to handle, should not happen though
         prop_details_container = self.soup.find("div", id="propertyDetails-collapsible")  # type: ignore
-
+        logger.info(f"{prop_details_container =}")
         if prop_details_container is None:
+            # logging handled in caller since we dont know the address in this scope
+            if self.soup is not None:
+                robot = self.soup.findAll(text=re.compile("you're not a robot"))
+                if len(robot) > 0:
+                    self.logger.warning("Web scraping likely detected!!")
+                else:
+                    self.logger.warning("Soup is not none, check contents!!")
+                # self.logger.debug(f"{self.soup = }")
             return None
         prop_details = prop_details_container.find("div", class_="amenities-container")  # type: ignore
         if prop_details is None:
@@ -313,7 +331,8 @@ class RedfinListingScraper:
                 )
                 return self.column_dict
         else:
-            self.logger.info(f"Could not find property details for {addr}.")
+            self.logger.warning(f"Could not find property details for {addr}.")
+            # self.logger.info(f"{self.soup =}")
             return self.column_dict
 
         return self.heating_terms_list_to_categorized_df_dict(heating_terms)

@@ -118,3 +118,7 @@ Each house takes about 1.7 seconds averaged over the programs run time. This inc
 # Documentation
 
 Documentation is done with mkdocs, mkdocstrings, mkdocs_gen_files, and mkdocs-material. To build documentation, run `mkdocs serve`. To build a static site, run `mkdocs build`, and the output will be in the sites directory.
+
+# Output
+
+output from running the program happens in two places, in output/, and in src/backend/.cache/. In output, there are folders with the names of metropolitans. inside are files with the name of a zip code. in these zip code files, the data collected is stored and can be retrieved. In src/backend/.cache, census data is stored. this will likely by changed to be another top level folder in output/. It will have the lookups in one folder, and outputs of our cleaned data in another folder

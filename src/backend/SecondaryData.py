@@ -16,13 +16,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 logger = Helper.logger
-# https://www.dcf.ks.gov/services/PPS/Documents/PPM_Forms/Section_5000_Forms/PPS5460_Instr.pdf                
+# https://www.dcf.ks.gov/services/PPS/Documents/PPM_Forms/Section_5000_Forms/PPS5460_Instr.pdf
 replace_dict = {
     "PercentMarginOfError": "PME",
     "Estimate": "EST",
     "Percent": "PCT",
     "MarginOfError": "MOE",
-    "AnnotationOf": "ann", #have to mess with select logic later down the line to get this shorter
+    "AnnotationOf": "ann",  # have to mess with select logic later down the line to get this shorter
     "AmericanIndian": "_A_",
     "BlackOrAfricanAmerica": "_B_",
     "PacificIslanderIncludingNativeHawaiian": "_P_",
@@ -32,12 +32,13 @@ replace_dict = {
     "HispanicOrLatino": "_H_",
     "NotHispanicOrLatino": "_N_",
     "TotalPopulation": "TPOP",
-    "OrMore" : "plus",
+    "OrMore": "plus",
     "AndOver": "plus",
     "One": "1",
     "Two": "2",
     "Three": "3",
 }
+
 
 class EIADataRetriever:
     """https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
@@ -491,15 +492,15 @@ class CensusAPI:
         req_json = self.get_table_to_group_name(table, year)
         if req_json is None:
             return req_json
-        
+
         for idx, header in enumerate(headers):
             new_col_name_dict = req_json.get(header)
             if new_col_name_dict is None:
                 # returns none if not in dict, means we have custom name and can continue
                 continue
             new_col_name = new_col_name_dict["label"]
-            #qgis doesnt allow field names of 80+ chars. massage into form, then cut off
-            #delimiter for table subsection
+            # qgis doesnt allow field names of 80+ chars. massage into form, then cut off
+            # delimiter for table subsection
             new_col_name = re.sub("!!", " ", new_col_name)
             new_col_name = re.sub(r"\s+", " ", new_col_name)
             # easier to read
@@ -507,11 +508,13 @@ class CensusAPI:
             for idy, no_format in enumerate(new_col_name_parts):
                 new_col_name_parts[idy] = no_format.capitalize()
             new_col_name = "".join(new_col_name_parts)
-            #shortenings to fit length requirement
+            # shortenings to fit length requirement
             for key, value in replace_dict.items():
                 new_col_name = re.sub(key, value, new_col_name)
-            # limiter 
-            new_col_name = new_col_name[:min(len(new_col_name), self.MAX_COL_NAME_LENGTH)]
+            # limiter
+            new_col_name = new_col_name[
+                : min(len(new_col_name), self.MAX_COL_NAME_LENGTH)
+            ]
 
             if new_col_name not in headers[:idx]:
                 headers[idx] = new_col_name

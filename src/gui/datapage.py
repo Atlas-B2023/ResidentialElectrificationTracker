@@ -20,13 +20,9 @@ class DataPage(ctk.CTkFrame):
         self.zip_frame = ctk.CTkFrame(self, border_width=2)
 
         # display column name and dropdown filters
-        self.state_banner_frame = ctk.CTkFrame(
-            self.state_frame, border_width=2, height=50
-        )
-        self.metro_banner_frame = ctk.CTkFrame(
-            self.metro_frame, border_width=2, height=50
-        )
-        self.zip_banner_frame = ctk.CTkFrame(self.zip_frame, border_width=2, height=50)
+        self.state_banner_frame = ctk.CTkFrame(self.state_frame, border_width=2)
+        self.metro_banner_frame = ctk.CTkFrame(self.metro_frame, border_width=2)
+        self.zip_banner_frame = ctk.CTkFrame(self.zip_frame, border_width=2)
 
         self.state_banner_text = ctk.CTkLabel(
             self.state_banner_frame, text="State Statistics"
@@ -53,7 +49,8 @@ class DataPage(ctk.CTkFrame):
         ]
         # can make helper for get state in metros,
         self.state_select_state_dropdown_button = ctk.CTkOptionMenu(
-            self.state_dropdown_frame, values=None, 
+            self.state_dropdown_frame,
+            values=None,
         )
         self.state_select_year_dropdown_button = ctk.CTkOptionMenu(
             self.state_dropdown_frame, values=years
@@ -73,6 +70,7 @@ class DataPage(ctk.CTkFrame):
             self.progress_bar_frame, orientation="horizontal"
         )
         # need some shared memory or queue to get current zip codes and completed zip codes https://pythonforthelab.com/blog/handling-and-sharing-data-between-threads/
+        # can get total by getting list from helper func when creating the frame. and get completed by using `watchdog` to scan for dir changes in the metros folder
         self.progress_words = ctk.CTkLabel(
             self.progress_bar_frame, text="18/713 ZIP codes"
         )
@@ -99,9 +97,12 @@ class DataPage(ctk.CTkFrame):
         self.rowconfigure(0, weight=50)
         self.rowconfigure(1, weight=1)
 
-        self.state_frame.rowconfigure((0, 1, 2, 3), weight=1)
-        self.metro_frame.rowconfigure((0, 1, 2), weight=1)
-        self.zip_frame.rowconfigure((0, 1, 2), weight=1)
+        self.state_frame.rowconfigure(0, weight=1)
+        self.state_frame.rowconfigure((1, 2, 3), weight=10)
+        self.metro_frame.rowconfigure(0, weight=1)
+        self.metro_frame.rowconfigure((1, 2), weight=10)
+        self.zip_frame.rowconfigure(0, weight=1)
+        self.zip_frame.rowconfigure((1, 2), weight=10)
 
         self.state_banner_frame.rowconfigure(0, weight=1)
         self.metro_banner_frame.rowconfigure(0, weight=1)
@@ -151,14 +152,16 @@ class DataPage(ctk.CTkFrame):
 
     def set_msa_name(self, msa_name: str):
         self.msa_name = msa_name
-        # configure drop boxes that need the data
-        states = Helper.get_states_in_metro(self.msa_name)
-
-        if len(states) > 0:
+        state_list = Helper.get_states_in_msa(self.msa_name)
+        if len(state_list) > 0:
             self.state_select_state_dropdown_button.configure()
+            self.state_select_state_dropdown_button.set(state_list[0])
         self.state_select_state_dropdown_button.configure(
-            values=Helper.get_states_in_metro(self.msa_name)
+            values=Helper.get_states_in_msa(self.msa_name)
         )
+
         zip_list = Helper.metro_name_to_zip_code_list(msa_name)
-        zip_list = [str(zip) for zip in zip_list]  # error check
+        zip_list = [str(zip) for zip in zip_list]
         self.zip_select_zip_dropdown_button.configure(values=zip_list)
+        if len(zip_list) > 0:
+            self.zip_select_zip_dropdown_button.set(zip_list[0])

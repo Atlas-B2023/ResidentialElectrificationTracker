@@ -9,8 +9,7 @@ import polars as pl
 import requests
 from redfin import Redfin
 
-session = requests.Session()
-
+redfin_session = requests.Session()
 master_df = pl.read_csv(
     f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}master.csv"
 )
@@ -109,15 +108,20 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
         # return [10101, 90037, 55424, 33617]  # nulls in sqft and large
     # path = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}uszips.csv"
 
-    df = master_df.select("ZIP", "METRO_NAME", "LSAD") 
+    df = master_df.select("ZIP", "METRO_NAME", "LSAD")
     # pl.read_csv(
     #     "./augmenting_data/master.csv", columns=["ZIP", "METRO_NAME", "LSAD"]
     # )
 
-    # MSAs are what were looking for in this project. Some MSA are repeated. can use unique(), but using a select is faster and better
-    return df.filter(
-        (df["METRO_NAME"] == msa_name) & (df["LSAD"] == "Metropolitan Statistical Area")
-    )["ZIP"].to_list()
+    # MSAs are what were looking for in this project.
+    return (
+        df.filter(
+            (pl.col("METRO_NAME").eq(msa_name))
+            & (pl.col("LSAD").eq("Metropolitan Statistical Area"))
+        )
+        .unique()["ZIP"]
+        .to_list()
+    )
 
 
 def zip_to_metro(zip: int) -> str:
@@ -203,11 +207,29 @@ def df_to_file(df: pl.DataFrame):
     df.write_csv(file_path, has_header=True)
 
 
-def get_unique_attrib_from_master_csv(attrib: str) -> pl.Series:
-    return master_df[attrib].unique()
+def get_unique_msa_from_master() -> pl.Series:
+    return (
+        master_df.filter(pl.col("LSAD").eq("Metropolitan Statistical Area"))
+        .select("METRO_NAME")
+        .unique()
+        .to_series()
+    )
 
-def get_states_in_metro(msa_name: str) -> list[str]:
-    return master_df.select(pl.col("STATE_ID"), pl.col("METRO_NAME")).filter(pl.col("METRO_NAME").eq(msa_name)).get_column("STATE_ID").unique().to_list()
+
+def get_states_in_msa(msa_name: str) -> list[str]:
+    return (
+        master_df.select("STATE_ID", "METRO_NAME", "LSAD")
+        .filter(
+            (
+                pl.col("METRO_NAME").eq(msa_name)
+                & pl.col("LSAD").eq("Metropolitan Statistical Area")
+            )
+        )
+        .get_column("STATE_ID")
+        .unique()
+        .to_list()
+    )
+
 
 def _set_up_logger(level: int) -> logging.Logger:
     """Setup a logger object with basic config.

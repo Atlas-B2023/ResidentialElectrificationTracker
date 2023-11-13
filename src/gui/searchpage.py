@@ -10,7 +10,7 @@ from backend.RedfinSearcher import RedfinSearcher as rfs
 # import os
 # import sys
 
-from backend.Helper import get_unique_attrib_from_master_csv
+from backend.Helper import get_unique_msa_from_master
 # from filters import RedfinFiltersWindow
 
 
@@ -20,7 +20,7 @@ class SearchPage(ctk.CTkFrame):
         self.datapage = None
         self.label_font = ctk.CTkFont("Roboto", 34)
         self.MATCHES_TO_DISPLAY = 20  # performance and practicality
-        self.auto_complete_series = get_unique_attrib_from_master_csv("METRO_NAME")
+        self.auto_complete_series = get_unique_msa_from_master()
         self.current_auto_complete_series = None
         self.prev_search_bar_len = 0
         self.create_widgets()
@@ -132,8 +132,7 @@ class SearchPage(ctk.CTkFrame):
         if len(cur_text) == 0:
             cur_text = r"!^"
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
-            # self.search_metros_threaded(cur_text)
-            print(cur_text)
+            self.search_metros_threaded(cur_text)
             self.go_to_data_page(cur_text)
         else:
             CTkMessagebox(
@@ -166,4 +165,8 @@ class SearchPage(ctk.CTkFrame):
         )
         lock = threading.Lock()
         with lock:
-            my_thread = threading.Thread(target=redfin_searcher.load_house_attributes_from_metro, args=("TEST",)).start()
+            my_thread = threading.Thread(
+                target=redfin_searcher.load_house_attributes_from_metro_to_file,
+                args=("TEST",),
+                daemon=True,
+            ).start()

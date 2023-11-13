@@ -1,22 +1,39 @@
-from datetime import datetime, timedelta
-from enum import StrEnum
+import http.client as http_client
+import io
+import logging
+import os
 import random
 import time
+from datetime import datetime, timedelta
+from enum import StrEnum
+from pathlib import Path
 from urllib.error import HTTPError
-import requests
-import io
 
+import polars as pl
+import requests
 from backend import (
-    logger,
+    ASCIIColors,
+    RedfinListingScraper,
     get_random_user_agent,
     get_redfin_url_path,
-    req_get_to_file,
-    ASCIIColors,
+    logger,
     metro_name_to_zip_code_list,
+    redfin_session,
+    req_get_to_file,
 )
-import polars as pl
-from backend import RedfinListingScraper
 from bs4 import BeautifulSoup as btfs
+
+http_client.HTTPConnection.debuglevel = 1
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
+
+output_dir_path = (
+    f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}output{os.sep}"
+)
 
 
 class RedfinSearcher:
@@ -187,13 +204,16 @@ class RedfinSearcher:
             "LONGITUDE": pl.Float32,
         }
         self.logger = logger
-        self.session = None
+        self.session = requests.Session()
 
     def req_wrapper(self, url: str) -> requests.Response:
-        if self.session is None:
-            self.session = requests.Session()
-        time.sleep(random.uniform(0.6, 1.1))
-        req = self.session.get(url, headers=self.get_gen_headers())
+        # redfin refusing to connect on listing connections. can reproduce on browser by blocking all cookies
+        #     self.session = requests.Session()
+        # redfin gets about 38 visits a second per month
+        time.sleep(random.uniform(1.1, 4))
+        redfin_session.headers = self.get_gen_headers()  # type: ignore
+        req = redfin_session.get(url)
+        self.logger.info(f"{req.cookies = }")
         return req
 
     def get_gen_headers(self) -> dict[str, str]:
@@ -202,11 +222,12 @@ class RedfinSearcher:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "en-US,en;q=0.5",
-            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Dest": "iframe",  # document
             "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-site",  # none
             "Sec-GPC": "1",
-            "Sec-Fetch-Site": "none",
             "Upgrade-Insecure-Requests": "1",
+            "Referer": "https://www.google.com/",
         }
 
     def set_filters_path(self, filters_path: str) -> None:
@@ -415,47 +436,6 @@ class RedfinSearcher:
         else:
             return pl.concat(list_of_csv_dfs)
 
-    def load_house_attributes_from_metro(
-        self, metro_name: str, filters_path: str | None = None
-    ) -> pl.DataFrame:
-        """Create a DataFrame of a metropolitan's available houses' attributes, including heating information.
-
-        Note:
-            The process is as follows:
-            * Convert a Metropolitan Statistical Area name into its constituent ZIP codes
-            * For each ZIP code, search Redfin with filters and collect listing results. (ZIP codes are searched to ensure maximal data collection, as Redfin only returns (9 pages * 40 listings) 360 entries per search.)
-            * For each listing collected, creates a DataFrame of house attributes, such as location and heating amenities.
-
-        Args:
-            metro_name (str): a Metropolitan Statistical Area name
-            filters_path (str): a filters path to search with
-
-        Returns:
-            pl.DataFrame: DataFrame of collected listing information
-        """
-        if filters_path is not None:
-            self.logger.info(
-                f"Filter path was supplied, overwriting filter string {ASCIIColors.YELLOW}{self.filters_path}{ASCIIColors.RESET} with {ASCIIColors.YELLOW}{filters_path}{ASCIIColors.RESET}"
-            )
-            self.set_filters_path(filters_path)
-            self.logger.debug(f"Metro is using filter string: {self.filters_path}")
-        zip_codes = metro_name_to_zip_code_list(metro_name)
-
-        if len(zip_codes) == 0:
-            self.logger.debug("no zip codes returned from metro name conversion")
-            return pl.DataFrame(schema=self.LISTING_SCHEMA)
-
-        zip_code_search_page_csvs_df = self.zips_to_search_page_csvs(zip_codes)
-
-        if zip_code_search_page_csvs_df is None:
-            self.logger.info("Supplied zip codes do not have listings. Relax filters?")
-            return pl.DataFrame(schema=self.LISTING_SCHEMA)
-
-        # house attribs check
-        return self.listing_attributes_from_search_page_csv(
-            zip_code_search_page_csvs_df
-        )
-
     def listing_attributes_from_search_page_csv(
         self, search_page_csvs: pl.DataFrame
     ) -> pl.DataFrame:
@@ -486,3 +466,60 @@ class RedfinSearcher:
             .drop(url_col_name)
             .unnest("nest")
         )
+
+    def load_house_attributes_from_metro_to_file(
+        self, metro_name: str, filters_path: str | None = None
+    ) -> None:
+        """Create a DataFrame of a metropolitan's available houses' attributes, including heating information.
+
+        Note:
+            The process is as follows:
+            * Convert a Metropolitan Statistical Area name into its constituent ZIP codes
+            * For each ZIP code, search Redfin with filters and collect listing results. (ZIP codes are searched to ensure maximal data collection, as Redfin only returns (9 pages * 40 listings) 360 entries per search.)
+            * For each listing collected, creates a DataFrame of house attributes, such as location and heating amenities.
+
+        Args:
+            metro_name (str): a Metropolitan Statistical Area name
+            filters_path (str): a filters path to search with
+
+        Returns:
+            pl.DataFrame: DataFrame of collected listing information
+        """
+        if filters_path is not None:
+            self.logger.info(
+                f"Filter path was supplied, overwriting filter string {ASCIIColors.YELLOW}{self.filters_path}{ASCIIColors.RESET} with {ASCIIColors.YELLOW}{filters_path}{ASCIIColors.RESET}"
+            )
+            self.set_filters_path(filters_path)
+            self.logger.debug(f"Metro is using filter string: {self.filters_path}")
+        zip_codes = metro_name_to_zip_code_list(metro_name)
+
+        if len(zip_codes) == 0:
+            self.logger.debug("no zip codes returned from metro name conversion")
+            return
+            # return pl.DataFrame(schema=self.LISTING_SCHEMA)
+
+        zip_code_search_page_csvs_df = self.zips_to_search_page_csvs(zip_codes)
+
+        if zip_code_search_page_csvs_df is None:
+            self.logger.info("Supplied zip codes do not have listings. Relax filters?")
+            return
+            # return pl.DataFrame(schema=self.LISTING_SCHEMA)
+
+        # house attribs check
+
+        full_df = self.listing_attributes_from_search_page_csv(
+            zip_code_search_page_csvs_df
+        )
+
+        output_metro_dir_path = Path(f"{output_dir_path}{metro_name}{os.sep}")
+
+        try:
+            os.mkdir(output_metro_dir_path)
+        except FileExistsError:  # exists
+            pass
+
+        list_of_dfs_by_zip = full_df.partition_by("ZIP OR POSTAL CODE")
+        for df_by_zip in list_of_dfs_by_zip:
+            # make file name the zip code
+            zip = df_by_zip.select("ZIP OR POSTAL CODE").item()
+            df_by_zip.write_csv(f"{output_metro_dir_path}{zip}")
