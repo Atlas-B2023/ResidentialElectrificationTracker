@@ -742,5 +742,6 @@ class CensusAPI:
             )
         )
         file_path = f"{output_dir_path}{os.sep}acs5-subject-group-{table}-zcta.csv"
+        # may not have to write. but cache func doesn't return whether it hits or not
         df.write_csv(file_path)
         return file_path

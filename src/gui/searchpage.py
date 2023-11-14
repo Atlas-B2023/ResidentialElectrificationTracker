@@ -148,7 +148,7 @@ class SearchPage(ctk.CTkFrame):
         if self.datapage is not None:
             self.grid_remove()
             self.datapage.grid()
-            self.datapage.set_msa_name(msa_name)
+            self.datapage.set_msa_name_and_create_init_figs(msa_name)
 
     def search_metros_threaded(self, metro_name: str):
         # get filters . submit button will validate them
@@ -164,7 +164,7 @@ class SearchPage(ctk.CTkFrame):
         )
         lock = threading.Lock()
         with lock:
-            my_thread = threading.Thread(
+            threading.Thread(
                 target=redfin_searcher.load_house_attributes_from_metro_to_file,
                 args=("TEST",),
                 daemon=True,

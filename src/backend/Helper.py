@@ -1,19 +1,23 @@
 import logging
 import random
+import re
 import time
 from enum import StrEnum
 from pathlib import Path
 import os
+from typing import Any
 
 import polars as pl
 import requests
 from redfin import Redfin
+from .us import states as sts
 
 redfin_session = requests.Session()
 master_df = pl.read_csv(
     f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}master.csv"
 )
-
+CENSUS_REPORTER_API_BASE_URL = "https://api.censusreporter.org"
+CENSUS_REPORTER_BASE_URL = "https://censusreporter.org"
 
 class ASCIIColors(StrEnum):
     """ASCII colors for use in printing colored text to the terminal."""
@@ -136,6 +140,7 @@ def zip_to_metro(zip: int) -> str:
     result = master_df.filter(master_df["ZIP"] == zip)["METRO_NAME"]
 
     if len(result) > 0:
+        logger.debug("Zip has multiple codes. Only giving first one")
         return result[0]
     else:
         return ""  # should this be none?
@@ -231,6 +236,21 @@ def get_states_in_msa(msa_name: str) -> list[str]:
     )
 
 
+def get_zip_codes_in_state(state: str) -> list[str]:
+    state_code = sts.lookup(state)
+    if state_code is not None:
+        state_code = state_code.abbr
+    else:
+        return []
+    return (
+        master_df.select("STATE_ID", "ZIP")
+        .filter(pl.col("STATE_ID").eq(state_code))
+        .get_column("ZIP")
+        .unique()
+        .to_list()
+    )
+
+
 def _set_up_logger(level: int) -> logging.Logger:
     """Setup a logger object with basic config.
 
@@ -255,3 +275,24 @@ def _set_up_logger(level: int) -> logging.Logger:
 
 
 logger = _set_up_logger(logging.INFO)
+
+def get_census_report_url_page(search_term: str):
+    census_reporter_headers =  {
+            "User-Agent": get_random_user_agent(),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.7",
+            "Cache-Control": "max-age=0",
+            "Dnt":"1",
+            "Sec-Fetch-Dest": "document",  
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",  
+            "Sec-GPC": "1",
+            "Upgrade-Insecure-Requests": "1",
+        }
+    req = requests.get(f"{CENSUS_REPORTER_API_BASE_URL}/2.1/full-text/search?q={search_term}", headers=census_reporter_headers)
+    req.raise_for_status()
+    req_json = req.json()
+    profile_url = req_json["results"][0].get("url")
+  
+    return f"{profile_url}"
