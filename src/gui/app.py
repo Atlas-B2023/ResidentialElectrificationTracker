@@ -14,9 +14,9 @@ class App(ctk.CTk):
         super().__init__()
         self.title("MSA Heater Searcher")
         # wxh
-        self.desired_geometry_string = "900x600"
+        self.desired_geometry_string = "800x600"
         self.geometry(self.desired_geometry_string)
-        self.minsize(width=900, height=600)
+        self.minsize(width=800, height=500)
         self.create_widgets()
 
     def create_widgets(self):

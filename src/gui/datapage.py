@@ -4,14 +4,16 @@ from datetime import datetime
 from backend import Helper
 from backend.us import states as sts
 
-# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
 
 plt.style.use("fivethirtyeight")
 
 
 class DataPage(ctk.CTkFrame):
+    """Crate page for displaying energy data and links to censusreporter.org for census level data"""
+
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         self.msa_name = None
@@ -21,8 +23,8 @@ class DataPage(ctk.CTkFrame):
         self.state_demog_dfs = None
         self.state_income_dfs = None
         self.roboto_font = ctk.CTkFont(family="Roboto")
-        self.roboto_header_font = ctk.CTkFont(family="Roboto", size=20)
-        self.roboto_link_font = ctk.CTkFont(family="Roboto", underline=True)
+        self.roboto_header_font = ctk.CTkFont(family="Roboto", size=28)
+        self.roboto_link_font = ctk.CTkFont(family="Roboto", underline=True, size=20)
         self.create_widgets()
         # threading.Thread(target=self.update_state_income_figure).start()
 
@@ -44,7 +46,12 @@ class DataPage(ctk.CTkFrame):
             text="Census and Energy Data:",
             font=self.roboto_header_font,
         )
-
+        self.content_banner_main_text.bind(
+            "<Configure>",
+            command=lambda x: self.content_banner_main_text.configure(
+                wraplength=self.content_banner_main_text._current_width
+            ),
+        )
         # nested frame for holding filters and text inside banner frame
         cur_year = datetime.now().year
         years = [
@@ -63,14 +70,18 @@ class DataPage(ctk.CTkFrame):
         self.select_state_dropdown = ctk.CTkOptionMenu(
             self.state_and_year_content_banner_dropdown_frame,
             values=None,
+            command=self.state_dropdown_callback,
         )
+
         self.select_year_label = ctk.CTkLabel(
             self.state_and_year_content_banner_dropdown_frame,
             text="Select Year",
             font=self.roboto_font,
         )
         self.select_year_dropdown = ctk.CTkOptionMenu(
-            self.state_and_year_content_banner_dropdown_frame, values=years
+            self.state_and_year_content_banner_dropdown_frame,
+            values=years,
+            command=self.year_dropdown_callback,
         )
 
         self.energy_graph_frame = ctk.CTkFrame(self.content_frame, border_width=2)
@@ -95,7 +106,9 @@ class DataPage(ctk.CTkFrame):
             cursor="hand2",
             text_color="blue",
         )
-        self.census_reporter_state_label.bind("<Button-1>", lambda x: self.open_census_reporter_state())
+        self.census_reporter_state_label.bind(
+            "<Button-1>", lambda x: self.open_census_reporter_state()
+        )
         self.census_reporter_metro_label = ctk.CTkLabel(
             self.census_reporter_frame,
             text="Census Reporter: Metro Report",
@@ -103,7 +116,9 @@ class DataPage(ctk.CTkFrame):
             cursor="hand2",
             text_color="blue",
         )
-        self.census_reporter_metro_label.bind("<Button-1>", lambda x: self.open_census_reporter_metro())
+        self.census_reporter_metro_label.bind(
+            "<Button-1>", lambda x: self.open_census_reporter_metro()
+        )
         # create grid
         # col
         self.columnconfigure(0, weight=1)
@@ -163,11 +178,18 @@ class DataPage(ctk.CTkFrame):
         self.census_reporter_state_label.grid(column=0, row=0)
         self.census_reporter_metro_label.grid(column=0, row=1)
         self.progress_bar_frame.grid(column=0, row=3, sticky="news")
-        self.progress_bar.grid(column=0, row=0, sticky="we")
+        self.progress_bar.grid(column=0, row=0, sticky="we", padx=(20, 0))
         self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
         self.stop_search_button.grid(column=2, row=0, sticky="w")
 
+        self.generate_energy_plot()
+
     def set_msa_name(self, msa_name: str):
+        """set the msa name
+
+        Args:
+            msa_name (str): msa name. This must be validated
+        """
         self.msa_name = msa_name
         self.states_in_msa = Helper.get_states_in_msa(self.msa_name)
 
@@ -182,6 +204,22 @@ class DataPage(ctk.CTkFrame):
         self.zip_list = Helper.metro_name_to_zip_code_list(msa_name)
         self.zip_list = [str(zip) for zip in self.zip_list]
 
+    def generate_energy_plot(self):
+        stockListExp = ["AMZN", "AAPL", "JETS", "CCL", "NCLH"]
+        stockSplitExp = [15, 25, 40, 10, 10]
+
+        fig = Figure(facecolor="blue")  # create a figure object
+        ax = fig.add_subplot(111)  # add an Axes to the figure
+        ax.pie(
+            stockSplitExp,
+            radius=1,
+            labels=stockListExp,
+            autopct="%0.2f%%",
+            shadow=False,
+        )
+        chart1 = FigureCanvasTkAgg(fig, self.energy_graph_frame)
+        chart1.get_tk_widget().grid(column=0, row=0)
+
     def open_census_reporter_state(self):
         state_link = Helper.get_census_report_url_page(
             sts.lookup(self.select_state_dropdown.get()).name  # type: ignore
@@ -189,5 +227,13 @@ class DataPage(ctk.CTkFrame):
         webbrowser.open_new_tab(state_link)
 
     def open_census_reporter_metro(self):
-        metro_link = Helper.get_census_report_url_page(f"{self.msa_name} metro area") # type: ignore
+        metro_link = Helper.get_census_report_url_page(f"{self.msa_name} metro area")  # type: ignore
         webbrowser.open_new_tab(metro_link)
+
+    def state_dropdown_callback(self, choice):
+        # update energy chart
+        print(choice)
+
+    def year_dropdown_callback(self, choice):
+        # update energy chart
+        print(choice)

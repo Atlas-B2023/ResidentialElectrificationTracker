@@ -88,6 +88,7 @@ class SearchPage(ctk.CTkFrame):
             "<KeyRelease>", command=lambda x: self.update_suggestions_listbox(x)
         )
 
+
     def update_suggestions_listbox(self, x: Event | None):
         cur_text = self.search_bar.get()
         if cur_text == "":
