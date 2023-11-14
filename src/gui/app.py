@@ -1,7 +1,6 @@
 import customtkinter as ctk
 
 from .searchpage import SearchPage
-from .datapage import DataPage
 # from filters import RedfinFiltersWindow
 # from datapage import Datapage
 
@@ -15,9 +14,9 @@ class App(ctk.CTk):
         super().__init__()
         self.title("MSA Heater Searcher")
         # wxh
-        self.desired_geometry_string = "1160x600"
+        self.desired_geometry_string = "900x600"
         self.geometry(self.desired_geometry_string)
-        self.minsize(width=1160, height=600)
+        self.minsize(width=900, height=600)
         self.create_widgets()
 
     def create_widgets(self):
