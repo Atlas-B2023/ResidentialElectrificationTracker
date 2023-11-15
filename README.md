@@ -122,3 +122,15 @@ Documentation is done with mkdocs, mkdocstrings, mkdocs_gen_files, and mkdocs-ma
 # Output
 
 output from running the program happens in two places, in output/, and in src/backend/.cache/. In output, there are folders with the names of metropolitans. inside are files with the name of a zip code. in these zip code files, the data collected is stored and can be retrieved. In src/backend/.cache, census data is stored. this will likely by changed to be another top level folder in output/. It will have the lookups in one folder, and outputs of our cleaned data in another folder
+
+# Sources
+
+Census data: DP05 and S1901 tables from the American Community Survey 5 year, vintage 2019, https://www.census.gov/data/developers/data-sets/acs-5year.html. Get your API key from: https://api.census.gov/data/key_signup.html.
+
+Energy price data: Energy Information Administration, https://www.eia.gov/opendata/. Get your API key from the right hand side by clicking the register button
+
+Augmenting data: This folder contains a collection of files that help with geo location information.
+    * ZIP_CBSA_092023: HUD crosswalk between ZIP codes and CBSAs: https://www.huduser.gov/apps/public/uspscrosswalk/home. 
+    * uszips: Contains lat/long, county name, state id, and city name, among other things: https://simplemaps.com/data/us-zips.
+    * cbsa-est2022: Translation from CBSA number and its Census defined name.
+    * master: inner join of some information from the above files 

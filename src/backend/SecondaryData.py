@@ -13,7 +13,6 @@ from backend import Helper
 from backend.us import states as sts
 from dotenv import load_dotenv
 
-# import csv
 
 load_dotenv()
 logger = Helper.logger
@@ -57,16 +56,111 @@ class EIADataRetriever:
         NotImplementedError: _description_
 
     Returns:
-        _type_: _description_
+        EIADataRetriever: EIADataRetriever object for interacting with the EIA api in regards to residential energy prices
     """
 
-    # Propane and Heating oil:
-    #   *per month is per heating month*
+    HEATING_OIL_STATES_ABBR = {
+        sts.CT.abbr,
+        sts.DC.abbr,
+        sts.DE.abbr,
+        sts.IA.abbr,
+        sts.IL.abbr,
+        sts.IN.abbr,
+        sts.KS.abbr,
+        sts.KY.abbr,
+        sts.MA.abbr,
+        sts.MD.abbr,
+        sts.ME.abbr,
+        sts.MI.abbr,
+        sts.MN.abbr,
+        sts.MO.abbr,
+        sts.NC.abbr,
+        sts.ND.abbr,
+        sts.NE.abbr,
+        sts.NH.abbr,
+        sts.NJ.abbr,
+        sts.NY.abbr,
+        sts.OH.abbr,
+        sts.PA.abbr,
+        sts.RI.abbr,
+        sts.SD.abbr,
+        sts.VA.abbr,
+        sts.VT.abbr,
+        sts.WI.abbr,
+    }
+
+    PROPANE_STATES_ABBR = {
+        sts.AL.abbr,
+        sts.AR.abbr,
+        sts.CO.abbr,
+        sts.CT.abbr,
+        sts.DE.abbr,
+        sts.FL.abbr,
+        sts.GA.abbr,
+        sts.IL.abbr,
+        sts.IN.abbr,
+        sts.KS.abbr,
+        sts.KY.abbr,
+        sts.KY.abbr,
+        sts.MA.abbr,
+        sts.MD.abbr,
+        sts.ME.abbr,
+        sts.MI.abbr,
+        sts.MN.abbr,
+        sts.MO.abbr,
+        sts.MS.abbr,
+        sts.MT.abbr,
+        sts.NC.abbr,
+        sts.ND.abbr,
+        sts.NE.abbr,
+        sts.NH.abbr,
+        sts.NJ.abbr,
+        sts.NY.abbr,
+        sts.OH.abbr,
+        sts.OK.abbr,
+        sts.PA.abbr,
+        sts.RI.abbr,
+        sts.SD.abbr,
+        sts.TN.abbr,
+        sts.TX.abbr,
+        sts.UT.abbr,
+        sts.VA.abbr,
+        sts.VT.abbr,
+        sts.WI.abbr,
+    }
+
+    class HeaterEfficiencies(Enum):
+        """Combination of system efficiency and distribution efficiency.
+
+        Notes:
+            Numbers taken from https://www.efficiencymaine.com/at-home/heating-cost-comparison/
+
+        Args:
+            Enum (HeaterEfficiencies): Enum
+        """
+
+        HEAT_PUMP_GEOTHERMAL = 3.69
+        HEAT_PUMP_DUCTLESS = 2.7  # mini split
+        HEAT_PUMP_DUCTED = 2.16
+        BASEBOARD = 1
+        KEROSENE_ROOM_HEATER = 0.87
+        PROPANE_BOILER = 0.837
+        NG_BOILER = 0.828
+        NG_ROOM_HEATER = 0.81
+        PROPANE_ROOM_HEATER = 0.81
+        OIL_BOILER = 0.783
+        WOOD_STOVE = 0.75
+        PELLET_STOVE = 0.75
+        NG_FURNACE = 0.744
+        PROPANE_FURNACE = 0.744
+        OIL_FURNACE = 0.704
+        PELLET_BOILER = 0.639
+
     class EnergyTypes(Enum):
         PROPANE = 1
-        NATURAL_GAS = 2
-        ELECTRICITY = 3
-        HEATING_OIL = 4
+        HEATING_OIL = 2
+        NATURAL_GAS = 3
+        ELECTRICITY = 4
 
     class PetroleumProductTypes(StrEnum):
         NATURAL_GAS = "EPG0"
@@ -84,8 +178,7 @@ class EIADataRetriever:
         NO6_OIL_BTU_PER_GAL = 150_000
         HEATING_OIL_BTU_PER_GAL = 138_500
         ELECTRICITY_BTU_PER_KWH = 3_412.14
-        # 1000 cubic feet
-        NG_BTU_PER_MCT = 1_036_000
+        NG_BTU_PER_MCT = 1_036_000  # 1000 cubic feet of gas
         NG_BTU_PER_THERM = 100_000
         PROPANE_BTU_PER_GAL = 91_452
         WOOD_BTU_PER_CORD = 20_000_000
@@ -99,12 +192,13 @@ class EIADataRetriever:
             )
             exit()
 
-    # normalize prices
-    #!this should be failing?
-    def _price_per_btu_converter(
+    def price_per_btu_with_efficiency(
         self, energy_price_dict: dict
     ) -> dict[str, str | EnergyTypes | float]:
-        """Convert an energy source's price per quantity into price per BTU.
+        """Convert an energy source's price per quantity into price per BTU with an efficiency.
+
+        See also:
+            `EIADataRetriever.HeaterEfficiencies`
 
         Args:
             energy_source (_type_): energy source json
@@ -116,42 +210,70 @@ class EIADataRetriever:
         #! currently doesn't take into account efficiency: make new function based on burner type/ end usage type
         CENTS_IN_DOLLAR = 100
         match energy_price_dict.get("type"):
-            case self.EnergyTypes.PROPANE:
+            case self.EnergyTypes.PROPANE.value:
                 # for loop is done for every case since i dont want to use `eval` or parse a string of division to keep PEMDAS
                 for key, value in energy_price_dict.items():
-                    if key in ["type", "state"]:
+                    if (
+                        key in ["type", "state", None]
+                        or energy_price_dict.get(key) is None
+                    ):
                         continue
                     energy_price_dict[key] = (
                         value
-                        / self.FuelBTUConversion.PROPANE_BTU_PER_GAL.value
+                        / (
+                            self.FuelBTUConversion.PROPANE_BTU_PER_GAL.value
+                            * self.HeaterEfficiencies.PROPANE_BOILER.value
+                        )
                         * 1_000_000
                     )
-            case self.EnergyTypes.NATURAL_GAS:
+            case self.EnergyTypes.NATURAL_GAS.value:
                 for key, value in energy_price_dict.items():
-                    if key in ["type", "state"]:
+                    if (
+                        key in ["type", "state", None]
+                        or energy_price_dict.get(key) is None
+                    ):
                         continue
                     energy_price_dict[key] = (
-                        value / self.FuelBTUConversion.NG_BTU_PER_MCT.value * 1_000_000
+                        value
+                        / (
+                            self.FuelBTUConversion.NG_BTU_PER_MCT.value
+                            * self.HeaterEfficiencies.NG_BOILER.value
+                        )
+                        * 1_000_000
                     )
-            case self.EnergyTypes.ELECTRICITY:
+            case self.EnergyTypes.ELECTRICITY.value:
                 for key, value in energy_price_dict.items():
-                    if key in ["type", "state"]:
+                    if (
+                        key in ["type", "state", None]
+                        or energy_price_dict.get(key) is None
+                    ):
                         continue
                     energy_price_dict[key] = (
                         value
                         / CENTS_IN_DOLLAR
-                        / self.FuelBTUConversion.ELECTRICITY_BTU_PER_KWH.value
+                        / (
+                            self.FuelBTUConversion.ELECTRICITY_BTU_PER_KWH.value
+                            * self.HeaterEfficiencies.HEAT_PUMP_DUCTED.value
+                        )
                         * 1_000_000
                     )
-            case self.EnergyTypes.HEATING_OIL:
+            case self.EnergyTypes.HEATING_OIL.value:
                 for key, value in energy_price_dict.items():
-                    if key in ["type", "state"]:
+                    if (
+                        key in ["type", "state", None]
+                        or energy_price_dict.get(key) is None
+                    ):
                         continue
                     energy_price_dict[key] = (
                         value
-                        / self.FuelBTUConversion.HEATING_OIL_BTU_PER_GAL.value
+                        / (
+                            self.FuelBTUConversion.HEATING_OIL_BTU_PER_GAL.value
+                            * self.HeaterEfficiencies.OIL_BOILER.value
+                        )
                         * 1_000_000
                     )
+            case _:
+                logger.warning("Could not translate dict to btu per price.")
 
         return energy_price_dict
 
@@ -176,7 +298,7 @@ class EIADataRetriever:
             entry["period"]: entry[f"{accessor}"]
             for entry in eia_json["response"]["data"]
         }
-        result_dict["type"] = energy_type
+        result_dict["type"] = energy_type.value
         result_dict["state"] = state
 
         return result_dict
@@ -196,9 +318,10 @@ class EIADataRetriever:
         """
         result_dict = {}
         for row in eia_df.rows(named=True):
-            year_month = f"{row.get("year")}-{row.get("month")}"
-            result_dict[year_month] = round(row.get("monthly_avg_price"), 3)  # type: ignore
-        result_dict["type"] = energy_type
+            year_month = f"{row.get("year")}-{row.get("month"):02}"
+            if row.get("monthly_avg_price") is not None:
+                result_dict[year_month] = round(row.get("monthly_avg_price"), 3)  # type: ignore
+        result_dict["type"] = energy_type.value
         result_dict["state"] = state
         return result_dict
 
@@ -276,7 +399,6 @@ class EIADataRetriever:
         """Get a participating state's average heating oil price in dollars per gal.
 
         Note:
-            TODO make this list a list of us.states enums
             Only these states are tracked, and only for the months October through March:
                 * CT
                 * DC
@@ -319,9 +441,8 @@ class EIADataRetriever:
         eia_request.raise_for_status()
 
         json = eia_request.json()
-        # return self.price_json_to_dict(eia_request.json())
         df = pl.DataFrame(json["response"]["data"])
-        # df = df.with_columns(pl.col("period").str.to_date().alias("period"))
+        # becomes int, so months are sig figs
         df = df.with_columns(pl.col("period").str.strptime(pl.Date))
         df = df.with_columns(
             pl.col("period").dt.year().alias("year"),
@@ -438,7 +559,7 @@ class EIADataRetriever:
             state = sts.lookup(state).abbr  # type: ignore
         match energy_type:
             case self.EnergyTypes.PROPANE:
-                return self._price_per_btu_converter(
+                return self.price_per_btu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_heating_season_propane_price_per_gal(
                             state, start_date, end_date
@@ -448,7 +569,7 @@ class EIADataRetriever:
                     )
                 )
             case self.EnergyTypes.NATURAL_GAS:
-                return self._price_per_btu_converter(
+                return self.price_per_btu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_ng_price_per_mcf(state, start_date, end_date),
                         energy_type,
@@ -456,7 +577,7 @@ class EIADataRetriever:
                     )
                 )
             case self.EnergyTypes.ELECTRICITY:
-                return self._price_per_btu_converter(
+                return self.price_per_btu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_electricity_price_per_kwh(
                             state, start_date, end_date
@@ -466,7 +587,7 @@ class EIADataRetriever:
                     )
                 )
             case self.EnergyTypes.HEATING_OIL:
-                return self._price_per_btu_converter(
+                return self.price_per_btu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_heating_season_heating_oil_price_per_gal(
                             state, start_date, end_date
@@ -477,6 +598,51 @@ class EIADataRetriever:
                 )
             case _:
                 raise NotImplementedError(f"Unsupported energy type: {energy_type}")
+
+    def monthly_price_per_million_btu_by_energy_type_by_state(
+        self, state: str, start_date: datetime.date, end_date: datetime.date
+    ) -> list[Any]:
+        """Get all available energy prices per BTU, taking efficiency into account, for a state.
+
+        Note:
+            Please keep times to within a year. For the non oil and propane, you have to go a month past.
+
+        Args:
+            state (str): 2 character postal code
+            start_date (datetime.date): start date
+            end_date (datetime.date): end date
+
+        Returns:
+            list[Any]: _description_
+        """
+        if len(state) > 2:
+            state = sts.lookup(state).abbr  # type: ignore
+
+        dicts_to_return = []
+        if state in self.HEATING_OIL_STATES_ABBR:
+            dicts_to_return.append(
+                self.monthly_price_per_million_btu_by_energy_type(
+                    self.EnergyTypes.HEATING_OIL, state, start_date, end_date
+                )
+            )
+        if state in self.PROPANE_STATES_ABBR:
+            dicts_to_return.append(
+                self.monthly_price_per_million_btu_by_energy_type(
+                    self.EnergyTypes.PROPANE, state, start_date, end_date
+                )
+            )
+        dicts_to_return.append(
+            self.monthly_price_per_million_btu_by_energy_type(
+                self.EnergyTypes.NATURAL_GAS, state, start_date, end_date
+            )
+        )
+        dicts_to_return.append(
+            self.monthly_price_per_million_btu_by_energy_type(
+                self.EnergyTypes.ELECTRICITY, state, start_date, end_date
+            )
+        )
+        logger.debug(f"{dicts_to_return = }")
+        return dicts_to_return
 
 
 class CensusDataRetriever:

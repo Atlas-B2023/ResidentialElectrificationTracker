@@ -1,11 +1,11 @@
 import threading
 import webbrowser
-from datetime import datetime
+import datetime
 
-import customtkinter as ctk
-from backend import Helper
-from backend.us import states as sts
 from matplotlib import pyplot as plt
+import customtkinter as ctk
+from backend import Helper, EIADataRetriever
+from backend.us import states as sts
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
@@ -55,7 +55,7 @@ class DataPage(ctk.CTkFrame):
             ),
         )
         # nested frame for holding filters and text inside banner frame
-        cur_year = datetime.now().year
+        cur_year = datetime.datetime.now().year
         years = [
             str(cur_year),
             str(cur_year - 1),
@@ -184,8 +184,6 @@ class DataPage(ctk.CTkFrame):
         self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
         self.stop_search_button.grid(column=2, row=0, sticky="w")
 
-        threading.Thread(target=self.generate_energy_plot, daemon=True).start()
-
     def set_msa_name(self, msa_name: str):
         """set the msa name
 
@@ -206,26 +204,100 @@ class DataPage(ctk.CTkFrame):
         self.zip_list = Helper.metro_name_to_zip_code_list(msa_name)
         self.zip_list = [str(zip) for zip in self.zip_list]
 
-    def generate_energy_plot(self):
-        """Calls the EIA api and generates a plot with the recieved data.
+        threading.Thread(
+            target=self.generate_energy_plot,
+            args=(
+                int(self.select_year_dropdown.get()),
+                self.select_state_dropdown.get(),
+            ),
+            daemon=True,
+        ).start()
+
+    def generate_energy_plot(self, year, state):
+        """Calls the EIA API and generates a plot with the received data.
 
         Notes:
-            Call this in a thread so that it doesnt entirerly freeze the
+            Call this in a thread so that it doesn't freeze the GUI
         """
-        stockListExp = ["AMZN", "AAPL", "JETS", "CCL", "NCLH"]
-        stockSplitExp = [15, 25, 40, 10, 10]
-
-        fig = Figure(facecolor="blue")  # create a figure object
-        ax = fig.add_subplot(111)  # add an Axes to the figure
-        ax.pie(
-            stockSplitExp,
-            radius=1,
-            labels=stockListExp,
-            autopct="%0.2f%%",
-            shadow=False,
+        eia = EIADataRetriever()
+        energy_price_per_mbtu_by_type_for_state = (
+            eia.monthly_price_per_million_btu_by_energy_type_by_state(
+                state, datetime.date(year, 1, 1), datetime.date(year + 1, 1, 1)
+            )
         )
-        chart1 = FigureCanvasTkAgg(fig, self.energy_graph_frame)
-        chart1.get_tk_widget().grid(column=0, row=0)
+
+        fig = Figure(layout="compressed", facecolor="blue")
+        ax = fig.add_subplot()
+        ax.set_xlabel("Time (Months)")
+        ax.set_ylabel("Effective Cost ($/MBTU)")
+        ax.set_title(f"Avg. Energy prices for {state}, {year}")
+        months = [i for i in range(1, 13)]
+        month_names = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+        ]
+        ax.set_xticks(months)
+        labels = [item.get_text() for item in ax.get_xticklabels()]
+
+        # Modify specific labels, keeping offset
+        for i in range(0, 12):
+            labels[i] = month_names[i]
+        ax.set_xticklabels(labels)
+        # some months may not be present, some months may be present with None. must go to NaN
+        # TODO investigate DC issues with api
+        for energy_dict in energy_price_per_mbtu_by_type_for_state:
+            print(f"Cur {energy_dict =}")
+            match energy_dict.get("type"):
+                case EIADataRetriever.EnergyTypes.PROPANE.value:
+                    result_list = []
+                    for month in months:
+                        key = f"{year}-{month:02}"
+                        val = energy_dict.get(key, float("NaN"))
+                        if val is None:
+                            val = float("NaN")
+                        result_list.append(val)
+                    ax.plot(months, result_list, label="Propane")
+                case EIADataRetriever.EnergyTypes.HEATING_OIL.value:
+                    result_list = []
+                    for month in months:
+                        key = f"{year}-{month:02}"
+                        val = energy_dict.get(key, float("NaN"))
+                        if val is None:
+                            val = float("NaN")
+                        result_list.append(val)
+                    ax.plot(months, result_list, label="Heating Oil")
+                case EIADataRetriever.EnergyTypes.NATURAL_GAS.value:
+                    result_list = []
+                    for month in months:
+                        key = f"{year}-{month:02}"
+                        val = energy_dict.get(key, float("NaN"))
+                        if val is None:
+                            val = float("NaN")
+                        result_list.append(val)
+                    ax.plot(months, result_list, label="Natural Gas")
+                case EIADataRetriever.EnergyTypes.ELECTRICITY.value:
+                    result_list = []
+                    for month in months:
+                        key = f"{year}-{month:02}"
+                        val = energy_dict.get(key, float("NaN"))
+                        if val is None:
+                            val = float("NaN")
+                        result_list.append(val)
+                    ax.plot(months, result_list, label="Electricity")
+        ax.legend()
+        with threading.Lock():
+            chart1 = FigureCanvasTkAgg(fig, self.energy_graph_frame)
+            chart1.get_tk_widget().grid(column=0, row=0)
 
     def open_census_reporter_state(self):
         state_link = Helper.get_census_report_url_page(
@@ -237,10 +309,25 @@ class DataPage(ctk.CTkFrame):
         metro_link = Helper.get_census_report_url_page(f"{self.msa_name} metro area")  # type: ignore
         webbrowser.open_new_tab(metro_link)
 
-    def state_dropdown_callback(self, choice):
-        # update energy chart
-        print(choice)
+    def state_dropdown_callback(self, state):
+        # update energy chart, choice is 2 char postal code
 
-    def year_dropdown_callback(self, choice):
-        # update energy chart
-        print(choice)
+        threading.Thread(
+            target=self.generate_energy_plot,
+            args=(
+                int(self.select_year_dropdown.get()),
+                state,
+            ),
+            daemon=True,
+        ).start()
+
+    def year_dropdown_callback(self, year):
+        # update energy chart, choice is year
+        threading.Thread(
+            target=self.generate_energy_plot,
+            args=(
+                int(year),
+                self.select_state_dropdown.get(),
+            ),
+            daemon=True,
+        ).start()
