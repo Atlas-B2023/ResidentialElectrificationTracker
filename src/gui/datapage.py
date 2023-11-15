@@ -1,12 +1,13 @@
-import customtkinter as ctk
+import threading
 import webbrowser
 from datetime import datetime
+
+import customtkinter as ctk
 from backend import Helper
 from backend.us import states as sts
-
+from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-from matplotlib import pyplot as plt
 
 plt.style.use("fivethirtyeight")
 
@@ -50,6 +51,7 @@ class DataPage(ctk.CTkFrame):
             "<Configure>",
             command=lambda x: self.content_banner_main_text.configure(
                 wraplength=self.content_banner_main_text._current_width
+                - 40  # random padding
             ),
         )
         # nested frame for holding filters and text inside banner frame
@@ -182,7 +184,7 @@ class DataPage(ctk.CTkFrame):
         self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
         self.stop_search_button.grid(column=2, row=0, sticky="w")
 
-        self.generate_energy_plot()
+        threading.Thread(target=self.generate_energy_plot, daemon=True).start()
 
     def set_msa_name(self, msa_name: str):
         """set the msa name
@@ -205,6 +207,11 @@ class DataPage(ctk.CTkFrame):
         self.zip_list = [str(zip) for zip in self.zip_list]
 
     def generate_energy_plot(self):
+        """Calls the EIA api and generates a plot with the recieved data.
+
+        Notes:
+            Call this in a thread so that it doesnt entirerly freeze the
+        """
         stockListExp = ["AMZN", "AAPL", "JETS", "CCL", "NCLH"]
         stockSplitExp = [15, 25, 40, 10, 10]
 
