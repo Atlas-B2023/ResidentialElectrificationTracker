@@ -5,13 +5,13 @@ from CTkMessagebox import CTkMessagebox
 from tkinter import Event
 import polars as pl
 import threading
-from backend.RedfinSearcher import RedfinSearcher as rfs
+from backend.redfinscraper import RedfinSearcher as rfs
 from .datapage import DataPage
 
 # import os
 # import sys
 
-from backend.Helper import get_unique_msa_from_master
+from backend.helper import get_unique_msa_from_master
 # from filters import RedfinFiltersWindow
 
 

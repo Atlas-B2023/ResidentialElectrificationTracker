@@ -1,4 +1,3 @@
-from .Helper import * #noqa
-from .RedfinListingScraper import RedfinListingScraper #noqa
-from .RedfinSearcher import RedfinSearcher #noqa
-from .SecondaryData import EIADataRetriever, CensusDataRetriever #noqa
+from .helper import * #noqa
+from .redfinscraper import RedfinListingScraper, RedfinSearcher #noqa
+from .secondarydata import EIADataRetriever, CensusDataRetriever #noqa

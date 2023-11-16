@@ -1,15 +1,17 @@
 # import polars as pl
-# from backend import Helper
+# from backend import helper
 # from backend.us import states as sts
-# from backend.SecondaryData import EIADataRetriever
+# from backend.secondarydata import EIADataRetriever
+from backend.redfinscraper import RedfinSearcher
 # import datetime
 from gui import app
 
 
 if __name__ == "__main__":
-    gui_app = app.App()
-    gui_app.mainloop()
-
+    # gui_app = app.App()
+    # gui_app.mainloop()
+    rfs = RedfinSearcher()
+    print(rfs.df_from_search_page_csv("https://www.redfin.com/zipcode/90715"))
     # eia = EIADataRetriever()
     # energy_btu = eia.monthly_price_per_million_btu_by_energy_type_by_state(
     #     "CA",

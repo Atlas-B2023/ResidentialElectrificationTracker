@@ -9,13 +9,13 @@ from typing import Any
 import polars as pl
 import polars.selectors as cs
 import requests
-from backend import Helper
+from backend import helper
 from backend.us import states as sts
 from dotenv import load_dotenv
 
 
 load_dotenv()
-logger = Helper.logger
+logger = helper.logger
 cache_dir_path = f"{os.path.dirname(__file__)}{os.sep}.cache"
 output_dir_path = (
     f"{pathlib.Path(os.path.dirname(__file__)).parent.parent}{os.sep}output"
@@ -367,7 +367,7 @@ class EIADataRetriever:
         # cent/ kwh
         url = f"{self.eia_base_url}/electricity/retail-sales/data/?frequency=monthly&data[0]=price&facets[stateid][]={state}&facets[sectorid][]=RES&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = Helper.req_get_wrapper(url)
+        eia_request = helper.req_get_wrapper(url)
         eia_request.raise_for_status()
 
         return eia_request.json()
@@ -388,7 +388,7 @@ class EIADataRetriever:
         # $/mcf
         url = f"https://api.eia.gov/v2/natural-gas/pri/sum/data/?frequency=monthly&data[0]=value&facets[duoarea][]=S{state}&facets[process][]=PRS&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = Helper.req_get_wrapper(url)
+        eia_request = helper.req_get_wrapper(url)
         eia_request.raise_for_status()
 
         return eia_request.json()
@@ -437,7 +437,7 @@ class EIADataRetriever:
         # heating season is Oct - march, $/gal
         url = f"https://api.eia.gov/v2/petroleum/pri/wfr/data/?frequency=weekly&data[0]=value&facets[duoarea][]=S{state}&facets[product][]=EPD2F&start={start_date}&end={end_date}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = Helper.req_get_wrapper(url)
+        eia_request = helper.req_get_wrapper(url)
         eia_request.raise_for_status()
 
         json = eia_request.json()
@@ -512,7 +512,7 @@ class EIADataRetriever:
         # heating season is Oct - march, $/gal
         url = f"https://api.eia.gov/v2/petroleum/pri/wfr/data/?frequency=weekly&data[0]=value&facets[process][]=PRS&facets[duoarea][]=S{state}&facets[product][]=EPLLPA&start={start_date}&end={end_date}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = Helper.req_get_wrapper(url)
+        eia_request = helper.req_get_wrapper(url)
         eia_request.raise_for_status()
 
         json = eia_request.json()

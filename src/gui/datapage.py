@@ -4,7 +4,7 @@ import datetime
 
 from matplotlib import pyplot as plt
 import customtkinter as ctk
-from backend import Helper, EIADataRetriever
+from backend import helper, EIADataRetriever
 from backend.us import states as sts
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -191,7 +191,7 @@ class DataPage(ctk.CTkFrame):
             msa_name (str): msa name. This must be validated
         """
         self.msa_name = msa_name
-        self.states_in_msa = Helper.get_states_in_msa(self.msa_name)
+        self.states_in_msa = helper.get_states_in_msa(self.msa_name)
 
         if len(self.states_in_msa) > 0:
             self.select_state_dropdown.configure()
@@ -201,7 +201,7 @@ class DataPage(ctk.CTkFrame):
         self.content_banner_main_text.configure(
             text=f"Census and Energy Data: {self.msa_name}"
         )
-        self.zip_list = Helper.metro_name_to_zip_code_list(msa_name)
+        self.zip_list = helper.metro_name_to_zip_code_list(msa_name)
         self.zip_list = [str(zip) for zip in self.zip_list]
 
         threading.Thread(
@@ -300,13 +300,13 @@ class DataPage(ctk.CTkFrame):
             chart1.get_tk_widget().grid(column=0, row=0)
 
     def open_census_reporter_state(self):
-        state_link = Helper.get_census_report_url_page(
+        state_link = helper.get_census_report_url_page(
             sts.lookup(self.select_state_dropdown.get()).name  # type: ignore
         )
         webbrowser.open_new_tab(state_link)
 
     def open_census_reporter_metro(self):
-        metro_link = Helper.get_census_report_url_page(f"{self.msa_name} metro area")  # type: ignore
+        metro_link = helper.get_census_report_url_page(f"{self.msa_name} metro area")  # type: ignore
         webbrowser.open_new_tab(metro_link)
 
     def state_dropdown_callback(self, state):
