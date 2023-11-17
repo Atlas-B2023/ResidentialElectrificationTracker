@@ -553,7 +553,7 @@ class RedfinApi:
         home_types: list[HouseType],
         sold: SoldWithinDays | None = SoldWithinDays.FIVE_YEARS,
     ) -> pl.DataFrame | None:
-        search_page_csvs = self.get_gis_csv_for_zips_in_metro_with_filters(
+        search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
             msa_name,
             min_year_built,
             max_year_built,
@@ -562,9 +562,17 @@ class RedfinApi:
             home_types,
             sold,
         )
-        if search_page_csvs is None:
+        if search_page_csvs_df is None:
             logger.info(f"No houses found within {msa_name}. Try relaxing filters.")
             return None
+
+        url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
+        search_page_csvs_df = search_page_csvs_df.filter(
+            (~pl.col(url_col_name).str.contains("(?i)unknown")).and_(
+                pl.col("ADDRESS").str.len_chars().gt(0)
+            )
+        )
+
         metro_dir_name = msa_name.strip().replace(" ", "_").replace(",", "_")
         metro_output_dir_path = Path(OUTPUT_DIR_PATH) / metro_dir_name / ""
         os.makedirs(metro_output_dir_path, exist_ok=True)
@@ -572,36 +580,35 @@ class RedfinApi:
         logger.debug(
             f"writing csv for metro to {metro_output_dir_path / (metro_dir_name + ".csv")}"
         )
-        search_page_csvs.write_csv(metro_output_dir_path / (metro_dir_name + ".csv"))
+        search_page_csvs_df.write_csv(metro_output_dir_path / (metro_dir_name + ".csv"))
 
         # go through whole csv and get the house attributes for each house. then partition the dataframe by ZIP and save files
 
-        url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
         logger.info("Starting lookups on listing URLS")
         # can have more than 1 zip in csv. save file, then append each listing?
         logger.info(
-            f"Unique ZIP codes: {search_page_csvs["ZIP OR POSTAL CODE"].n_unique()}"
+            f"Unique ZIP codes: {search_page_csvs_df["ZIP OR POSTAL CODE"].n_unique()}"
         )
         logger.info(
-            f"Estimated completion time: {search_page_csvs.height * 4} seconds"
+            f"Estimated completion time: {search_page_csvs_df.height * 3.58} seconds"
         )  # make another estimation for csvs
 
-        heating_info_for_houses_in_metro = (
-            search_page_csvs.with_columns(
-                pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)])
-                .map_elements(self.get_heating_terms_dict_from_listing)
-                .alias("nest")
+        list_of_dfs_by_zip = search_page_csvs_df.partition_by("ZIP OR POSTAL CODE")
+
+        for df_of_zip in list_of_dfs_by_zip:
+            df_of_zip = (
+                df_of_zip.with_columns(
+                    pl.concat_list(
+                        [pl.col("ADDRESS"), pl.col(url_col_name)]
+                    )  # len check wont work. just leave that out and make sure filter of search page csv is good
+                    .map_elements(self.get_heating_terms_dict_from_listing)
+                    .alias("nest")
+                )
+                .drop(url_col_name)
+                .unnest("nest")
             )
-            .drop(url_col_name)
-            .unnest("nest")
-        )
 
-        list_of_dfs_by_zip = heating_info_for_houses_in_metro.partition_by(
-            "ZIP OR POSTAL CODE"
-        )
-        for df_by_zip in list_of_dfs_by_zip:
-            # make file name the zip code
-            zip = df_by_zip.select("ZIP OR POSTAL CODE").item(0, 0)
-            df_by_zip.write_csv(f"{metro_output_dir_path}{os.sep}{zip}.csv")
+            zip = df_of_zip.select("ZIP OR POSTAL CODE").item(0, 0)
+            df_of_zip.write_csv(f"{metro_output_dir_path}{os.sep}{zip}.csv")
 
-        return heating_info_for_houses_in_metro
+        logger.info(f"Done with searching houses in {msa_name}!")

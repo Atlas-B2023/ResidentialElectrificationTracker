@@ -40,7 +40,6 @@ class DataPage(ctk.CTkFrame):
             self.content_banner_frame, border_width=2
         )
         self.census_reporter_frame = ctk.CTkFrame(self.content_frame, border_width=2)
-        self.progress_bar_frame = ctk.CTkFrame(self.content_frame, border_width=2)
 
         self.content_banner_main_text = ctk.CTkLabel(
             self.content_banner_frame,
@@ -87,19 +86,6 @@ class DataPage(ctk.CTkFrame):
         )
 
         self.energy_graph_frame = ctk.CTkFrame(self.content_frame, border_width=2)
-
-        self.progress_bar = ctk.CTkProgressBar(
-            self.progress_bar_frame, orientation="horizontal"
-        )
-        # need some shared memory or queue to get current zip codes and completed zip codes https://pythonforthelab.com/blog/handling-and-sharing-data-between-threads/
-        # can get total by getting list from helper func when creating the frame. and get completed by using `watchdog` to scan for dir changes in the metros folder
-        self.progress_words = ctk.CTkLabel(
-            self.progress_bar_frame, text="18/713 ZIP codes", font=self.roboto_font
-        )
-
-        self.stop_search_button = ctk.CTkButton(
-            self.progress_bar_frame, text="Stop search"
-        )
 
         self.census_reporter_state_label = ctk.CTkLabel(
             self.census_reporter_frame,
@@ -331,3 +317,5 @@ class DataPage(ctk.CTkFrame):
             ),
             daemon=True,
         ).start()
+
+    def update_progress(self, x):

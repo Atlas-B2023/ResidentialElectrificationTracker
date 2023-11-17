@@ -5,7 +5,7 @@ from CTkMessagebox import CTkMessagebox
 from tkinter import Event
 import polars as pl
 import threading
-from backend.redfinscraper import RedfinSearcher as rfs
+from backend.redfinscraper import RedfinApi
 from .datapage import DataPage
 
 # import os
@@ -88,7 +88,6 @@ class SearchPage(ctk.CTkFrame):
             "<KeyRelease>", command=lambda x: self.update_suggestions_listbox(x)
         )
 
-
     def update_suggestions_listbox(self, x: Event | None):
         cur_text = self.search_bar.get()
         if cur_text == "":
@@ -153,20 +152,13 @@ class SearchPage(ctk.CTkFrame):
 
     def search_metros_threaded(self, metro_name: str):
         # get filters . submit button will validate them
-        redfin_searcher = rfs(
-            filters_path=rfs.generate_filters_path(
-                sort=rfs.Sort.MOST_RECENTLY_SOLD,
-                property_type=rfs.PropertyType.HOUSE,
-                min_year_built=2022,
-                max_year_built=2022,
-                include=rfs.Include.LAST_5_YEAR,
-                min_stories=rfs.Stories.ONE,
-            )
-        )
+        redfin_searcher = RedfinApi()
         lock = threading.Lock()
+        # params = filterspage.get_params
+        # msa = x, min year = x max year = x...
         with lock:
             threading.Thread(
-                target=redfin_searcher.load_house_attributes_from_metro_to_file,
+                target=redfin_searcher.get_gis_csv_from_zip_with_filters,
                 args=("TEST",),
                 daemon=True,
             ).start()
