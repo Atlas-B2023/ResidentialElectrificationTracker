@@ -2,7 +2,7 @@
 # from backend import helper
 # from backend.us import states as sts
 # from backend.secondarydata import EIADataRetriever
-from backend.redfinscraper import NewScraper
+from backend.redfinscraper import RedfinApi
 # import datetime
 # from gui import app
 
@@ -10,15 +10,15 @@ from backend.redfinscraper import NewScraper
 if __name__ == "__main__":
     # gui_app = app.App()
     # gui_app.mainloop()
-    rfs = NewScraper()
+    rfs = RedfinApi()
     print(
-        rfs.get_gis_csv_for_zips_in_metro_with_filters(
-            "Nashville-Davidson--Murfreesboro--Franklin, TN",
+        rfs.get_house_attributes_from_metro(
+            "TEST",
             "2022",
             "2023",
-            NewScraper.Stories.ONE,
-            NewScraper.SortOrder.MOST_RECENTLY_SOLD,
-            [NewScraper.HouseType.HOUSE],
-            NewScraper.SoldWithinDays.FIVE_YEARS,
+            RedfinApi.Stories.ONE,
+            RedfinApi.SortOrder.MOST_RECENTLY_SOLD,
+            [RedfinApi.HouseType.HOUSE],
+            RedfinApi.SoldWithinDays.FIVE_YEARS,
         )
     )
