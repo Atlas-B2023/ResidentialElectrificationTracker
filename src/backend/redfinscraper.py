@@ -526,8 +526,7 @@ class RedfinSearcher:
         self.LISTING_SCHEMA = {
             "LATITUDE": pl.Float32,
             "LONGITUDE": pl.Float32,
-            "ADDRESS"
-            "CITY": str,
+            "ADDRESS" "CITY": str,
             "STATE OR PROVINCE": str,
             "ZIP OR POSTAL CODE": pl.UInt16,
             "PRICE": pl.UInt32,
@@ -989,9 +988,22 @@ class NewScraper:
         self.search_params = None
 
     def meta_request_download(self, url, kwargs) -> str:
+        """Method for downloading objects.
+
+        Notes:
+            Use for downloading the gis csv
+
+        Args:
+            url (_type_): _description_
+            kwargs (_type_): _description_
+
+        Returns:
+            str: _description_
+        """
         response = requests.get(
             self.rf.base + url, params=kwargs, headers=self.rf.user_agent_header
         )
+        logger.debug(response.request.url)  # change to debug
         response.raise_for_status()
         return response.text
 
@@ -1035,7 +1047,7 @@ class NewScraper:
         except HTTPError:
             logger.warning("Error retrieving region info.")
             return None
-        
+
         if sold:
             if sort_order is self.SortOrder.NEWEST:
                 logger.warning("Wrong sort order for sale type")
@@ -1125,60 +1137,6 @@ class NewScraper:
         Returns:
             pl.DataFrame | None: DataFrame of listings for the given ZIP code and filters
         """
-        # TODO, handle empty csv page. can try with normal filters and rural town
-
-        # TODO, the stuff for when searching by for sale. on back burner cause not useful rn
-   
-        # region_info = self.get_region_info_from_zipcode(zip)
-        
-        # if sold:
-        #     if sort_order is self.SortOrder.NEWEST:
-        #         logger.warning("wrong sort order for sale type")
-        #         return
-        # else:
-        #     if sort_order is self.SortOrder.MOST_RECENTLY_SOLD:
-        #         logger.warning("wrong sort order for sale type")
-        #         return
-        # market = region_info["payload"]["rootDefaults"]["market"]
-        # region_id = region_info["payload"]["rootDefaults"]["region_id"]
-        # status = str(region_info["payload"]["rootDefaults"]["status"])
-        # # sold:
-        # params = {
-        #     "al": 1,
-        #     "has_deal": "false",
-        #     "has_dishwasher": "false",
-        #     "has_laundry_facility": "false",
-        #     "has_laundry_hookups": "false",
-        #     "has_parking": "false",
-        #     "has_pool": "false",
-        #     "max_year_built": max_year_built,
-        #     "min_stories": min_stories.value,
-        #     "min_year_built": min_year_built,
-        #     "has_short_term_lease": "false",
-        #     "include_pending_homes": "false",  # probably an "include" option
-        #     "isRentals": "false",
-        #     "is_furnished": "false",
-        #     "is_income_restricted": "false",
-        #     "is_senior_living": "false",
-        #     "market": market,
-        #     "num_homes": 350,
-        #     "ord": sort_order,
-        #     "page_number": "1",
-        #     "pool": "false",
-        #     "region_id": region_id,
-        #     "region_type": 2,
-        #     "status": status,
-        #     "travel_with_traffic": "false",
-        #     "travel_within_region": "false",
-        #     "uipt": ",".join(val for val in home_types),
-        #     "utilities_included": "false",
-        #     "v": "8",
-        # }
-        # if sold is not None:
-        #     params["sold_within_days"] = sold.value
-        # else:
-        #     params["sf"] = 1, 2, 3, 5, 6, 7
-        # filter on what we want. currently were only accepting `HOUSE`
         if self.search_params is None:
             logger.warn(f"Search params were not set. {self.search_params = }.")
             return
@@ -1201,13 +1159,17 @@ class NewScraper:
                 )
             )
             if df.height == 0:
-                logger.debug("CSV was empty. This can happen if local MLS rules dont allow downloads.")
+                logger.debug(
+                    "CSV was empty. This can happen if local MLS rules dont allow downloads."
+                )
                 return None
         except Exception as e:
-            logger.warning(f"Could not read gis csv.\n{csv_text = }\n{e}")
+            logger.warning(
+                f"Could not read gis csv into dataframe.\n{csv_text = }\n{e}"
+            )
             return None
         return df
-    
+
     def get_gis_csv_for_zips_in_metro_with_filters(
         self,
         metro: str,
@@ -1218,17 +1180,34 @@ class NewScraper:
         home_types: list[HouseType],
         sold: SoldWithinDays | None = SoldWithinDays.FIVE_YEARS,
     ) -> pl.DataFrame | None:
-        
-        # zips = helper.metroname to zips
-        # zips = formated zips
-        # for zip in zips
-        # ->
+        """Get DataFrame of all gis CSVs of a metro.
+
+        Args:
+            metro (str): MSA name
+            min_year_built (str): min year built to filter
+            max_year_built (str): max year built to filter
+            min_stories (Stories): min stories to filter
+            sort_order (SortOrder): how to sort results. Max 350 results, suggested to sort by recent sold
+            home_types (list[HouseType]): House type
+            sold (SoldWithinDays | None, optional): Sold within days. Defaults to SoldWithinDays.FIVE_YEARS.
+
+        Returns:
+            pl.DataFrame | None: Return a dataframe of all gis CSVs in the metro . Return `None` if no houses are found in the metro
+        """
         zip_codes = metro_name_to_zip_code_list(metro)
         formatted_zip_codes = [f"{zip_code:0{5}}" for zip_code in zip_codes]
         list_of_csv_dfs = []
         for zip in formatted_zip_codes:
-            time.sleep(random.uniform(.5, 1.6))
-            self.set_search_params(zip, min_year_built, max_year_built, min_stories, sort_order, home_types, sold)
+            time.sleep(random.uniform(1.5, 2))
+            self.set_search_params(
+                zip,
+                min_year_built,
+                max_year_built,
+                min_stories,
+                sort_order,
+                home_types,
+                sold,
+            )
             temp = self.get_gis_csv_from_zip_with_filters()
             if temp is None:
                 logger.info(f"Did not find any houses in {zip}.")
@@ -1236,17 +1215,7 @@ class NewScraper:
             logger.info(f"Found data for {temp.height} houses in {zip}.")
             list_of_csv_dfs.append(temp)
 
+        if len(list_of_csv_dfs) == 0:
+            logger.info(f"No houses found within {metro}. Try relaxing filters.")
+            return None
         return pl.concat(list_of_csv_dfs)
-                
-        #-> if not none all.append(zipcodecsv_search) else "nothing for for {zip = }"
-
-
-    # get_csv_from_zip_with_filters(
-    #     "01609",
-    #     "2022",
-    #     "2023",
-    #     NewScraper.Stories.ONE,
-    #     NewScraper.SortOrder.MOST_RECENTLY_SOLD,
-    #     [NewScraper,HouseType.HOUSE],
-    #     NewScraper.SoldWithinDays.FIVE_YEARS,
-    # )

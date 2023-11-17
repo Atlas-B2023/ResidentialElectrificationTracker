@@ -13,7 +13,7 @@ if __name__ == "__main__":
     rfs = NewScraper()
     print(
         rfs.get_gis_csv_for_zips_in_metro_with_filters(
-            "TEST",
+            "Nashville-Davidson--Murfreesboro--Franklin, TN",
             "2022",
             "2023",
             NewScraper.Stories.ONE,
