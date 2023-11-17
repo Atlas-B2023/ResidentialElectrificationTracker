@@ -13,12 +13,13 @@ if __name__ == "__main__":
     rfs = RedfinApi()
     print(
         rfs.get_house_attributes_from_metro(
-            "TEST",
+            "Phoenix-Mesa-Chandler, AZ",
             "2022",
             "2023",
             RedfinApi.Stories.ONE,
             RedfinApi.SortOrder.MOST_RECENTLY_SOLD,
             [RedfinApi.HouseType.HOUSE],
             RedfinApi.SoldWithinDays.FIVE_YEARS,
+            True
         )
     )

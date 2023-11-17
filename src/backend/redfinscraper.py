@@ -329,18 +329,43 @@ class RedfinApi:
         Returns:
             list[str]: list of raw heating terms
         """
-        reference_names = ("HEATING", "HEATING_FUEL", "UTILITIES")
+        reference_names = [
+            "(?i)HEATING",
+            "HEATING_FUEL",
+            "UTILITIES",
+            "utili",
+            "heat",
+        ]
 
         raw_amenity_values = []
-        amenity_groups = super_group.get(
-            "amenityGroups", ""
-        )  # list. skip for loop if nothing
-        for amenity in (
-            amenity_groups
-        ):  # going through all super  and check if property detail header is a match.
+        # list. skip for loop if nothing
+        amenity_groups = super_group.get("amenityGroups", "")
+        # going through all super  and check if property detail header is a match.
+        for amenity in amenity_groups:
             for amenity_entry in amenity.get("amenityEntries", ""):
-                if amenity_entry.get("referenceName", "") in reference_names:
+                if any(
+                    re.findall(
+                        "|".join(reference_names),
+                        amenity_entry.get("referenceName", ""),
+                    )
+                ):
                     if re.match(r"utili", amenity_entry.get("amenityName", ""), re.I):
+                        temp_list = []
+                        for string in amenity_entry.get("amenityValues", ""):
+                            match = utilities_group.findall(
+                                string
+                            )  # utilities is weird since they pack everting together
+                            if match:
+                                temp_list.extend(utilities_group.findall(string))
+                        raw_amenity_values.extend(temp_list)
+                    else:
+                        raw_amenity_values.extend(amenity_entry.get("amenityValues"))
+                elif any(
+                    re.findall(
+                        "|".join(reference_names), amenity.get("referenceName", "")
+                    )
+                ):
+                    if re.match(r"utili", amenity.get("referenceName", ""), re.I):
                         temp_list = []
                         for string in amenity_entry.get("amenityValues", ""):
                             match = utilities_group.findall(
@@ -396,12 +421,6 @@ class RedfinApi:
     def get_heating_terms_dict_from_listing(
         self, address_url_list: list[str]
     ) -> dict[str, bool]:
-        if len(address_url_list) != 2:
-            logger.critical(
-                f"Address was not accompanied by its url. check if the metro dataframe has both. {address_url_list = }"
-            )
-            return copy.deepcopy(self.column_dict)
-
         address = address_url_list[0]
         listing_url = address_url_list[1]
         terms = []
@@ -552,16 +571,36 @@ class RedfinApi:
         sort_order: SortOrder,
         home_types: list[HouseType],
         sold: SoldWithinDays | None = SoldWithinDays.FIVE_YEARS,
+        use_cached_gis_csv_csv: bool = False,
     ) -> pl.DataFrame | None:
-        search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
-            msa_name,
-            min_year_built,
-            max_year_built,
-            min_stories,
-            sort_order,
-            home_types,
-            sold,
-        )
+        msa_name_file_safe = msa_name.strip().replace(", ", "_").replace(" ", "_")
+        metro_output_dir_path = Path(OUTPUT_DIR_PATH) / msa_name_file_safe
+
+        if use_cached_gis_csv_csv:
+            logger.info("Loading csv from cache.")
+            search_page_csvs_df = pl.read_csv(
+                metro_output_dir_path / (msa_name_file_safe + ".csv"),
+                dtypes=self.DESIRED_CSV_SCHEMA,
+            )
+            if search_page_csvs_df is not None:
+                logger.info(
+                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} is complete."
+                )
+            else:
+                logger.info(
+                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} has failed."
+                )
+                return
+        else:
+            search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
+                msa_name,
+                min_year_built,
+                max_year_built,
+                min_stories,
+                sort_order,
+                home_types,
+                sold,
+            )
         if search_page_csvs_df is None:
             logger.info(f"No houses found within {msa_name}. Try relaxing filters.")
             return None
@@ -573,14 +612,14 @@ class RedfinApi:
             )
         )
 
-        metro_dir_name = msa_name.strip().replace(" ", "_").replace(",", "_")
-        metro_output_dir_path = Path(OUTPUT_DIR_PATH) / metro_dir_name / ""
         os.makedirs(metro_output_dir_path, exist_ok=True)
         # write it so that we can save for future use
         logger.debug(
-            f"writing csv for metro to {metro_output_dir_path / (metro_dir_name + ".csv")}"
+            f"writing csv for metro to {metro_output_dir_path / (msa_name_file_safe + ".csv")}"
         )
-        search_page_csvs_df.write_csv(metro_output_dir_path / (metro_dir_name + ".csv"))
+        search_page_csvs_df.write_csv(
+            metro_output_dir_path / (msa_name_file_safe + ".csv")
+        )
 
         # go through whole csv and get the house attributes for each house. then partition the dataframe by ZIP and save files
 
