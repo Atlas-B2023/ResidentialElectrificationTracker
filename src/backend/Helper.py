@@ -1,15 +1,16 @@
 import logging
+import os
 import random
-import re
 import time
 from enum import StrEnum
 from pathlib import Path
-import os
 from typing import Any
 
 import polars as pl
 import requests
+from fake_useragent import UserAgent
 from redfin import Redfin
+
 from .us import states as sts
 
 redfin_session = requests.Session()
@@ -18,6 +19,7 @@ master_df = pl.read_csv(
 )
 CENSUS_REPORTER_API_BASE_URL = "https://api.censusreporter.org"
 CENSUS_REPORTER_BASE_URL = "https://censusreporter.org"
+
 
 class ASCIIColors(StrEnum):
     """ASCII colors for use in printing colored text to the terminal."""
@@ -107,9 +109,9 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
         list[int]: list of ZIP codes found. Is empty if MSA name is invalid
     """
     if msa_name == "TEST":
-        return [55424]  # good and small
+        # return [20814]  # good and small
         # return [22067, 55424]  # nulls in sqft
-        # return [10101, 90037, 55424, 33617]  # nulls in sqft and large
+        return [10101, 90037, 1609, 33617, 80206, 60624]  # nulls in sqft and large
     # path = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}uszips.csv"
 
     df = master_df.select("ZIP", "METRO_NAME", "LSAD")
@@ -146,28 +148,6 @@ def zip_to_metro(zip: int) -> str:
         return ""  # should this be none?
 
 
-def get_random_user_agent() -> str:
-    """Pick a random user agent string from a list of popular user agents.
-
-    Returns:
-        str: user agent string
-    """
-    list = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
-        "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
-        "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
-        "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
-        "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.35",
-        "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/113.0",
-        "Mozilla/5.0 (Android 12; Mobile; rv:109.0) Gecko/113.0 Firefox/113.0",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-    ]
-    return random.choice(list)
-
-
 def req_get_wrapper(url: str) -> requests.Response:
     """Wrapper for requests. Uses a random short sleep and random user agent string. DO NOT USE
 
@@ -178,9 +158,10 @@ def req_get_wrapper(url: str) -> requests.Response:
         requests.Response: the response object
     """
     time.sleep(random.uniform(0.6, 1.1))
+    ua = UserAgent(min_percentage=0.1)
     req = redfin_session.get(
         url,
-        headers={"User-Agent": get_random_user_agent()},
+        headers={"User-Agent": ua.random},
         timeout=17,
     )
 
@@ -276,23 +257,28 @@ def _set_up_logger(level: int) -> logging.Logger:
 
 logger = _set_up_logger(logging.INFO)
 
+
 def get_census_report_url_page(search_term: str):
-    census_reporter_headers =  {
-            "User-Agent": get_random_user_agent(),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.7",
-            "Cache-Control": "max-age=0",
-            "Dnt":"1",
-            "Sec-Fetch-Dest": "document",  
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",  
-            "Sec-GPC": "1",
-            "Upgrade-Insecure-Requests": "1",
-        }
-    req = requests.get(f"{CENSUS_REPORTER_API_BASE_URL}/2.1/full-text/search?q={search_term}", headers=census_reporter_headers)
+    ua = UserAgent(min_percentage=0.1)
+    census_reporter_headers = {
+        "User-Agent": ua.random,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.7",
+        "Cache-Control": "max-age=0",
+        "Dnt": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-GPC": "1",
+        "Upgrade-Insecure-Requests": "1",
+    }
+    req = requests.get(
+        f"{CENSUS_REPORTER_API_BASE_URL}/2.1/full-text/search?q={search_term}",
+        headers=census_reporter_headers,
+    )
     req.raise_for_status()
     req_json = req.json()
     profile_url = req_json["results"][0].get("url")
-  
+
     return f"{profile_url}"
