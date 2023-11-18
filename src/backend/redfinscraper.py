@@ -260,16 +260,21 @@ class RedfinApi:
         response.raise_for_status()
         return response.text
 
-    def working_below_the_fold(self, property_id, listing_id):
-        return self.rf.meta_request(
-            "/api/home/details/belowTheFold",
-            {
+    def working_below_the_fold(self, property_id, listing_id=False):
+        if listing_id:
+            params = {
                 "accessLevel": 1,
                 "propertyId": property_id,
                 "listingId": listing_id,
                 "pageType": 1,
-            },
-        )
+            }
+        else:
+            params = {
+                "accessLevel": 1,
+                "propertyId": property_id,
+                "pageType": 1,
+            }
+        return self.rf.meta_request("/api/home/details/belowTheFold", params)
 
     def get_region_info_from_zipcode(self, zip_code: str) -> Any:
         return self.rf.meta_request(
@@ -376,7 +381,6 @@ class RedfinApi:
                         raw_amenity_values.extend(
                             amenity_entry.get("amenityValues", "")
                         )
-        logger.info(f"{raw_amenity_values = }")
         # filters on final are too restrictive. move them into above if statements
         amenity_values = [
             string
@@ -384,7 +388,6 @@ class RedfinApi:
             if any(regex.findall(string) for regex in heating_related_patterns)
             and not any(exclude_terms.findall(string))
         ]
-        logger.info(f"{amenity_values = }")
         return amenity_values
 
     def get_super_groups_from_url(self, listing_url: str) -> list | None:
@@ -405,11 +408,24 @@ class RedfinApi:
         except json.JSONDecodeError:
             logger.warn(f"Could not get initial info for {listing_url =}")
             return None
-        property_id = initial_info["payload"]["propertyId"]
-        listing_id = initial_info["payload"]["listingId"]
+        try:
+            property_id = initial_info["payload"]["propertyId"]
+        except KeyError:
+            logger.critical("Could not find property id")
+            return None
+        try:
+            listing_id = initial_info["payload"]["listingId"]
+        except KeyError:
+            listing_id = None
+            logger.warning(
+                "Could not find listing id. Will try to continue. if errors in final zip csv, this might be the issue"
+            )
         try:
             time.sleep(random.uniform(1.1, 2.1))
-            mls_data = self.working_below_the_fold(property_id, listing_id)
+            if listing_id is None:
+                mls_data = self.working_below_the_fold(property_id)
+            else:
+                mls_data = self.working_below_the_fold(property_id, listing_id)
         except json.JSONDecodeError:
             logger.warn(f"Could not find mls details for {listing_url = }")
             return None
@@ -446,7 +462,6 @@ class RedfinApi:
 
         # categorize the correct dict and return
         master_dict = copy.deepcopy(self.column_dict)
-        logger.debug(f"master dict {master_dict = }")
         for input_string in terms:
             logger.debug(f"{input_string = }")
             result = {}
@@ -459,8 +474,8 @@ class RedfinApi:
                 master_dict[key] = result[key] | master_dict[key]
 
         # You'll have to df.unnest this for use in a dataframe
-        logger.debug(terms)
-        logger.debug(master_dict)
+        logger.debug(f"{terms = }")
+        logger.debug(f"{master_dict = }")
         logger.info(f"Heating amenities found for {address}.")
         return master_dict
 
@@ -651,9 +666,7 @@ class RedfinApi:
         for df_of_zip in list_of_dfs_by_zip:
             df_of_zip = (
                 df_of_zip.with_columns(
-                    pl.concat_list(
-                        [pl.col("ADDRESS"), pl.col(url_col_name)]
-                    )  # len check wont work. just leave that out and make sure filter of search page csv is good
+                    pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)])
                     .map_elements(self.get_heating_terms_dict_from_listing)
                     .alias("nest")
                 )
