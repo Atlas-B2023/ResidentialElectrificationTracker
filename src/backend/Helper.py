@@ -111,7 +111,7 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
     if msa_name == "TEST":
         # return [20814]  # good and small
         # return [22067, 55424]  # nulls in sqft
-        return [10101, 90037, 1609, 33617, 80206, 60624]  # nulls in sqft and large
+        return [85131]  # nulls in sqft and large
     # path = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}uszips.csv"
 
     df = master_df.select("ZIP", "METRO_NAME", "LSAD")

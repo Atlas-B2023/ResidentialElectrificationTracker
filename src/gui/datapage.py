@@ -122,8 +122,8 @@ class DataPage(ctk.CTkFrame):
 
         self.census_reporter_frame.columnconfigure(0, weight=1)
 
-        self.progress_bar_frame.columnconfigure(0, weight=50)  # bar
-        self.progress_bar_frame.columnconfigure((1, 2), weight=1)  # text, button
+        # self.progress_bar_frame.columnconfigure(0, weight=50)  # bar
+        # self.progress_bar_frame.columnconfigure((1, 2), weight=1)  # text, button
 
         # row
         self.rowconfigure(0, weight=1)
@@ -142,7 +142,7 @@ class DataPage(ctk.CTkFrame):
             (0, 1), weight=1
         )  # going to have two labels
 
-        self.progress_bar_frame.rowconfigure(0, weight=1)
+        # self.progress_bar_frame.rowconfigure(0, weight=1)
 
         # placement
         self.content_frame.grid(column=0, row=0, sticky="news")
@@ -165,10 +165,10 @@ class DataPage(ctk.CTkFrame):
         self.census_reporter_frame.grid(column=0, row=2, sticky="news")
         self.census_reporter_state_label.grid(column=0, row=0)
         self.census_reporter_metro_label.grid(column=0, row=1)
-        self.progress_bar_frame.grid(column=0, row=3, sticky="news")
-        self.progress_bar.grid(column=0, row=0, sticky="we", padx=(20, 0))
-        self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
-        self.stop_search_button.grid(column=2, row=0, sticky="w")
+        # self.progress_bar_frame.grid(column=0, row=3, sticky="news")
+        # self.progress_bar.grid(column=0, row=0, sticky="we", padx=(20, 0))
+        # self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
+        # self.stop_search_button.grid(column=2, row=0, sticky="w")
 
     def set_msa_name(self, msa_name: str):
         """set the msa name
@@ -318,4 +318,4 @@ class DataPage(ctk.CTkFrame):
             daemon=True,
         ).start()
 
-    def update_progress(self, x):
+    # def update_progress(self, x):

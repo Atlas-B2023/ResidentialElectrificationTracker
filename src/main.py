@@ -11,15 +11,12 @@ if __name__ == "__main__":
     # gui_app = app.App()
     # gui_app.mainloop()
     rfs = RedfinApi()
-    print(
-        rfs.get_house_attributes_from_metro(
-            "Phoenix-Mesa-Chandler, AZ",
-            "2022",
-            "2023",
-            RedfinApi.Stories.ONE,
-            RedfinApi.SortOrder.MOST_RECENTLY_SOLD,
-            [RedfinApi.HouseType.HOUSE],
-            RedfinApi.SoldWithinDays.FIVE_YEARS,
-            True
-        )
+    rfs.get_house_attributes_from_metro(
+        "TEST",
+        "2022",
+        "2023",
+        RedfinApi.Stories.ONE,
+        RedfinApi.SortOrder.MOST_RECENTLY_SOLD,
+        [RedfinApi.HouseType.HOUSE],
+        RedfinApi.SoldWithinDays.FIVE_YEARS,
     )

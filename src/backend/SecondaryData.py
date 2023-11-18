@@ -151,7 +151,7 @@ class EIADataRetriever:
         OIL_BOILER = 0.783
         WOOD_STOVE = 0.75
         PELLET_STOVE = 0.75
-        NG_FURNACE = 0.744
+        NG_FURNACE = 0.744  #! double check this value
         PROPANE_FURNACE = 0.744
         OIL_FURNACE = 0.704
         PELLET_BOILER = 0.639

@@ -1,14 +1,11 @@
 import copy
 import io
-
-# import itertoos
+import re
 import os
 import random
 import re
 import time
 import json
-
-# from datetime import datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -24,30 +21,17 @@ from backend import (
     metro_name_to_zip_code_list,
 )
 
+# TODO add notice that this program may over estimate or under estimate fuels that are common across not heating system in houses, like electricity and NG
+# listings say things like "Electric: 200+ amps" or "No: gas, electricity" not really needed tho?
+exclude_terms = re.compile(r"no\b.*electric|no\b.*gas|water", re.I)
 
-exclude_terms = [
-    # listings say things like "Electric: 200+ amps"
-    re.compile(r"^electric", re.I),
-    re.compile(r"no\b.*electric", re.I),
-    re.compile(r"no\b.*gas", re.I),
-    # hot water related things. the water has to get heated somehow... This might get rid of some strings that have all utilities listed together.
-    # still leaven tho because a lot list how their hot water is heated
-    re.compile(r"water", re.I),
-    re.compile(r"utilities:", re.I),
-    # if you want to disable collection of cooling un-comment
-    # re.compile(r"cool", re.I),
-]
 
-utilities_group = re.compile(
+utilities_group_exclude = re.compile(
     r"electric(?=\s(heat|baseboard))", re.I
 )  # only match electric in utilities container with this matches
 
-heating_related_property_details_headers = [
-    re.compile(r"heat", re.I),
-    re.compile(r"property", re.I),
-    # ies and y
-    re.compile(r"utilit", re.I),
-]
+probable_super_group_title_strings = re.compile(r"heat|property|interior|utilit", re.I)
+
 
 heating_related_patterns = [
     re.compile(r"electric", re.I),
@@ -75,8 +59,6 @@ regex_category_patterns = {
     "Diesel/Heating Oil": re.compile(r"diesel|oil", re.I),
     "Wood/Pellet": re.compile(r"wood|pellet", re.I),
     "Solar Heating": re.compile(r"solar", re.I),
-    # ask zack about the central electric match being a heat pump
-    # central.*electric  #(?!.*mini-split)
     "Heat Pump": re.compile(r"heat pump|mini[\s-]split", re.I),
     "Baseboard": re.compile(r"baseboard", re.I),
     "Furnace": re.compile(r"furnace", re.I),
@@ -302,7 +284,7 @@ class RedfinApi:
         """Supply a probable heating group
 
         Notes:
-            Format of super group :
+            Format of super group in JSON:
             {
                 types: []
                 amenityGroups: [
@@ -323,66 +305,86 @@ class RedfinApi:
                 titleString: ""
             }
 
+            Format of groupTitle/propertyDetailsHeader on website:
+                Interior -> titleString
+                ...
+                    Heating & Cooling -> groupTitle
+                        Electric -> no amenityName
+                        Ceiling Fan(s), Programmable Thermostat, Refrigeration -> no amenityName
+                        Heating/Cooling Updated In: 2022 -> amenityName = Heating/Cooling Updated In
+
         Args:
             super_group (dict): _description_
 
         Returns:
             list[str]: list of raw heating terms
         """
-        reference_names = [
-            "(?i)HEATING",
-            "HEATING_FUEL",
-            "UTILITIES",
-            "utili",
-            "heat",
-        ]
+        # for matching amenity group names on
+        group_names_include = re.compile(r"heat|utilit|interior", re.I)
+        group_names_exclude = re.compile(r"heating.*updat|has heat", re.I)
 
         raw_amenity_values = []
-        # list. skip for loop if nothing
         amenity_groups = super_group.get("amenityGroups", "")
         # going through all super  and check if property detail header is a match.
         for amenity in amenity_groups:
             for amenity_entry in amenity.get("amenityEntries", ""):
-                if any(
-                    re.findall(
-                        "|".join(reference_names),
-                        amenity_entry.get("referenceName", ""),
-                    )
-                ):
-                    if re.match(r"utili", amenity_entry.get("amenityName", ""), re.I):
-                        temp_list = []
-                        for string in amenity_entry.get("amenityValues", ""):
-                            match = utilities_group.findall(
-                                string
-                            )  # utilities is weird since they pack everting together
-                            if match:
-                                temp_list.extend(utilities_group.findall(string))
-                        raw_amenity_values.extend(temp_list)
-                    else:
-                        raw_amenity_values.extend(amenity_entry.get("amenityValues"))
-                elif any(
-                    re.findall(
-                        "|".join(reference_names), amenity.get("referenceName", "")
-                    )
-                ):
-                    if re.match(r"utili", amenity.get("referenceName", ""), re.I):
-                        temp_list = []
-                        for string in amenity_entry.get("amenityValues", ""):
-                            match = utilities_group.findall(
-                                string
-                            )  # utilities is weird since they pack everting together
-                            if match:
-                                temp_list.extend(utilities_group.findall(string))
-                        raw_amenity_values.extend(temp_list)
-                    else:
-                        raw_amenity_values.extend(amenity_entry.get("amenityValues"))
+                amenity_name = amenity_entry.get("amenityName", "")
+                group_title = amenity.get("groupTitle", "")
 
+                if group_names_include.findall(
+                    amenity_name
+                ) and not group_names_exclude.findall(amenity_name):
+                    if any(re.compile("utilit", re.I).findall(amenity_name)):
+                        # dont match things like
+                        # Utilities
+                        #   Electricity
+                        for value in amenity_entry.get("amenityValues", ""):
+                            # TODO invert this regex. i think this would still match "internet" in utilities?
+                            # TODO have seperate regex for group title and amenity name? should match differently if the details section is "heating & cooling" and amenity name is "interior"
+                            if re.search(
+                                r"^electric|^natural gas|^no.*gas|^no.*electric|water",
+                                value,
+                                re.I,
+                            ):
+                                continue
+                            else:
+                                raw_amenity_values.append(value)
+                    else:
+                        raw_amenity_values.extend(
+                            amenity_entry.get("amenityValues", "")
+                        )
+                elif (
+                    amenity_name == ""
+                    and group_names_include.findall(group_title)
+                    and not group_names_exclude.findall(group_title)
+                ):
+                    # if floating item ( empty string compare being true implicitly means that we are not rejected)...
+                    if any(re.compile("utilit", re.I).findall(group_title)):
+                        # dont match things like
+                        # Utilities
+                        #   Electricity
+                        for value in amenity_entry.get("amenityValues", ""):
+                            if re.search(
+                                r"^electric|^natural gas|^no.*gas|^no.*electric|water",
+                                value,
+                                re.I,
+                            ):
+                                continue
+                            else:
+                                raw_amenity_values.append(value)
+                    else:
+                        raw_amenity_values.extend(
+                            amenity_entry.get("amenityValues", "")
+                        )
+        logger.info(f"{raw_amenity_values = }")
+        # filters on final are too restrictive. move them into above if statements
         amenity_values = [
             string
             for string in raw_amenity_values
             if any(regex.findall(string) for regex in heating_related_patterns)
-            and not any(regex.findall(string) for regex in exclude_terms)
+            and not any(exclude_terms.findall(string))
         ]
+        logger.info(f"{amenity_values = }")
         return amenity_values
 
     def get_super_groups_from_url(self, listing_url: str) -> list | None:
@@ -432,9 +434,12 @@ class RedfinApi:
             )  # this and "There was no heating information for {address}" should be made in caller?
             return copy.deepcopy(self.column_dict)
         for super_group in super_groups:  # dict
-            terms.extend(
-                self.get_heating_info_from_super_group(super_group)
-            )  # this will be like [gas, electricity, heat pump]
+            if probable_super_group_title_strings.findall(
+                super_group.get("titleString", "")
+            ):
+                terms.extend(
+                    self.get_heating_info_from_super_group(super_group)
+                )  # this will be like [gas, electricity, heat pump]
         if len(terms) == 0:
             logger.info(f"There was no heating information for {address}")
             return copy.deepcopy(self.column_dict)
@@ -578,19 +583,27 @@ class RedfinApi:
 
         if use_cached_gis_csv_csv:
             logger.info("Loading csv from cache.")
-            search_page_csvs_df = pl.read_csv(
-                metro_output_dir_path / (msa_name_file_safe + ".csv"),
-                dtypes=self.DESIRED_CSV_SCHEMA,
-            )
-            if search_page_csvs_df is not None:
+            try:
+                search_page_csvs_df = pl.read_csv(
+                    metro_output_dir_path / (msa_name_file_safe + ".csv"),
+                    dtypes=self.DESIRED_CSV_SCHEMA,
+                )
                 logger.info(
                     f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} is complete."
                 )
-            else:
+            except FileNotFoundError:
                 logger.info(
-                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} has failed."
+                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} has failed, continuing with API search."
                 )
-                return
+                search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
+                    msa_name,
+                    min_year_built,
+                    max_year_built,
+                    min_stories,
+                    sort_order,
+                    home_types,
+                    sold,
+                )
         else:
             search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
                 msa_name,
@@ -607,10 +620,11 @@ class RedfinApi:
 
         url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
         search_page_csvs_df = search_page_csvs_df.filter(
-            (~pl.col(url_col_name).str.contains("(?i)unknown")).and_(
-                pl.col("ADDRESS").str.len_chars().gt(0)
-            )
-        )
+            (~pl.col(url_col_name).str.contains("(?i)unknown"))
+            .and_(pl.col("ADDRESS").str.len_chars().gt(0))
+            .and_(pl.col("SQUARE FEET").is_not_null())
+            .and_(pl.col("YEAR BUILT").is_not_null())
+        ).unique(subset=["LATITUDE", "LONGITUDE"], maintain_order=True)
 
         os.makedirs(metro_output_dir_path, exist_ok=True)
         # write it so that we can save for future use
