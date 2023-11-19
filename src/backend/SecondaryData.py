@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-import pathlib
+from pathlib import Path
 import re
 from enum import Enum, StrEnum
 from typing import Any
@@ -9,17 +9,15 @@ from typing import Any
 import polars as pl
 import polars.selectors as cs
 import requests
-from backend import helper
+from backend.helper import log, req_get_wrapper
 from backend.us import states as sts
 from dotenv import load_dotenv
 
 
 load_dotenv()
-logger = helper.logger
-cache_dir_path = f"{os.path.dirname(__file__)}{os.sep}.cache"
-output_dir_path = (
-    f"{pathlib.Path(os.path.dirname(__file__)).parent.parent}{os.sep}output"
-)
+
+CENSUS_DATA_DIR_PATH = Path(__file__).parent.parent.parent / "output" / "census_data"
+
 
 # https://www.dcf.ks.gov/services/PPS/Documents/PPM_Forms/Section_5000_Forms/PPS5460_Instr.pdf
 replace_dict = {
@@ -187,8 +185,9 @@ class EIADataRetriever:
         self.eia_base_url = "https://api.eia.gov/v2"
         self.api_key = os.getenv("EIA_API_KEY")
         if self.api_key is None:
-            logger.critical(
-                "No Census API key found in a .env file in project directory. please request a key at https://www.eia.gov/opendata/register.php"
+            log(
+                "No Census API key found in a .env file in project directory. please request a key at https://www.eia.gov/opendata/register.php",
+                "critical",
             )
             exit()
 
@@ -222,7 +221,7 @@ class EIADataRetriever:
                         value
                         / (
                             self.FuelBTUConversion.PROPANE_BTU_PER_GAL.value
-                            * self.HeaterEfficiencies.PROPANE_BOILER.value
+                            * self.HeaterEfficiencies.PROPANE_FURNACE.value
                         )
                         * 1_000_000
                     )
@@ -237,7 +236,7 @@ class EIADataRetriever:
                         value
                         / (
                             self.FuelBTUConversion.NG_BTU_PER_MCT.value
-                            * self.HeaterEfficiencies.NG_BOILER.value
+                            * self.HeaterEfficiencies.NG_FURNACE.value
                         )
                         * 1_000_000
                     )
@@ -273,7 +272,7 @@ class EIADataRetriever:
                         * 1_000_000
                     )
             case _:
-                logger.warning("Could not translate dict to btu per price.")
+                log("Could not translate dict to btu per price.", "warn")
 
         return energy_price_dict
 
@@ -367,7 +366,7 @@ class EIADataRetriever:
         # cent/ kwh
         url = f"{self.eia_base_url}/electricity/retail-sales/data/?frequency=monthly&data[0]=price&facets[stateid][]={state}&facets[sectorid][]=RES&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = helper.req_get_wrapper(url)
+        eia_request = req_get_wrapper(url)
         eia_request.raise_for_status()
 
         return eia_request.json()
@@ -388,7 +387,7 @@ class EIADataRetriever:
         # $/mcf
         url = f"https://api.eia.gov/v2/natural-gas/pri/sum/data/?frequency=monthly&data[0]=value&facets[duoarea][]=S{state}&facets[process][]=PRS&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = helper.req_get_wrapper(url)
+        eia_request = req_get_wrapper(url)
         eia_request.raise_for_status()
 
         return eia_request.json()
@@ -437,7 +436,7 @@ class EIADataRetriever:
         # heating season is Oct - march, $/gal
         url = f"https://api.eia.gov/v2/petroleum/pri/wfr/data/?frequency=weekly&data[0]=value&facets[duoarea][]=S{state}&facets[product][]=EPD2F&start={start_date}&end={end_date}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = helper.req_get_wrapper(url)
+        eia_request = req_get_wrapper(url)
         eia_request.raise_for_status()
 
         json = eia_request.json()
@@ -512,7 +511,7 @@ class EIADataRetriever:
         # heating season is Oct - march, $/gal
         url = f"https://api.eia.gov/v2/petroleum/pri/wfr/data/?frequency=weekly&data[0]=value&facets[process][]=PRS&facets[duoarea][]=S{state}&facets[product][]=EPLLPA&start={start_date}&end={end_date}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
-        eia_request = helper.req_get_wrapper(url)
+        eia_request = req_get_wrapper(url)
         eia_request.raise_for_status()
 
         json = eia_request.json()
@@ -641,7 +640,7 @@ class EIADataRetriever:
                 self.EnergyTypes.ELECTRICITY, state, start_date, end_date
             )
         )
-        logger.debug(f"{dicts_to_return = }")
+        log(f"{dicts_to_return = }", "debug")
         return dicts_to_return
 
 
@@ -653,8 +652,9 @@ class CensusDataRetriever:
         # https://api.census.gov/data/2021/acs/acs5/profile/variables.html
         self.api_key = os.getenv("CENSUS_API_KEY")
         if self.api_key is None:
-            logger.critical(
-                "No Census API key found in a .env file in project directory. please request a key at https://api.census.gov/data/key_signup.html"
+            log(
+                "No Census API key found in a .env file in project directory. please request a key at https://api.census.gov/data/key_signup.html",
+                "critical",
             )
             exit()
         self.MAX_COL_NAME_LENGTH = 80
@@ -662,14 +662,14 @@ class CensusDataRetriever:
     def get(self, url: str) -> requests.Response | None:
         r = requests.get(url, timeout=65)
         if r.status_code == 400:
-            logger.info(f"Unknown variable {r.text.split("variable ")[-1]}")
+            log(f"Unknown variable {r.text.split("variable ")[-1]}", "info")
             return None
         return r
 
     def get_and_cache_data(
         self, file_name: str, url_to_lookup_on_miss: str
     ) -> dict[str, str] | bool:
-        """Cache files in the .cache folder
+        """Cache files
 
         Args:
             file_name (str): file name to save/lookup
@@ -678,31 +678,26 @@ class CensusDataRetriever:
         Returns:
             bool | dict[str, str] | None | Any: the dict of tablename:label or
         """
-        try:
-            os.mkdir(cache_dir_path)
-        except FileExistsError:
-            logger.debug("Cache folder exists.")
-        except FileNotFoundError:
-            logger.debug("Parent folder for cache folder does not exist.")
+        CENSUS_DATA_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
         my_json = None
 
         try:
-            with open(f"{cache_dir_path}{os.sep}{file_name}", mode="r") as f:
-                logger.debug(f"Reading {file_name}")
+            with open(CENSUS_DATA_DIR_PATH / file_name, mode="r") as f:
+                log(f"Reading {file_name}", "debug")
                 try:
                     my_json = json.load(f)
                 except json.JSONDecodeError:
-                    logger.error("Could not decode cached file")
+                    log("Could not decode cached file", "error")
                     return False
         except FileNotFoundError:
             req = self.get(url_to_lookup_on_miss)
             if req is None:
-                logger.info(f"{req = }")
+                log(f"Could not find census file {req = }", "error")
                 return False
             req.raise_for_status()
             my_json = req.json()
-            with open(f"{cache_dir_path}{os.sep}{file_name}", "w") as f:
+            with open(CENSUS_DATA_DIR_PATH / file_name, "w") as f:
                 json.dump(my_json, f)
 
         return my_json
@@ -759,15 +754,13 @@ class CensusDataRetriever:
         Returns:
             str | Any: json object
         """
-        cache_file_rel_path = f"{year}-acs5-profile-groups-{table}.json"
+        file_name = f"{year}-acs5-profile-groups-{table}.json"
         groups_url = (
             f"https://api.census.gov/data/{year}/acs/acs5/profile/groups/{table}.json"
         )
-        groups_to_label_translation = self.get_and_cache_data(
-            cache_file_rel_path, groups_url
-        )
+        groups_to_label_translation = self.get_and_cache_data(file_name, groups_url)
         if groups_to_label_translation is False:
-            logger.warning("Something is wrong with groups label dict")
+            log("Something is wrong with groups label dict", "warn")
             return None
         return groups_to_label_translation["variables"]  # type: ignore
 
@@ -788,7 +781,7 @@ class CensusDataRetriever:
             table, year
         )
         if groups_to_label_translation_dict is None:
-            logger.warning("Could not translate headers")
+            log("Could not translate headers", "warn")
             return groups_to_label_translation_dict
 
         for idx, header in enumerate(headers):
@@ -827,13 +820,14 @@ class CensusDataRetriever:
             year (str): year to search
             state (str): state
         """
-        cache_file_rel_path = f"{os.sep}{year}-acs-profile-table-{table}.json"
+        file_name = f"{year}-acs-profile-table-{table}.json"
         url = f"https://api.census.gov/data/{year}/acs/acs5/profile?get=group({table})&for=zip%20code%20tabulation%20area:*"
-        list_of_list_table_json = self.get_and_cache_data(cache_file_rel_path, url)
+        list_of_list_table_json = self.get_and_cache_data(file_name, url)
 
         if list_of_list_table_json is False:
-            logger.warning(
-                f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file."
+            log(
+                f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file.",
+                "warn",
             )
             return ""
 
@@ -856,11 +850,10 @@ class CensusDataRetriever:
                 }
             )
         )
-        file_path = f"{output_dir_path}{os.sep}acs5-profile-group-{table}-zcta.csv"
+        file_path = CENSUS_DATA_DIR_PATH / "acs5-profile-group-{table}-zcta.csv"
         df.write_csv(file_path)
-        return file_path
+        return str(file_path)
 
-    # b
     def get_acs5_subject_table_to_group_name(
         self, table: str, year: str
     ) -> dict[str, Any] | None:
@@ -893,15 +886,13 @@ class CensusDataRetriever:
         Returns:
             str | Any: json object
         """
-        cache_file_rel_path = f"{year}-acs5-subject-groups-{table}.json"
+        file_name = f"{year}-acs5-subject-groups-{table}.json"
         groups_url = (
             f"https://api.census.gov/data/{year}/acs/acs5/subject/groups/{table}.json"
         )
-        groups_to_label_translation = self.get_and_cache_data(
-            cache_file_rel_path, groups_url
-        )
+        groups_to_label_translation = self.get_and_cache_data(file_name, groups_url)
         if groups_to_label_translation is False:
-            logger.warning("Something is wrong with groups label dict")
+            log("Something is wrong with groups label dict", "warn")
             return None
         return groups_to_label_translation["variables"]  # type: ignore
 
@@ -922,7 +913,7 @@ class CensusDataRetriever:
             table, year
         )
         if groups_to_label_translation_dict is None:
-            logger.warning("Could not translate headers")
+            log("Could not translate headers", "warn")
             return groups_to_label_translation_dict
 
         for idx, header in enumerate(headers):
@@ -961,13 +952,14 @@ class CensusDataRetriever:
             year (str): year to search
             state (str): state
         """
-        cache_file_rel_path = f"{os.sep}{year}-acs-subject-table-{table}.json"
+        file_name = f"{year}-acs-subject-table-{table}.json"
         url = f"https://api.census.gov/data/{year}/acs/acs5/subject?get=group({table})&for=zip%20code%20tabulation%20area:*"
-        list_of_list_table_json = self.get_and_cache_data(cache_file_rel_path, url)
+        list_of_list_table_json = self.get_and_cache_data(file_name, url)
 
         if list_of_list_table_json is False:
-            logger.warning(
-                f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file."
+            log(
+                f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file.",
+                "warn",
             )
             return ""
 
@@ -990,7 +982,7 @@ class CensusDataRetriever:
                 }
             )
         )
-        file_path = f"{output_dir_path}{os.sep}acs5-subject-group-{table}-zcta.csv"
+        file_path = CENSUS_DATA_DIR_PATH / "acs5-subject-group-{table}-zcta.csv"
         # may not have to write. but cache func doesn't return whether it hits or not
         df.write_csv(file_path)
-        return file_path
+        return str(file_path)

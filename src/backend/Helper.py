@@ -13,6 +13,8 @@ from redfin import Redfin
 
 from .us import states as sts
 
+LOGGING_DIR = Path(__file__).parent.parent.parent / "output" / "logging"
+
 redfin_session = requests.Session()
 master_df = pl.read_csv(
     f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}master.csv"
@@ -142,7 +144,7 @@ def zip_to_metro(zip: int) -> str:
     result = master_df.filter(master_df["ZIP"] == zip)["METRO_NAME"]
 
     if len(result) > 0:
-        logger.debug("Zip has multiple codes. Only giving first one")
+        log("Zip has multiple codes. Only giving first one", "debug")
         return result[0]
     else:
         return ""  # should this be none?
@@ -233,7 +235,7 @@ def get_zip_codes_in_state(state: str) -> list[str]:
 
 
 def _set_up_logger(level: int) -> logging.Logger:
-    """Setup a logger object with basic config.
+    """Setup a logger that prints to a file.
 
     Args:
         level (int): Severity level
@@ -241,21 +243,24 @@ def _set_up_logger(level: int) -> logging.Logger:
     Returns:
         logging.Logger: logger object
     """
+    LOGGING_DIR.mkdir(exist_ok=True)
+
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
     date_format = "%Y-%m-%d %H:%M:%S"
     formatter = logging.Formatter(
         fmt="%(asctime)s - %(levelname)s: %(message)s", datefmt=date_format
     )
-    handler = logging.StreamHandler()
+    handler = logging.FileHandler(LOGGING_DIR / "logging.log", encoding="utf-8")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.propagate = False
 
+    logger.info("===============================")
+    logger.info("Starting logger.")
+    logger.info("===============================")
+
     return logger
-
-
-logger = _set_up_logger(logging.INFO)
 
 
 def get_census_report_url_page(search_term: str):
@@ -282,3 +287,40 @@ def get_census_report_url_page(search_term: str):
     profile_url = req_json["results"][0].get("url")
 
     return f"{profile_url}"
+
+
+def log(msg, level):
+    file_handler = None
+    for handler in _logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            file_handler = handler
+            break
+
+    if file_handler is None:
+        print("Logging file handler could not be established")
+        exit()
+
+    match level:
+        case "debug":
+            _logger.debug(msg)
+            file_handler.flush()
+            os.fsync(file_handler.stream.fileno())
+        case "warn", "warning":
+            _logger.warning(msg)
+            file_handler.flush()
+            os.fsync(file_handler.stream.fileno())
+        case "error":
+            _logger.warning(msg)
+            file_handler.flush()
+            os.fsync(file_handler.stream.fileno())
+        case "critical":
+            _logger.warning(msg)
+            file_handler.flush()
+            os.fsync(file_handler.stream.fileno())
+        case _:
+            _logger.info(msg)
+            file_handler.flush()
+            os.fsync(file_handler.stream.fileno())
+
+
+_logger = _set_up_logger(logging.INFO)

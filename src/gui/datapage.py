@@ -1,13 +1,17 @@
 import threading
 import webbrowser
 import datetime
-
 from matplotlib import pyplot as plt
 import customtkinter as ctk
+
+# from matplotlib.backend_bases import key_press_handler
 from backend import helper, EIADataRetriever
 from backend.us import states as sts
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+# from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.figure import Figure
+from backend.helper import log
 
 plt.style.use("fivethirtyeight")
 
@@ -17,6 +21,7 @@ class DataPage(ctk.CTkFrame):
 
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
+        self.master = master
         self.msa_name = None
         self.income_df = None
         self.demog_df = None
@@ -30,9 +35,7 @@ class DataPage(ctk.CTkFrame):
         # threading.Thread(target=self.update_state_income_figure).start()
 
     def create_widgets(self):
-        # copy paste for state metro and zip
-        # width_by_3 = int(int(self.winfo_geometry().split("x")[0]) / 3)
-
+        # bug in sockets library wont allow you to raise keyboardinterrupt, so stopping
         # Content frame will have 4 rows. first will be header, 2nd is energy graph, 3rd will contain a frame that has censusreport.org links, 4th will have progress bar frame
         self.content_frame = ctk.CTkFrame(self, border_width=2)
         self.content_banner_frame = ctk.CTkFrame(self.content_frame, border_width=2)
@@ -40,7 +43,6 @@ class DataPage(ctk.CTkFrame):
             self.content_banner_frame, border_width=2
         )
         self.census_reporter_frame = ctk.CTkFrame(self.content_frame, border_width=2)
-
         self.content_banner_main_text = ctk.CTkLabel(
             self.content_banner_frame,
             text="Census and Energy Data:",
@@ -94,6 +96,7 @@ class DataPage(ctk.CTkFrame):
             cursor="hand2",
             text_color="blue",
         )
+
         self.census_reporter_state_label.bind(
             "<Button-1>", lambda x: self.open_census_reporter_state()
         )
@@ -112,7 +115,6 @@ class DataPage(ctk.CTkFrame):
         self.columnconfigure(0, weight=1)
 
         self.content_frame.columnconfigure(0, weight=1)
-
         self.content_banner_frame.columnconfigure((0, 1), weight=1)
         self.state_and_year_content_banner_dropdown_frame.columnconfigure(
             (0, 1), weight=1
@@ -137,6 +139,7 @@ class DataPage(ctk.CTkFrame):
         self.state_and_year_content_banner_dropdown_frame.rowconfigure((0, 1), weight=1)
 
         self.energy_graph_frame.rowconfigure(0, weight=1)
+        # self.energy_graph_frame.rowconfigure(1, weight=1)
 
         self.census_reporter_frame.rowconfigure(
             (0, 1), weight=1
@@ -165,6 +168,7 @@ class DataPage(ctk.CTkFrame):
         self.census_reporter_frame.grid(column=0, row=2, sticky="news")
         self.census_reporter_state_label.grid(column=0, row=0)
         self.census_reporter_metro_label.grid(column=0, row=1)
+
         # self.progress_bar_frame.grid(column=0, row=3, sticky="news")
         # self.progress_bar.grid(column=0, row=0, sticky="we", padx=(20, 0))
         # self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
@@ -204,6 +208,7 @@ class DataPage(ctk.CTkFrame):
 
         Notes:
             Call this in a thread so that it doesn't freeze the GUI
+            Update: might want to jsut get the data and plot on the main thread
         """
         eia = EIADataRetriever()
         energy_price_per_mbtu_by_type_for_state = (
@@ -215,8 +220,12 @@ class DataPage(ctk.CTkFrame):
         fig = Figure(layout="compressed", facecolor="blue")
         ax = fig.add_subplot()
         ax.set_xlabel("Time (Months)")
-        ax.set_ylabel("Effective Cost ($/MBTU)")
-        ax.set_title(f"Avg. Energy prices for {state}, {year}")
+        ax.set_ylabel("Cost per Effective MBTU ($/MBTU)")
+        ax.set_title(
+            f"Avg. Energy prices by Appliance for {state}, {year}",
+            loc="center",
+            wrap=True,
+        )
         months = [i for i in range(1, 13)]
         month_names = [
             "Jan",
@@ -242,7 +251,12 @@ class DataPage(ctk.CTkFrame):
         # some months may not be present, some months may be present with None. must go to NaN
         # TODO investigate DC issues with api
         for energy_dict in energy_price_per_mbtu_by_type_for_state:
-            print(f"Cur {energy_dict =}")
+            if len(energy_dict) < 3:
+                log(
+                    f"Issue with energy type {energy_dict.get("type")} for state {energy_dict.get("state")}",
+                    "debug",
+                )
+                continue
             match energy_dict.get("type"):
                 case EIADataRetriever.EnergyTypes.PROPANE.value:
                     result_list = []
@@ -252,7 +266,7 @@ class DataPage(ctk.CTkFrame):
                         if val is None:
                             val = float("NaN")
                         result_list.append(val)
-                    ax.plot(months, result_list, label="Propane")
+                    ax.plot(months, result_list, label="Propane Furnace")
                 case EIADataRetriever.EnergyTypes.HEATING_OIL.value:
                     result_list = []
                     for month in months:
@@ -261,7 +275,7 @@ class DataPage(ctk.CTkFrame):
                         if val is None:
                             val = float("NaN")
                         result_list.append(val)
-                    ax.plot(months, result_list, label="Heating Oil")
+                    ax.plot(months, result_list, label="Heating Oil Boiler")
                 case EIADataRetriever.EnergyTypes.NATURAL_GAS.value:
                     result_list = []
                     for month in months:
@@ -270,7 +284,7 @@ class DataPage(ctk.CTkFrame):
                         if val is None:
                             val = float("NaN")
                         result_list.append(val)
-                    ax.plot(months, result_list, label="Natural Gas")
+                    ax.plot(months, result_list, label="Natural Gas Furnace")
                 case EIADataRetriever.EnergyTypes.ELECTRICITY.value:
                     result_list = []
                     for month in months:
@@ -279,11 +293,18 @@ class DataPage(ctk.CTkFrame):
                         if val is None:
                             val = float("NaN")
                         result_list.append(val)
-                    ax.plot(months, result_list, label="Electricity")
+                    ax.plot(months, result_list, label="Ducted Heat Pump")
         ax.legend()
         with threading.Lock():
-            chart1 = FigureCanvasTkAgg(fig, self.energy_graph_frame)
-            chart1.get_tk_widget().grid(column=0, row=0)
+            canvas = FigureCanvasTkAgg(fig, master=self.energy_graph_frame)
+            canvas.draw()
+
+            # toolbar = NavigationToolbar2Tk(canvas, window=self.energy_graph_frame, pack_toolbar=False)
+            # toolbar.update()
+            # canvas.mpl_connect("key_press_event", key_press_handler)
+
+            # toolbar.grid(column=0, row=1, sticky="news")
+            canvas.get_tk_widget().grid(column=0, row=0)
 
     def open_census_reporter_state(self):
         state_link = helper.get_census_report_url_page(
@@ -296,7 +317,7 @@ class DataPage(ctk.CTkFrame):
         webbrowser.open_new_tab(metro_link)
 
     def state_dropdown_callback(self, state):
-        # update energy chart, choice is 2 char postal code
+        # check if thread is running with given name, and if so join it and start the new thread
 
         threading.Thread(
             target=self.generate_energy_plot,
@@ -304,6 +325,7 @@ class DataPage(ctk.CTkFrame):
                 int(self.select_year_dropdown.get()),
                 state,
             ),
+            name="energy_thread",
             daemon=True,
         ).start()
 
@@ -315,6 +337,7 @@ class DataPage(ctk.CTkFrame):
                 int(year),
                 self.select_state_dropdown.get(),
             ),
+            name="energy_thread",
             daemon=True,
         ).start()
 

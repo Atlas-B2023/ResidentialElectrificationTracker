@@ -3,7 +3,6 @@ import io
 import re
 import os
 import random
-import re
 import time
 import json
 from enum import StrEnum
@@ -17,7 +16,7 @@ import redfin
 import requests
 from backend import (
     # ASCIIColors,
-    logger,
+    log,
     metro_name_to_zip_code_list,
 )
 
@@ -180,19 +179,19 @@ class RedfinApi:
         try:
             region_info = self.get_region_info_from_zipcode(zip)
         except json.JSONDecodeError:
-            logger.warning("Error decoding region info.")
+            log("Error decoding region info.", "warn")
             return None
         except HTTPError:
-            logger.warning("Error retrieving region info.")
+            log("Error retrieving region info.", "warn")
             return None
 
         if sold:
             if sort_order is self.SortOrder.NEWEST:
-                logger.warning("Wrong sort order for sale type")
+                log("Wrong sort order for sale type", "warn")
                 return None
         else:
             if sort_order is self.SortOrder.MOST_RECENTLY_SOLD:
-                logger.warning("Wrong sort order for sale type")
+                log("Wrong sort order for sale type", "warn")
                 return None
 
         try:
@@ -200,7 +199,7 @@ class RedfinApi:
             region_id = region_info["payload"]["rootDefaults"]["region_id"]
             status = str(region_info["payload"]["rootDefaults"]["status"])
         except KeyError:
-            logger.warn("Market, region, or status could not be identified ")
+            log("Market, region, or status could not be identified ", "warn")
             return None
 
         self.search_params = {
@@ -256,7 +255,7 @@ class RedfinApi:
         response = requests.get(
             self.rf.base + url, params=kwargs, headers=self.rf.user_agent_header
         )
-        logger.debug(response.request.url)  # change to debug
+        log(response.request.url, "debug")  # change to debug
         response.raise_for_status()
         return response.text
 
@@ -406,19 +405,20 @@ class RedfinApi:
             time.sleep(random.uniform(1.2, 2.1))
             initial_info = self.rf.initial_info(listing_url)
         except json.JSONDecodeError:
-            logger.warn(f"Could not get initial info for {listing_url =}")
+            log(f"Could not get initial info for {listing_url =}", "warn")
             return None
         try:
             property_id = initial_info["payload"]["propertyId"]
         except KeyError:
-            logger.critical("Could not find property id")
+            log("Could not find property id", "critical")
             return None
         try:
             listing_id = initial_info["payload"]["listingId"]
         except KeyError:
             listing_id = None
-            logger.warning(
-                "Could not find listing id. Will try to continue. if errors in final zip csv, this might be the issue"
+            log(
+                "Could not find listing id. Will try to continue. if errors in final zip csv, this might be the issue",
+                "warn",
             )
         try:
             time.sleep(random.uniform(1.1, 2.1))
@@ -427,12 +427,12 @@ class RedfinApi:
             else:
                 mls_data = self.working_below_the_fold(property_id, listing_id)
         except json.JSONDecodeError:
-            logger.warn(f"Could not find mls details for {listing_url = }")
+            log(f"Could not find mls details for {listing_url = }", "warn")
             return None
         try:
             super_groups = mls_data["payload"]["amenitiesInfo"]["superGroups"]
         except KeyError:
-            logger.warn(f"Could not find property details for {listing_url = }")
+            log(f"Could not find property details for {listing_url = }", "warn")
             return None
         return super_groups
 
@@ -445,8 +445,8 @@ class RedfinApi:
 
         super_groups = self.get_super_groups_from_url(listing_url)
         if super_groups is None:
-            logger.info(
-                "No amenities found"
+            log(
+                "No amenities found", "info"
             )  # this and "There was no heating information for {address}" should be made in caller?
             return copy.deepcopy(self.column_dict)
         for super_group in super_groups:  # dict
@@ -457,26 +457,26 @@ class RedfinApi:
                     self.get_heating_info_from_super_group(super_group)
                 )  # this will be like [gas, electricity, heat pump]
         if len(terms) == 0:
-            logger.info(f"There was no heating information for {address}")
+            log(f"There was no heating information for {address}", "info")
             return copy.deepcopy(self.column_dict)
 
         # categorize the correct dict and return
         master_dict = copy.deepcopy(self.column_dict)
         for input_string in terms:
-            logger.debug(f"{input_string = }")
+            log(f"{input_string = }", "debug")
             result = {}
             for key, pattern in regex_category_patterns.items():
                 if bool(re.search(pattern, input_string)):
                     result[key] = True
-                    logger.debug(f"Pattern matched on {key, pattern = }")
-                logger.debug(f"Pattern did not match on {key, pattern = }")
+                    log(f"Pattern matched on {key, pattern = }", "debug")
+                log(f"Pattern did not match on {key, pattern = }", "debug")
             for key in result.keys():
                 master_dict[key] = result[key] | master_dict[key]
 
         # You'll have to df.unnest this for use in a dataframe
-        logger.debug(f"{terms = }")
-        logger.debug(f"{master_dict = }")
-        logger.info(f"Heating amenities found for {address}.")
+        log(f"{terms = }", "debug")
+        log(f"{master_dict = }", "debug")
+        log(f"Heating amenities found for {address}.", "info")
         return master_dict
 
     def get_gis_csv_from_zip_with_filters(
@@ -500,7 +500,7 @@ class RedfinApi:
             pl.DataFrame | None: DataFrame of listings for the given ZIP code and filters
         """
         if self.search_params is None:
-            logger.warn(f"Search params were not set. {self.search_params = }.")
+            log(f"Search params were not set. {self.search_params = }.", "warn")
             return
         csv_text = self.get_gis_csv(self.search_params)
         try:
@@ -521,14 +521,13 @@ class RedfinApi:
                 )
             )
             if df.height == 0:
-                logger.debug(
-                    "CSV was empty. This can happen if local MLS rules dont allow downloads."
+                log(
+                    "CSV was empty. This can happen if local MLS rules dont allow downloads.",
+                    "debug",
                 )
                 return None
         except Exception as e:
-            logger.warning(
-                f"Could not read gis csv into dataframe.\n{csv_text = }\n{e}"
-            )
+            log(f"Could not read gis csv into dataframe.\n{csv_text = }\n{e}", "warn")
             return None
         return df
 
@@ -558,7 +557,13 @@ class RedfinApi:
         """
         zip_codes = metro_name_to_zip_code_list(msa_name)
         formatted_zip_codes = [f"{zip_code:0{5}}" for zip_code in zip_codes]
-        logger.info(f"Estimated search time: {len(formatted_zip_codes) * (1.75+1.5)}")
+        try:
+            log(
+                f"Estimated search time: {len(formatted_zip_codes) * (1.75+1.5)}",
+                "info",
+            )
+        except Exception as e:
+            print(e)
         list_of_csv_dfs = []
         for zip in formatted_zip_codes:
             time.sleep(random.uniform(1.5, 2))
@@ -573,9 +578,9 @@ class RedfinApi:
             )
             temp = self.get_gis_csv_from_zip_with_filters()
             if temp is None:
-                logger.info(f"Did not find any houses in {zip}.")
+                log(f"Did not find any houses in {zip}.", "info")
                 continue
-            logger.info(f"Found data for {temp.height} houses in {zip}.")
+            log(f"Found data for {temp.height} houses in {zip}.", "info")
             list_of_csv_dfs.append(temp)
 
         if len(list_of_csv_dfs) == 0:
@@ -597,18 +602,20 @@ class RedfinApi:
         metro_output_dir_path = Path(OUTPUT_DIR_PATH) / msa_name_file_safe
 
         if use_cached_gis_csv_csv:
-            logger.info("Loading csv from cache.")
+            log("Loading csv from cache.", "info")
             try:
                 search_page_csvs_df = pl.read_csv(
                     metro_output_dir_path / (msa_name_file_safe + ".csv"),
                     dtypes=self.DESIRED_CSV_SCHEMA,
                 )
-                logger.info(
-                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} is complete."
+                log(
+                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} is complete.",
+                    "info",
                 )
             except FileNotFoundError:
-                logger.info(
-                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} has failed, continuing with API search."
+                log(
+                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} has failed, continuing with API search.",
+                    "info",
                 )
                 search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
                     msa_name,
@@ -630,7 +637,7 @@ class RedfinApi:
                 sold,
             )
         if search_page_csvs_df is None:
-            logger.info(f"No houses found within {msa_name}. Try relaxing filters.")
+            log(f"No houses found within {msa_name}. Try relaxing filters.", "info")
             return None
 
         url_col_name = "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)"
@@ -643,22 +650,26 @@ class RedfinApi:
 
         os.makedirs(metro_output_dir_path, exist_ok=True)
         # write it so that we can save for future use
-        logger.debug(
-            f"writing csv for metro to {metro_output_dir_path / (msa_name_file_safe + ".csv")}"
+        log(
+            f"writing csv for metro to {metro_output_dir_path / (msa_name_file_safe + ".csv")}",
+            "debug",
         )
+        print("after")
         search_page_csvs_df.write_csv(
             metro_output_dir_path / (msa_name_file_safe + ".csv")
         )
 
         # go through whole csv and get the house attributes for each house. then partition the dataframe by ZIP and save files
 
-        logger.info("Starting lookups on listing URLS")
+        log("Starting lookups on listing URLS", "info")
         # can have more than 1 zip in csv. save file, then append each listing?
-        logger.info(
-            f"Unique ZIP codes: {search_page_csvs_df["ZIP OR POSTAL CODE"].n_unique()}"
+        log(
+            f"Unique ZIP codes: {search_page_csvs_df["ZIP OR POSTAL CODE"].n_unique()}",
+            "info",
         )
-        logger.info(
-            f"Estimated completion time: {search_page_csvs_df.height * 3.58} seconds"
+        log(
+            f"Estimated completion time: {search_page_csvs_df.height * 3.58} seconds",
+            "info",
         )  # make another estimation for csvs
 
         list_of_dfs_by_zip = search_page_csvs_df.partition_by("ZIP OR POSTAL CODE")
@@ -677,4 +688,4 @@ class RedfinApi:
             zip = df_of_zip.select("ZIP OR POSTAL CODE").item(0, 0)
             df_of_zip.write_csv(f"{metro_output_dir_path}{os.sep}{zip}.csv")
 
-        logger.info(f"Done with searching houses in {msa_name}!")
+        log(f"Done with searching houses in {msa_name}!", "info")

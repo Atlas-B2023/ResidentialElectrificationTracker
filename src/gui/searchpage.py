@@ -134,7 +134,7 @@ class SearchPage(ctk.CTkFrame):
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
             self.datapage = DataPage(self.master)
             self.datapage.grid(row=0, column=0, sticky="news")
-            # self.search_metros_threaded(cur_text)
+            self.search_metros_threaded(cur_text)
             self.go_to_data_page(cur_text)
         else:
             CTkMessagebox(
@@ -150,15 +150,24 @@ class SearchPage(ctk.CTkFrame):
             self.datapage.grid()
             self.datapage.set_msa_name(msa_name)
 
-    def search_metros_threaded(self, metro_name: str):
+    def search_metros_threaded(self, msa_name: str):
         # get filters . submit button will validate them
         redfin_searcher = RedfinApi()
         lock = threading.Lock()
         # params = filterspage.get_params
         # msa = x, min year = x max year = x...
+        # TODO have stdout text box on button press
         with lock:
             threading.Thread(
-                target=redfin_searcher.get_gis_csv_from_zip_with_filters,
-                args=("TEST",),
+                target=redfin_searcher.get_house_attributes_from_metro,
+                args=(
+                    msa_name,
+                    "2022",
+                    "2023",
+                    RedfinApi.Stories.ONE,
+                    RedfinApi.SortOrder.MOST_RECENTLY_SOLD,
+                    [RedfinApi.HouseType.HOUSE],
+                    RedfinApi.SoldWithinDays.FIVE_YEARS,
+                ),
                 daemon=True,
             ).start()
