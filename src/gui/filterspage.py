@@ -94,9 +94,7 @@ class FiltersPage(ctk.CTkFrame):
         self.year_built_label = ctk.CTkLabel(self.year_built_frame, text="Year Built")
         self.home_type_label = ctk.CTkLabel(self.home_type_frame, text="Home Type")
         self.sqft_label = ctk.CTkLabel(self.square_feet_frame, text="Square Feet")
-        self.sale_status_label = ctk.CTkLabel(
-            self.status_frame, text="Status"
-        )  # shouldnt be here
+        self.sale_status_label = ctk.CTkLabel(self.status_frame, text="Status")
         self.price_range_label = ctk.CTkLabel(
             self.price_range_frame, text="Price Range"
         )
@@ -262,7 +260,6 @@ class FiltersPage(ctk.CTkFrame):
                 self.sold_within_label.configure(state="disabled")
                 self.sold_within_om.configure(state="disabled")
             case RedfinApi.SoldStatus.SOLD.value:
-                # clear value
                 self.sale_status_label.configure(state="disabled")
                 self.status_active_chb.configure(state="disabled")
                 self.status_coming_soon_chb.configure(state="disabled")

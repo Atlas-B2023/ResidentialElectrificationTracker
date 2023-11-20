@@ -636,6 +636,7 @@ class RedfinApi:
         Returns:
             pl.DataFrame | None: Return a dataframe of all gis CSVs in the metro . Return `None` if no houses are found in the metro
         """
+        log(f"Searching {msa_name} with filters {search_filters}.", "log")
         zip_codes = metro_name_to_zip_code_list(msa_name)
         formatted_zip_codes = [f"{zip_code:0{5}}" for zip_code in zip_codes]
         log(
@@ -646,7 +647,6 @@ class RedfinApi:
         for zip in formatted_zip_codes:
             time.sleep(random.uniform(1.5, 2))
             self.set_search_params(zip, search_filters)
-            log(f"{self.search_params = }", "info")
             temp = self.get_gis_csv_from_zip_with_filters()
             if temp is None:
                 log(f"Did not find any houses in {zip}.", "info")
@@ -743,4 +743,4 @@ class RedfinApi:
             df_of_zip.write_csv(f"{metro_output_dir_path}{os.sep}{zip}.csv")
 
         log(f"Done with searching houses in {msa_name}!", "info")
-        #concat all and give final statistics?
+        # concat all and give final statistics?
