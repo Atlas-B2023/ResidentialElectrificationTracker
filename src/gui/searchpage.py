@@ -7,7 +7,7 @@ import polars as pl
 import threading
 from backend.redfinscraper import RedfinApi
 from .datapage import DataPage
-from .filters import FiltersPage
+from .filterspage import FiltersPage
 
 # import os
 # import sys
@@ -20,7 +20,7 @@ class SearchPage(ctk.CTkFrame):
     def __init__(self, master: ctk.CTk, **kwargs):
         super().__init__(master, **kwargs)
         self.master = master
-        # self.datapage = None
+        self.datapage = None
         self.label_font = ctk.CTkFont("Roboto", 34)
         self.MATCHES_TO_DISPLAY = 20  # performance and practicality
         self.auto_complete_series = get_unique_msa_from_master()
@@ -143,8 +143,8 @@ class SearchPage(ctk.CTkFrame):
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
             self.data_page = DataPage(self.master)
             self.data_page.grid(row=0, column=0, sticky="news")
-            self.search_metros_threaded(cur_text)
             self.go_to_data_page(cur_text)
+            self.search_metros_threaded(cur_text)
         else:
             CTkMessagebox(
                 self,
@@ -160,23 +160,14 @@ class SearchPage(ctk.CTkFrame):
             self.data_page.set_msa_name(msa_name)
 
     def search_metros_threaded(self, msa_name: str):
-        # get filters . submit button will validate them
         redfin_searcher = RedfinApi()
         lock = threading.Lock()
-        # params = filterspage.get_params
-        # msa = x, min year = x max year = x...
-        # TODO have stdout text box on button press
         with lock:
             threading.Thread(
                 target=redfin_searcher.get_house_attributes_from_metro,
                 args=(
                     msa_name,
-                    "2022",
-                    "2023",
-                    RedfinApi.Stories.ONE,
-                    RedfinApi.SortOrder.MOST_RECENTLY_SOLD,
-                    [RedfinApi.HouseType.HOUSE],
-                    RedfinApi.SoldWithinDays.FIVE_YEARS,
+                    self.filters_page.get_values()
                 ),
                 daemon=True,
             ).start()

@@ -1,10 +1,8 @@
 import logging
 import os
-import random
 import time
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
 
 import polars as pl
 import requests
@@ -14,8 +12,9 @@ from redfin import Redfin
 from .us import states as sts
 
 LOGGING_DIR = Path(__file__).parent.parent.parent / "output" / "logging"
+LOGGING_FILE_PATH = LOGGING_DIR / "logging.log"
+OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
 
-redfin_session = requests.Session()
 master_df = pl.read_csv(
     f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}master.csv"
 )
@@ -99,6 +98,12 @@ def is_valid_zipcode(zip: int) -> bool:
         zip = int(zip)
     return zip in master_df["ZIP"]
 
+def req_get_wrapper(url:str) -> requests.Response:
+    time.sleep(0.3)
+    req = requests.get(url=url)
+    req.raise_for_status()
+    req.encoding = "utf-8"
+    return req
 
 # when making class, init the csv and have it open in memory. not too much and saves on making the df every call
 def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
@@ -150,26 +155,6 @@ def zip_to_metro(zip: int) -> str:
         return ""  # should this be none?
 
 
-def req_get_wrapper(url: str) -> requests.Response:
-    """Wrapper for requests. Uses a random short sleep and random user agent string. DO NOT USE
-
-    Args:
-        url (str): url to pass to `requests.get()`
-
-    Returns:
-        requests.Response: the response object
-    """
-    time.sleep(random.uniform(0.6, 1.1))
-    ua = UserAgent(min_percentage=0.1)
-    req = redfin_session.get(
-        url,
-        headers={"User-Agent": ua.random},
-        timeout=17,
-    )
-
-    return req
-
-
 def req_get_to_file(request: requests.Response) -> int:
     """Write the contents of a request response to a unique file.
 
@@ -179,7 +164,7 @@ def req_get_to_file(request: requests.Response) -> int:
     Returns:
         int: the status code of the request
     """
-    with open(f"{time.time()}_request.html", "w+", encoding="utf-8") as f:
+    with open(OUTPUT_DIR / f"{time.time()}_request.html", "w+", encoding="utf-8") as f:
         f.write(request.text)
     return request.status_code
 
@@ -190,9 +175,9 @@ def df_to_file(df: pl.DataFrame):
     Args:
         df (pl.DataFrame): the DataFrame to write
     """
-    file_path = Path("./output") / f"{time.time()}_data_frame.csv"
+    file_path = OUTPUT_DIR / f"{time.time()}_data_frame.csv"
     print(f"Dataframe saved to {file_path.resolve()}")
-    df.write_csv(file_path, has_header=True)
+    df.write_csv(file_path, include_header=True)
 
 
 def get_unique_msa_from_master() -> pl.Series:
@@ -251,7 +236,7 @@ def _set_up_logger(level: int) -> logging.Logger:
     formatter = logging.Formatter(
         fmt="%(asctime)s - %(levelname)s: %(message)s", datefmt=date_format
     )
-    handler = logging.FileHandler(LOGGING_DIR / "logging.log", encoding="utf-8")
+    handler = logging.FileHandler(LOGGING_FILE_PATH, encoding="utf-8")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.propagate = False

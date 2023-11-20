@@ -85,9 +85,7 @@ class RedfinApi:
         OTHER = "6"
 
     class Price(StrEnum):
-        NONE = (
-            "None"
-        )  # make sure to check for this so it doesnt make a spot in the filters dict
+        NONE = "None"
         FIFTY_THOU = "50000"
         SEVENTY_FIVE_THOU = "75000"
         ONE_HUN_THOU = "100000"
@@ -154,7 +152,7 @@ class RedfinApi:
         ONE_MONTH = "30"
         THREE_MONTHS = "90"
         SIX_MONTHS = "180"
-        ONE_YEARS = "365"
+        ONE_YEAR = "365"
         TWO_YEARS = "730"
         THREE_YEARS = "1095"
         FIVE_YEARS = "1825"
@@ -172,9 +170,7 @@ class RedfinApi:
     class Sqft(StrEnum):
         """Properties of the `min-sqft` and `max-sqft` filter."""
 
-        NONE = (
-            "None"
-        )  # make sure this doesnt get passed to the params when making filters
+        NONE = "None"
         SEVEN_FIFTY = "750"
         THOU = "1000"
         THOU_1 = "1100"
@@ -214,16 +210,7 @@ class RedfinApi:
         self.search_params = None
         self.column_dict = {key: False for key in regex_category_patterns.keys()}
 
-    def set_search_params(
-        self,
-        zip: str,
-        min_year_built: str,
-        max_year_built: str,
-        min_stories: Stories,
-        sort_order: SortOrder,
-        home_types: list[HouseType],
-        sold: SoldWithinDays | None = SoldWithinDays.FIVE_YEARS,
-    ) -> None:
+    def set_search_params(self, zip: str, search_filters) -> None:
         """Set the parameters for searching by zip code
 
         Args:
@@ -241,21 +228,16 @@ class RedfinApi:
         try:
             region_info = self.get_region_info_from_zipcode(zip)
         except json.JSONDecodeError:
-            log("Error decoding region info.", "warn")
+            log(f"Could not decode region info for {zip}.", "warn")
             return None
         except HTTPError:
-            log("Error retrieving region info.", "warn")
+            log(f"Could not retrieve region info for {zip}.", "warn")
             return None
 
-        if sold:
-            if sort_order is self.SortOrder.NEWEST:
-                log("Wrong sort order for sale type", "warn")
-                return None
+        if search_filters.get("for sale sold") == "Sold":
+            sort_order = self.SortOrder.MOST_RECENTLY_SOLD.value
         else:
-            if sort_order is self.SortOrder.MOST_RECENTLY_SOLD:
-                log("Wrong sort order for sale type", "warn")
-                return None
-        # max_price, min_price, min_listing_approx_size, max_listing_approx_size, max_sqft, min_sqft, min_stories
+            sort_order = self.SortOrder.NEWEST.value
         # TODO make sure to fix filtering so that its not just "single family homes"
 
         try:
@@ -274,33 +256,77 @@ class RedfinApi:
             "has_laundry_hookups": "false",
             "has_parking": "false",
             "has_pool": "false",
-            "max_year_built": max_year_built,
-            "min_stories": min_stories.value,
-            "min_year_built": min_year_built,
             "has_short_term_lease": "false",
             "include_pending_homes": "false",  # probably an "include" option
             "isRentals": "false",
             "is_furnished": "false",
             "is_income_restricted": "false",
             "is_senior_living": "false",
+            "max_year_built": search_filters.get("max year built"),
+            "min_year_built": search_filters.get("min year built"),
             "market": market,
+            "min_stories": search_filters.get("min stories"),
             "num_homes": 350,
             "ord": sort_order,
             "page_number": "1",
             "pool": "false",
             "region_id": region_id,
-            "region_type": 2,
+            "region_type": "2",
             "status": status,
             "travel_with_traffic": "false",
             "travel_within_region": "false",
-            "uipt": ",".join(val for val in home_types),
             "utilities_included": "false",
             "v": "8",
         }
-        if sold is not None:
-            self.search_params["sold_within_days"] = sold.value
+        if search_filters.get("for sale sold") == "Sold":
+            self.search_params["sold_within_days"] = search_filters.get("sold within")
+            self.search_params["status"] = 9
         else:
-            self.search_params["sf"] = 1, 2, 3, 5, 6, 7
+            self.search_params["sf"] = "1, 2, 3, 4, 5, 6, 7"
+            match [
+                search_filters.get("status coming soon"),
+                search_filters.get("status active"),
+                search_filters.get("status pending"),
+            ]:
+                case [True, False, False]:
+                    status = "8"
+                case [False, True, False]:
+                    status = "1"
+                case [False, False, True]:
+                    status = "130"
+                case [True, True, False]:
+                    status = "9"
+                case [False, True, True]:
+                    status = "139"
+                case [True, False, True]:
+                    status = "138"
+                case [True, True, True]:
+                    status = "139"
+
+            self.search_params["status"] = status
+
+        # max_price, min_price, min_listing_approx_size, max_listing_approx_size, uipt
+        if (max_sqft := search_filters.get("max sqft")) != "None":
+            self.search_params["max_sqft"] = max_sqft
+        if (min_sqft := search_filters.get("min sqft")) != "None":
+            self.search_params["min_sqft"] = min_sqft
+
+        if (max_price := search_filters.get("max price")) != "None":
+            self.search_params["max_price"] = max_price
+        if (min_price := search_filters.get("min price")) != "None":
+            self.search_params["min_price"] = min_price
+
+        houses = ""  # figure out how to join into comma string
+        if search_filters.get("house type house") is True:
+            houses = houses + "1"
+        if search_filters.get("house type townhouse") is True:
+            houses = houses + "3"
+        if search_filters.get("house type mul fam") is True:
+            houses = houses + "4"
+        if search_filters.get("house type condo") is True:
+            houses = houses + "2"
+
+        self.search_params["uipt"] = ",".join(list(houses))
 
     # redfin stuff
     def meta_request_download(self, url, kwargs) -> str:
@@ -408,7 +434,7 @@ class RedfinApi:
                         #   Electricity
                         for value in amenity_entry.get("amenityValues", ""):
                             # TODO invert this regex. i think this would still match "internet" in utilities?
-                            # TODO have seperate regex for group title and amenity name? should match differently if the details section is "heating & cooling" and amenity name is "interior"
+                            # TODO have separate regex for group title and amenity name? should match differently if the details section is "heating & cooling" and amenity name is "interior"
                             if re.search(
                                 r"^electric|^natural gas|^no.*gas|^no.*electric|water",
                                 value,
@@ -444,7 +470,6 @@ class RedfinApi:
                         raw_amenity_values.extend(
                             amenity_entry.get("amenityValues", "")
                         )
-        # filters on final are too restrictive. move them into above if statements
         amenity_values = [
             string
             for string in raw_amenity_values
@@ -564,7 +589,6 @@ class RedfinApi:
             pl.DataFrame | None: DataFrame of listings for the given ZIP code and filters
         """
         if self.search_params is None:
-            log(f"Search params were not set. {self.search_params = }.", "warn")
             return
         csv_text = self.get_gis_csv(self.search_params)
         try:
@@ -596,14 +620,7 @@ class RedfinApi:
         return df
 
     def get_gis_csv_for_zips_in_metro_with_filters(
-        self,
-        msa_name: str,
-        min_year_built: str,
-        max_year_built: str,
-        min_stories: Stories,
-        sort_order: SortOrder,
-        home_types: list[HouseType],
-        sold: SoldWithinDays | None = SoldWithinDays.FIVE_YEARS,
+        self, msa_name: str, search_filters: dict[str, Any]
     ) -> pl.DataFrame | None:
         """Get DataFrame of all gis CSVs of a metro.
 
@@ -621,25 +638,15 @@ class RedfinApi:
         """
         zip_codes = metro_name_to_zip_code_list(msa_name)
         formatted_zip_codes = [f"{zip_code:0{5}}" for zip_code in zip_codes]
-        try:
-            log(
-                f"Estimated search time: {len(formatted_zip_codes) * (1.75+1.5)}",
-                "info",
-            )
-        except Exception as e:
-            print(e)
+        log(
+            f"Estimated search time: {len(formatted_zip_codes) * (1.75+1.5)}",
+            "info",
+        )
         list_of_csv_dfs = []
         for zip in formatted_zip_codes:
             time.sleep(random.uniform(1.5, 2))
-            self.set_search_params(
-                zip,
-                min_year_built,
-                max_year_built,
-                min_stories,
-                sort_order,
-                home_types,
-                sold,
-            )
+            self.set_search_params(zip, search_filters)
+            log(f"{self.search_params = }", "info")
             temp = self.get_gis_csv_from_zip_with_filters()
             if temp is None:
                 log(f"Did not find any houses in {zip}.", "info")
@@ -654,12 +661,7 @@ class RedfinApi:
     def get_house_attributes_from_metro(
         self,
         msa_name: str,
-        min_year_built: str,
-        max_year_built: str,
-        min_stories: Stories,
-        sort_order: SortOrder,
-        home_types: list[HouseType],
-        sold: SoldWithinDays | None = SoldWithinDays.FIVE_YEARS,
+        search_filters: dict[str, Any],
         use_cached_gis_csv_csv: bool = False,
     ) -> pl.DataFrame | None:
         msa_name_file_safe = msa_name.strip().replace(", ", "_").replace(" ", "_")
@@ -682,24 +684,13 @@ class RedfinApi:
                     "info",
                 )
                 search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
-                    msa_name,
-                    min_year_built,
-                    max_year_built,
-                    min_stories,
-                    sort_order,
-                    home_types,
-                    sold,
+                    msa_name, search_filters
                 )
         else:
             search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
-                msa_name,
-                min_year_built,
-                max_year_built,
-                min_stories,
-                sort_order,
-                home_types,
-                sold,
+                msa_name, search_filters
             )
+
         if search_page_csvs_df is None:
             log(f"No houses found within {msa_name}. Try relaxing filters.", "info")
             return None
@@ -712,13 +703,13 @@ class RedfinApi:
             .and_(pl.col("YEAR BUILT").is_not_null())
         ).unique(subset=["LATITUDE", "LONGITUDE"], maintain_order=True)
 
+        log(f"Found {search_page_csvs_df.height} possible houses in {msa_name}", "info")
         os.makedirs(metro_output_dir_path, exist_ok=True)
         # write it so that we can save for future use
         log(
-            f"writing csv for metro to {metro_output_dir_path / (msa_name_file_safe + ".csv")}",
+            f"Writing csv for metro to {metro_output_dir_path / (msa_name_file_safe + ".csv")}",
             "debug",
         )
-        print("after")
         search_page_csvs_df.write_csv(
             metro_output_dir_path / (msa_name_file_safe + ".csv")
         )
@@ -726,7 +717,6 @@ class RedfinApi:
         # go through whole csv and get the house attributes for each house. then partition the dataframe by ZIP and save files
 
         log("Starting lookups on listing URLS", "info")
-        # can have more than 1 zip in csv. save file, then append each listing?
         log(
             f"Unique ZIP codes: {search_page_csvs_df["ZIP OR POSTAL CODE"].n_unique()}",
             "info",
@@ -734,7 +724,7 @@ class RedfinApi:
         log(
             f"Estimated completion time: {search_page_csvs_df.height * 3.58} seconds",
             "info",
-        )  # make another estimation for csvs
+        )
 
         list_of_dfs_by_zip = search_page_csvs_df.partition_by("ZIP OR POSTAL CODE")
 
@@ -753,3 +743,4 @@ class RedfinApi:
             df_of_zip.write_csv(f"{metro_output_dir_path}{os.sep}{zip}.csv")
 
         log(f"Done with searching houses in {msa_name}!", "info")
+        #concat all and give final statistics?

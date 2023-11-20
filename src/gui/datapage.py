@@ -3,6 +3,8 @@ import webbrowser
 import datetime
 from matplotlib import pyplot as plt
 import customtkinter as ctk
+from CTkMessagebox import CTkMessagebox
+from os import startfile
 
 # from matplotlib.backend_bases import key_press_handler
 from backend import helper, EIADataRetriever
@@ -27,6 +29,14 @@ class DataPage(ctk.CTkFrame):
         self.states_in_msa = None
         self.state_demog_dfs = None
         self.state_income_dfs = None
+        self.cur_year = datetime.datetime.now().year
+        self.years = [
+            str(self.cur_year),
+            str(self.cur_year - 1),
+            str(self.cur_year - 2),
+            str(self.cur_year - 3),
+            str(self.cur_year - 4),
+        ]
         self.roboto_font = ctk.CTkFont(family="Roboto")
         self.roboto_header_font = ctk.CTkFont(family="Roboto", size=28)
         self.roboto_link_font = ctk.CTkFont(family="Roboto", underline=True, size=20)
@@ -42,6 +52,8 @@ class DataPage(ctk.CTkFrame):
             self.content_banner_frame, border_width=2
         )
         self.census_reporter_frame = ctk.CTkFrame(self.content_frame, border_width=2)
+        self.log_frame = ctk.CTkFrame(self.content_frame, border_width=2)
+
         self.content_banner_main_text = ctk.CTkLabel(
             self.content_banner_frame,
             text="Census and Energy Data:",
@@ -55,14 +67,6 @@ class DataPage(ctk.CTkFrame):
             ),
         )
         # nested frame for holding filters and text inside banner frame
-        cur_year = datetime.datetime.now().year
-        years = [
-            str(cur_year),
-            str(cur_year - 1),
-            str(cur_year - 2),
-            str(cur_year - 3),
-            str(cur_year - 4),
-        ]
 
         self.select_state_label = ctk.CTkLabel(
             self.state_and_year_content_banner_dropdown_frame,
@@ -82,7 +86,7 @@ class DataPage(ctk.CTkFrame):
         )
         self.select_year_dropdown = ctk.CTkOptionMenu(
             self.state_and_year_content_banner_dropdown_frame,
-            values=years,
+            values=self.years,
             command=self.year_dropdown_callback,
         )
 
@@ -96,6 +100,9 @@ class DataPage(ctk.CTkFrame):
             text_color="blue",
         )
 
+        self.log_button = ctk.CTkButton(
+            self.log_frame, text="Open Log File", command=self.open_log_file
+        )
         self.census_reporter_state_label.bind(
             "<Button-1>", lambda x: self.open_census_reporter_state()
         )
@@ -112,16 +119,14 @@ class DataPage(ctk.CTkFrame):
         # create grid
         # col
         self.columnconfigure(0, weight=1)
-
         self.content_frame.columnconfigure(0, weight=1)
         self.content_banner_frame.columnconfigure((0, 1), weight=1)
         self.state_and_year_content_banner_dropdown_frame.columnconfigure(
             (0, 1), weight=1
         )
-
         self.energy_graph_frame.columnconfigure(0, weight=1)
-
         self.census_reporter_frame.columnconfigure(0, weight=1)
+        self.log_frame.columnconfigure(0, weight=1)
 
         # self.progress_bar_frame.columnconfigure(0, weight=50)  # bar
         # self.progress_bar_frame.columnconfigure((1, 2), weight=1)  # text, button
@@ -132,19 +137,17 @@ class DataPage(ctk.CTkFrame):
         self.content_frame.rowconfigure(0, weight=1)  # banner
         self.content_frame.rowconfigure(1, weight=5)  # energy graph
         self.content_frame.rowconfigure(2, weight=2)  # census reporter frame
-        self.content_frame.rowconfigure(3, weight=1)  # progress bar
+        self.content_frame.rowconfigure(3, weight=1)
 
         self.content_banner_frame.rowconfigure(0, weight=1)
+
         self.state_and_year_content_banner_dropdown_frame.rowconfigure((0, 1), weight=1)
 
         self.energy_graph_frame.rowconfigure(0, weight=1)
-        # self.energy_graph_frame.rowconfigure(1, weight=1)
 
-        self.census_reporter_frame.rowconfigure(
-            (0, 1), weight=1
-        )  # going to have two labels
+        self.census_reporter_frame.rowconfigure((0, 1), weight=1)
 
-        # self.progress_bar_frame.rowconfigure(0, weight=1)
+        self.log_frame.rowconfigure(0, weight=1)
 
         # placement
         self.content_frame.grid(column=0, row=0, sticky="news")
@@ -167,6 +170,9 @@ class DataPage(ctk.CTkFrame):
         self.census_reporter_frame.grid(column=0, row=2, sticky="news")
         self.census_reporter_state_label.grid(column=0, row=0)
         self.census_reporter_metro_label.grid(column=0, row=1)
+
+        self.log_frame.grid(column=0, row=3, sticky="news")
+        self.log_button.grid(column=0, row=0, pady=10)
 
         # self.progress_bar_frame.grid(column=0, row=3, sticky="news")
         # self.progress_bar.grid(column=0, row=0, sticky="we", padx=(20, 0))
@@ -221,7 +227,7 @@ class DataPage(ctk.CTkFrame):
         ax.set_xlabel("Time (Months)")
         ax.set_ylabel("Cost per Effective MBTU ($/MBTU)")
         ax.set_title(
-            f"Avg. Energy prices by Appliance for {state}, {year}",
+            f"Avg. Energy Prices by Appliance for {state}, {year}",
             loc="center",
             wrap=True,
         )
@@ -340,4 +346,14 @@ class DataPage(ctk.CTkFrame):
             daemon=True,
         ).start()
 
-    # def update_progress(self, x):
+    def open_log_file(self):
+        # windows only
+        try:
+            startfile(helper.LOGGING_FILE_PATH)
+        except FileNotFoundError:
+            CTkMessagebox(
+                self,
+                title="Error",
+                message="Logging file doesn't exist! Try rerunning the program or creating a logger.log file in /output/logging/",
+                icon="warning",
+            )

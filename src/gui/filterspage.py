@@ -1,11 +1,7 @@
-# import tkinter as tk
-# from tkinter import ttk
+from typing import Any
 import customtkinter as ctk
 import datetime
 from backend.redfinscraper import RedfinApi
-
-# exercise:
-# convert the app to use ctk
 
 
 class FiltersPage(ctk.CTkFrame):
@@ -15,6 +11,10 @@ class FiltersPage(ctk.CTkFrame):
         self.root = master
         self.search_page = search_page
         self.cur_year = datetime.datetime.now().year
+        self.year_list = [str(x) for x in range(2010, self.cur_year + 1)]
+        list.reverse(self.year_list)
+        self.sqft_list = [sqft.value for sqft in RedfinApi.Sqft]
+        list.reverse(self.sqft_list)
         self.sold_within_list = [
             "Last 1 week",
             "Last 1 month",
@@ -25,6 +25,8 @@ class FiltersPage(ctk.CTkFrame):
             "Last 3 years",
             "Last 5 years",
         ]
+        self.price_list = [price.value for price in RedfinApi.Price]
+        list.reverse(self.price_list)
         self.create_widgets()
         self.set_default_values()
 
@@ -111,43 +113,56 @@ class FiltersPage(ctk.CTkFrame):
         # Create the Buttons
         self.for_sale_sold_om = ctk.CTkOptionMenu(
             master=self.for_sale_sold_frame,
-            values=[value.value for value in RedfinApi.SoldStatus],
+            values=[status.value for status in RedfinApi.SoldStatus],
             command=lambda x: self.status_within_activate_deactivate(x),
         )
 
-        self.stories_om = ctk.CTkOptionMenu(
+        self.min_stories_om = ctk.CTkOptionMenu(
             self.stories_frame, values=[story.value for story in RedfinApi.Stories]
         )
-        self.year_list = [str(x) for x in range(2010, self.cur_year + 1)]
-        list.reverse(self.year_list)
-        self.year_built_min_om = ctk.CTkOptionMenu(
+
+        self.min_year_built_om = ctk.CTkOptionMenu(
             self.year_built_frame,
-            values=self.year_list,  # add validation
+            values=self.year_list,
+            command=lambda x: self.year_validation(),
         )
 
-        self.year_built_max_om = ctk.CTkOptionMenu(
+        self.max_year_built_om = ctk.CTkOptionMenu(
             self.year_built_frame,
-            values=self.year_list,  # add validation
+            values=self.year_list,
+            command=lambda x: self.year_validation(),
         )
 
-        self.house_type_house_switch = ctk.CTkSwitch(self.home_type_frame, text="House")
-
+        self.house_type_house_switch = ctk.CTkSwitch(
+            self.home_type_frame,
+            text="House",
+            command=self.house_type_validation,
+        )
         self.house_type_townhouse_switch = ctk.CTkSwitch(
-            self.home_type_frame, text="Townhouse"
+            self.home_type_frame,
+            text="Townhouse",
+            command=self.house_type_validation,
         )
-        self.house_type_condo_switch = ctk.CTkSwitch(self.home_type_frame, text="Condo")
+        self.house_type_condo_switch = ctk.CTkSwitch(
+            self.home_type_frame,
+            text="Condo",
+            command=self.house_type_validation,
+        )
         self.house_type_mul_fam_switch = ctk.CTkSwitch(
-            self.home_type_frame, text="Multi-Family"
+            self.home_type_frame,
+            text="Multi-Family",
+            command=self.house_type_validation,
         )
-        self.sqft_list = [sqft.value for sqft in RedfinApi.Sqft]
-        list.reverse(self.sqft_list)
-        self.sqft_min_om = ctk.CTkOptionMenu(
+
+        self.min_sqft_om = ctk.CTkOptionMenu(
             self.square_feet_frame,
             values=self.sqft_list,
+            command=lambda x: self.sqft_validation(),
         )
-        self.sqft_max_om = ctk.CTkOptionMenu(
+        self.max_sqft_om = ctk.CTkOptionMenu(
             self.square_feet_frame,
             values=self.sqft_list,
+            command=lambda x: self.sqft_validation(),
         )
         self.status_coming_soon_chb = ctk.CTkCheckBox(
             self.status_frame, text="Coming soon"
@@ -159,15 +174,16 @@ class FiltersPage(ctk.CTkFrame):
         self.sold_within_om = ctk.CTkOptionMenu(
             self.sold_within_frame, values=self.sold_within_list
         )
-        self.price_list = [price.value for price in RedfinApi.Price]
-        list.reverse(self.price_list)
-        self.price_range_min_om = ctk.CTkOptionMenu(
+
+        self.min_price_om = ctk.CTkOptionMenu(
             self.price_range_frame,
             values=self.price_list,
-        )  # add validation here too
-        self.price_range_max_om = ctk.CTkOptionMenu(
+            command=lambda x: self.price_validation(),
+        )
+        self.max_price_om = ctk.CTkOptionMenu(
             self.price_range_frame,
             values=self.price_list,
+            command=lambda x: self.price_validation(),
         )
 
         self.reset_filters_button = ctk.CTkButton(
@@ -198,14 +214,14 @@ class FiltersPage(ctk.CTkFrame):
         self.sold_within_to_label.grid(row=1, column=2)
 
         self.for_sale_sold_om.grid(row=0, column=1)
-        self.stories_om.grid(row=0, column=1)
-        self.year_built_min_om.grid(row=1, column=1)
-        self.year_built_max_om.grid(row=1, column=3)
-        self.sqft_min_om.grid(row=1, column=1)
-        self.sqft_max_om.grid(row=1, column=3)
+        self.min_stories_om.grid(row=0, column=1)
+        self.min_year_built_om.grid(row=1, column=1)
+        self.max_year_built_om.grid(row=1, column=3)
+        self.min_sqft_om.grid(row=1, column=1)
+        self.max_sqft_om.grid(row=1, column=3)
         self.sold_within_om.grid(row=0, column=1)
-        self.price_range_min_om.grid(row=1, column=1)
-        self.price_range_max_om.grid(row=1, column=3)
+        self.min_price_om.grid(row=1, column=1)
+        self.max_price_om.grid(row=1, column=3)
         self.house_type_house_switch.grid(row=1, column=0)
         self.house_type_townhouse_switch.grid(row=1, column=1)
         self.house_type_condo_switch.grid(row=2, column=0)
@@ -217,15 +233,15 @@ class FiltersPage(ctk.CTkFrame):
         self.apply_filters_button.grid(row=0, column=1, sticky="nesw")
 
     def set_default_values(self):
-        self.for_sale_sold_om.set(RedfinApi.SoldStatus.SOLD)
-        self.stories_om.set(RedfinApi.Stories.ONE)
-        self.year_built_min_om.set(str(self.cur_year - 1))
-        self.year_built_max_om.set(str(self.cur_year - 1))
+        self.for_sale_sold_om.set(RedfinApi.SoldStatus.SOLD.value)
+        self.min_stories_om.set(RedfinApi.Stories.ONE.value)
+        self.min_year_built_om.set(str(self.cur_year - 1))
+        self.max_year_built_om.set(str(self.cur_year - 1))
         self.sold_within_om.set(self.sold_within_list[-1])
-        self.price_range_max_om.set("None")
-        self.price_range_min_om.set("None")
-        self.sqft_max_om.set("None")
-        self.sqft_min_om.set("None")
+        self.max_price_om.set(RedfinApi.Price.NONE.value)
+        self.min_price_om.set(RedfinApi.Price.NONE.value)
+        self.max_sqft_om.set(RedfinApi.Sqft.NONE.value)
+        self.min_sqft_om.set(RedfinApi.Sqft.NONE.value)
         self.status_active_chb.deselect()
         self.status_pending_chb.deselect()
         self.status_coming_soon_chb.deselect()
@@ -246,7 +262,7 @@ class FiltersPage(ctk.CTkFrame):
                 self.sold_within_label.configure(state="disabled")
                 self.sold_within_om.configure(state="disabled")
             case RedfinApi.SoldStatus.SOLD.value:
-                # TODO make these filters compatible with tool
+                # clear value
                 self.sale_status_label.configure(state="disabled")
                 self.status_active_chb.configure(state="disabled")
                 self.status_coming_soon_chb.configure(state="disabled")
@@ -258,20 +274,77 @@ class FiltersPage(ctk.CTkFrame):
         self.grid_remove()
         self.search_page.grid()
 
-    def get_values(self):
-        self.for_sale_sold_om.get()
-        self.stories_om.get()
-        self.sqft_max_om.get()
-        self.sqft_min_om.get()
-        self.year_built_max_om.get()
-        self.year_built_min_om.get()
-        self.price_range_max_om.get()
-        self.price_range_min_om.get()
-        self.status_active_chb.get()
-        self.status_coming_soon_chb.get()
-        self.status_pending_chb.get()
-        self.sold_within_om.get()
-        self.house_type_house_switch.get()
-        self.house_type_townhouse_switch.get()
-        self.house_type_mul_fam_switch.get()
-        self.house_type_condo_switch.get()
+    def price_validation(self):
+        """Called when price range min om gets changed"""
+        if (
+            self.max_price_om.get() == RedfinApi.Price.NONE.value
+            or self.min_price_om.get() == RedfinApi.Price.NONE.value
+        ):
+            return
+        if int(self.max_price_om.get()) < int(self.min_price_om.get()):
+            self.max_price_om.set(self.min_price_om.get())
+
+    def year_validation(self):
+        """Called when year drop down gets changed"""
+        if int(self.max_year_built_om.get()) < int(self.min_year_built_om.get()):
+            self.max_year_built_om.set(self.min_year_built_om.get())
+
+    def sqft_validation(self):
+        """Called when sqft drop down gets changed"""
+        if (
+            self.max_sqft_om.get() == RedfinApi.Sqft.NONE.value
+            or self.min_sqft_om.get() == RedfinApi.Sqft.NONE.value
+        ):
+            return
+        if int(self.max_sqft_om.get()) < int(self.min_sqft_om.get()):
+            self.max_sqft_om.set(self.min_sqft_om.get())
+
+    def house_type_validation(self):
+        """Make sure that the house type switches have at least one active switch"""
+        if not any(
+            [
+                self.house_type_house_switch.get(),
+                self.house_type_condo_switch.get(),
+                self.house_type_mul_fam_switch.get(),
+                self.house_type_townhouse_switch.get(),
+            ]
+        ):
+            self.house_type_house_switch.select()
+
+    def get_values(self) -> dict[str, Any]:
+        match self.sold_within_om.get():
+            case "Last 1 week":
+                sold_within_days = RedfinApi.SoldWithinDays.ONE_WEEK
+            case "Last 1 month":
+                sold_within_days = RedfinApi.SoldWithinDays.ONE_MONTH
+            case "Last 3 months":
+                sold_within_days = RedfinApi.SoldWithinDays.THREE_MONTHS
+            case "Last 6 months":
+                sold_within_days = RedfinApi.SoldWithinDays.SIX_MONTHS
+            case "Last 1 year":
+                sold_within_days = RedfinApi.SoldWithinDays.ONE_YEAR
+            case "Last 2 years":
+                sold_within_days = RedfinApi.SoldWithinDays.TWO_YEARS
+            case "Last 3 years":
+                sold_within_days = RedfinApi.SoldWithinDays.THREE_YEARS
+            case _:
+                sold_within_days = RedfinApi.SoldWithinDays.FIVE_YEARS
+
+        return {
+            "for sale sold": self.for_sale_sold_om.get(),
+            "min stories": self.min_stories_om.get(),
+            "max year built": self.max_year_built_om.get(),  # do validation here
+            "min year built": self.min_year_built_om.get(),
+            "sold within": sold_within_days.value,
+            "status active": bool(self.status_active_chb.get()),
+            "status coming soon": bool(self.status_coming_soon_chb.get()),
+            "status pending": bool(self.status_pending_chb.get()),
+            "house type house": bool(self.house_type_house_switch.get()),
+            "house type townhouse": bool(self.house_type_townhouse_switch.get()),
+            "house type mul fam": bool(self.house_type_mul_fam_switch.get()),
+            "house type condo": bool(self.house_type_condo_switch.get()),
+            "max sqft": self.max_sqft_om.get(),
+            "min sqft": self.min_sqft_om.get(),
+            "max price": self.max_price_om.get(),
+            "min price": self.min_price_om.get(),
+        }
