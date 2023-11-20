@@ -1,102 +1,21 @@
 # import tkinter as tk
 # from tkinter import ttk
 import customtkinter as ctk
+import datetime
+from backend.redfinscraper import RedfinApi
 
 # exercise:
 # convert the app to use ctk
 
 
-# s1=swich1.get()
-# def converts():
-# print(entry.get())
-# def inSoldChange(self,x)
-#     if
-
-
-class FiltersPage(ctk.CTkFrame)):
-    def __init__(self):
+class FiltersPage(ctk.CTkFrame):
+    def __init__(self, master: ctk.CTk, search_page: ctk.CTkFrame, **kwargs):
         # main setup
-        super().__init__()
-        self.title("Filter")
-        self.geometry("400x600")
-        self.minsize(400, 600)
-        self.maxsize(400, 600)
-        self.rowconfigure((0, 2), weight=1)
-        self.columnconfigure((0, 2), weight=1)
-        self.rowconfigure(1, weight=30)
-        self.columnconfigure(1, weight=30)
-
-        self.create_widgets()
-
-    # widgets
-
-    # run
-
-    def create_widgets(self):
-        frame = ctk.CTkFrame(self, fg_color="transparent")
-        frame.grid(row=1, column=1)
-        frame.columnconfigure((0), weight=1, uniform="a")
-        frame.rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10), weight=1, uniform="a")
-        forsale_sold = ctk.CTkFrame(
-            frame, width=300, height=100, fg_color="transparent"
-        )
-        Stories = ctk.CTkFrame(frame)
-        year_build = ctk.CTkFrame(frame, fg_color="transparent")
-        home_type = ctk.CTkFrame(frame)
-        square_feet = ctk.CTkFrame(frame, fg_color="transparent")
-        status = ctk.CTkFrame(frame)
-        sold_within = ctk.CTkFrame(frame, fg_color="transparent")
-        price_range = ctk.CTkFrame(frame)
-        resetfilter_applyfilter = ctk.CTkFrame(frame, fg_color="transparent")
-
-        # placing the frames
-        forsale_sold.grid(row=0, column=0, columnspan=1, sticky="nsew")
-        Stories.grid(row=1, column=0, sticky="nesw")
-        year_build.grid(row=2, column=0, rowspan=1, sticky="nesw")
-        home_type.grid(row=3, column=0, rowspan=2, sticky="nesw")
-        square_feet.grid(row=5, column=0, rowspan=1, sticky="nesw")
-        status.grid(row=6, column=0, rowspan=1)
-        sold_within.grid(row=7, column=0, sticky="nesw")
-        price_range.grid(row=8, column=0, rowspan=2, sticky="nesw")
-        resetfilter_applyfilter.grid(row=10, column=0)
-
-        # make more grid
-        forsale_sold.columnconfigure((0, 1), weight=1)
-        forsale_sold.rowconfigure(0, weight=1)
-        Stories.columnconfigure((0, 1), weight=1)
-        Stories.rowconfigure(0, weight=1)
-        year_build.columnconfigure((0, 1, 2, 3), weight=1)
-        year_build.rowconfigure((0, 1), weight=1)
-        home_type.columnconfigure((0, 1, 2, 3), weight=1)
-        home_type.rowconfigure((0, 1, 2), weight=1)
-        square_feet.columnconfigure((0, 1, 2, 3), weight=1)
-        square_feet.rowconfigure((0, 1), weight=1)
-        status.columnconfigure((0, 1, 2), weight=1)
-        status.rowconfigure((0, 1), weight=1)
-        sold_within.columnconfigure((0, 1), weight=1)
-        sold_within.rowconfigure(0, weight=1)
-        price_range.columnconfigure((0, 1, 2, 3), weight=1)
-        price_range.rowconfigure((0, 1), weight=1)
-        resetfilter_applyfilter.columnconfigure((0, 1), weight=1)
-        resetfilter_applyfilter.rowconfigure(0, weight=1)
-
-        # Create the labels
-        Label1 = ctk.CTkLabel(forsale_sold, text="For Sale/Sold")
-        Label2 = ctk.CTkLabel(Stories, text="Stories")
-        Label3 = ctk.CTkLabel(year_build, text="Year Build")
-        Label4 = ctk.CTkLabel(home_type, text="Home Type")
-        Label5 = ctk.CTkLabel(square_feet, text="Square Feet")
-        Label6 = ctk.CTkLabel(status, text="Sold Within")
-        Label7 = ctk.CTkLabel(price_range, text="Price Range")
-        Label8 = ctk.CTkLabel(year_build, text="From")
-        Label9 = ctk.CTkLabel(year_build, text="To")
-        Label10 = ctk.CTkLabel(price_range, text="From")
-        Label11 = ctk.CTkLabel(price_range, text="To")
-        Label12 = ctk.CTkLabel(sold_within, text="Sold Within")
-        Label13 = ctk.CTkLabel(square_feet, text="From")
-        Label14 = ctk.CTkLabel(square_feet, text="To")
-
-        self.sold_within_labels = [
+        super().__init__(master, **kwargs)
+        self.root = master
+        self.search_page = search_page
+        self.cur_year = datetime.datetime.now().year
+        self.sold_within_list = [
             "Last 1 week",
             "Last 1 month",
             "Last 3 months",
@@ -104,143 +23,255 @@ class FiltersPage(ctk.CTkFrame)):
             "Last 1 year",
             "Last 2 years",
             "Last 3 years",
-            "Last 4 years",
             "Last 5 years",
         ]
+        self.create_widgets()
+        self.set_default_values()
+
+    def create_widgets(self):
+        # frames
+        self.content_frame = ctk.CTkFrame(self)
+        self.for_sale_sold_frame = ctk.CTkFrame(
+            self.content_frame, width=300, height=100, fg_color="transparent"
+        )
+        self.stories_frame = ctk.CTkFrame(self.content_frame)
+        self.year_built_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+        self.home_type_frame = ctk.CTkFrame(self.content_frame)
+        self.square_feet_frame = ctk.CTkFrame(self.content_frame)
+        self.status_frame = ctk.CTkFrame(self.content_frame)
+        self.sold_within_frame = ctk.CTkFrame(self.content_frame)
+        self.price_range_frame = ctk.CTkFrame(self.content_frame)
+        self.reset_apply_frame = ctk.CTkFrame(self.content_frame)
+
+        # make more grid
+        self.columnconfigure((0, 2), weight=1)
+        self.columnconfigure(1, weight=30)
+        self.content_frame.columnconfigure((0), weight=1, uniform="a")  # uniform
+        self.for_sale_sold_frame.columnconfigure((0, 1), weight=1)
+        self.stories_frame.columnconfigure((0, 1), weight=1)
+        self.year_built_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        self.home_type_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        self.square_feet_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        self.status_frame.columnconfigure((0, 1, 2), weight=1)
+        self.sold_within_frame.columnconfigure((0, 1), weight=1)
+        self.price_range_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        self.reset_apply_frame.columnconfigure((0, 1), weight=1)
+
+        self.rowconfigure((0, 2), weight=1)
+        self.rowconfigure(1, weight=30)
+        self.content_frame.rowconfigure(
+            (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10), weight=1, uniform="a"
+        )
+        self.for_sale_sold_frame.rowconfigure(0, weight=1)
+        self.stories_frame.rowconfigure(0, weight=1)
+        self.year_built_frame.rowconfigure((0, 1), weight=1)
+        self.home_type_frame.rowconfigure((0, 1, 2), weight=1)
+        self.square_feet_frame.rowconfigure((0, 1), weight=1)
+        self.status_frame.rowconfigure((0, 1), weight=1)
+        self.sold_within_frame.rowconfigure(0, weight=1)
+        self.price_range_frame.rowconfigure((0, 1), weight=1)
+        self.reset_apply_frame.rowconfigure(0, weight=1)
+
+        # placing the frames
+        self.content_frame.grid(row=1, column=1)
+        self.for_sale_sold_frame.grid(row=0, column=0, sticky="nsew")
+        self.stories_frame.grid(row=1, column=0, sticky="nesw")
+        self.year_built_frame.grid(row=2, column=0, sticky="nesw")
+        self.home_type_frame.grid(row=3, column=0, rowspan=2, sticky="nesw")
+        self.square_feet_frame.grid(row=5, column=0, sticky="nesw")
+        self.status_frame.grid(row=6, column=0)
+        self.sold_within_frame.grid(row=7, column=0, sticky="nesw")
+        self.price_range_frame.grid(row=8, column=0, rowspan=2, sticky="nesw")
+        self.reset_apply_frame.grid(row=10, column=0)
+
+        # Create the labels
+        self.for_sale_sold_label = ctk.CTkLabel(
+            self.for_sale_sold_frame, text="For Sale/Sold"
+        )
+        self.stories_label = ctk.CTkLabel(self.stories_frame, text="Stories")
+        self.year_built_label = ctk.CTkLabel(self.year_built_frame, text="Year Built")
+        self.home_type_label = ctk.CTkLabel(self.home_type_frame, text="Home Type")
+        self.sqft_label = ctk.CTkLabel(self.square_feet_frame, text="Square Feet")
+        self.sale_status_label = ctk.CTkLabel(
+            self.status_frame, text="Status"
+        )  # shouldnt be here
+        self.price_range_label = ctk.CTkLabel(
+            self.price_range_frame, text="Price Range"
+        )
+        self.price_range_from_label = ctk.CTkLabel(self.price_range_frame, text="From")
+        self.price_range_to_label = ctk.CTkLabel(self.price_range_frame, text="To")
+        self.year_built_from_label = ctk.CTkLabel(self.year_built_frame, text="From")
+        self.year_built_to_label = ctk.CTkLabel(self.year_built_frame, text="To")
+        self.sold_within_label = ctk.CTkLabel(
+            self.sold_within_frame, text="Sold Within"
+        )
+        self.sold_within_from_label = ctk.CTkLabel(self.square_feet_frame, text="From")
+        self.sold_within_to_label = ctk.CTkLabel(self.square_feet_frame, text="To")
+
         # Create the Buttons
-        combobox1 = ctk.CTkComboBox(
-            master=forsale_sold, values=["For sale", "For sold"]
+        self.for_sale_sold_om = ctk.CTkOptionMenu(
+            master=self.for_sale_sold_frame,
+            values=[value.value for value in RedfinApi.SoldStatus],
+            command=lambda x: self.status_within_activate_deactivate(x),
         )
-        combobox2 = ctk.CTkComboBox(Stories, values=["1", "2", "3", "4", "5", "6"])
-        combobox3 = ctk.CTkComboBox(
-            year_build, values=[str(x) for x in range(1960, 2022)]
-        )
-        combobox4 = ctk.CTkComboBox(
-            year_build, values=[str(x) for x in range(1960, 2022)]
-        )
-        switch1 = ctk.CTkSwitch(home_type, text="House")
-        switch2 = ctk.CTkSwitch(home_type, text="Townhouse")
-        switch3 = ctk.CTkSwitch(home_type, text="Condo")
-        switch4 = ctk.CTkSwitch(home_type, text="Multi-Family")
-        combobox5 = ctk.CTkComboBox(
-            square_feet,
-            values=[
-                "500",
-                "750",
-                "1000",
-                "1250",
-                "1500",
-                "1750",
-                "2000",
-                "2250",
-                "2500",
-                "2750",
-                "3000",
-            ],
-        )
-        combobox6 = ctk.CTkComboBox(
-            square_feet,
-            values=[
-                "500",
-                "750",
-                "1000",
-                "1250",
-                "1500",
-                "1750",
-                "2000",
-                "2250",
-                "2500",
-                "2750",
-                "3000",
-            ],
-        )
-        checkbox1 = ctk.CTkCheckBox(status, text="Coming soon")
-        checkbox2 = ctk.CTkCheckBox(status, text="Active")
-        checkbox3 = ctk.CTkCheckBox(status, text="Under contract/Pending")
-        combobox7 = ctk.CTkComboBox(sold_within, values=self.sold_within_labels)
-        combobox8 = ctk.CTkComboBox(
-            price_range,
-            values=[
-                "100k",
-                "150k",
-                "200k",
-                "250k",
-                "300k",
-                "350k",
-                "400k",
-                "450k",
-                "500k",
-                "550k",
-                "600k",
-                "700k",
-                "750k",
-                "800k",
-                "850k",
-                "900k",
-                "950k",
-                "1M",
-            ],
-        )
-        combobox9 = ctk.CTkComboBox(
-            price_range,
-            values=[
-                "100k",
-                "150k",
-                "200k",
-                "250k",
-                "300k",
-                "350k",
-                "400k",
-                "450k",
-                "500k",
-                "550k",
-                "600k",
-                "700k",
-                "750k",
-                "800k",
-                "850k",
-                "900k",
-                "950k",
-                "1M",
-            ],
-        )
-        button1 = ctk.CTkButton(resetfilter_applyfilter, text="Reset Filters")
-        button2 = ctk.CTkButton(resetfilter_applyfilter, text="Apply Filters")
 
-        # Placing the weidgets
-        Label1.grid(row=0, column=0)
-        Label2.grid(row=0, column=0)
-        Label3.grid(row=0, column=0)
-        Label4.grid(row=0, column=0)
-        Label5.grid(row=0, column=0)
-        Label6.grid(row=0, column=0)
-        Label7.grid(row=0, column=0)
-        Label8.grid(row=1, column=0)
-        Label9.grid(row=1, column=2)
-        Label10.grid(row=1, column=0)
-        Label11.grid(row=1, column=2)
-        Label12.grid(row=0, column=0)
-        Label13.grid(row=1, column=0)
-        Label14.grid(row=1, column=2)
+        self.stories_om = ctk.CTkOptionMenu(
+            self.stories_frame, values=[story.value for story in RedfinApi.Stories]
+        )
+        self.year_list = [str(x) for x in range(2010, self.cur_year + 1)]
+        list.reverse(self.year_list)
+        self.year_built_min_om = ctk.CTkOptionMenu(
+            self.year_built_frame,
+            values=self.year_list,  # add validation
+        )
 
-        combobox1.grid(row=0, column=1)
-        combobox2.grid(row=0, column=1)
-        combobox3.grid(row=1, column=1)
-        combobox4.grid(row=1, column=3)
-        combobox5.grid(row=1, column=1)
-        combobox6.grid(row=1, column=3)
-        combobox7.grid(row=0, column=1)
-        combobox8.grid(row=1, column=1)
-        combobox9.grid(row=1, column=3)
-        switch1.grid(row=1, column=0)
-        switch2.grid(row=1, column=1)
-        switch3.grid(row=2, column=0)
-        switch4.grid(row=2, column=1)
-        checkbox1.grid(row=1, column=0)
-        checkbox2.grid(row=1, column=1)
-        checkbox3.grid(row=1, column=2)
-        button1.grid(row=0, column=0, sticky="nesw")
-        button2.grid(row=0, column=1, sticky="nesw")
+        self.year_built_max_om = ctk.CTkOptionMenu(
+            self.year_built_frame,
+            values=self.year_list,  # add validation
+        )
 
+        self.house_type_house_switch = ctk.CTkSwitch(self.home_type_frame, text="House")
 
-FiltersPage().mainloop()
+        self.house_type_townhouse_switch = ctk.CTkSwitch(
+            self.home_type_frame, text="Townhouse"
+        )
+        self.house_type_condo_switch = ctk.CTkSwitch(self.home_type_frame, text="Condo")
+        self.house_type_mul_fam_switch = ctk.CTkSwitch(
+            self.home_type_frame, text="Multi-Family"
+        )
+        self.sqft_list = [sqft.value for sqft in RedfinApi.Sqft]
+        list.reverse(self.sqft_list)
+        self.sqft_min_om = ctk.CTkOptionMenu(
+            self.square_feet_frame,
+            values=self.sqft_list,
+        )
+        self.sqft_max_om = ctk.CTkOptionMenu(
+            self.square_feet_frame,
+            values=self.sqft_list,
+        )
+        self.status_coming_soon_chb = ctk.CTkCheckBox(
+            self.status_frame, text="Coming soon"
+        )
+        self.status_active_chb = ctk.CTkCheckBox(self.status_frame, text="Active")
+        self.status_pending_chb = ctk.CTkCheckBox(
+            self.status_frame, text="Under contract/Pending"
+        )  # missing one i think
+        self.sold_within_om = ctk.CTkOptionMenu(
+            self.sold_within_frame, values=self.sold_within_list
+        )
+        self.price_list = [price.value for price in RedfinApi.Price]
+        list.reverse(self.price_list)
+        self.price_range_min_om = ctk.CTkOptionMenu(
+            self.price_range_frame,
+            values=self.price_list,
+        )  # add validation here too
+        self.price_range_max_om = ctk.CTkOptionMenu(
+            self.price_range_frame,
+            values=self.price_list,
+        )
+
+        self.reset_filters_button = ctk.CTkButton(
+            self.reset_apply_frame,
+            text="Reset Filters",
+            command=self.set_default_values,
+        )
+        self.apply_filters_button = ctk.CTkButton(
+            self.reset_apply_frame,
+            text="Apply Filters",
+            command=self.change_to_search_page,
+        )
+
+        # Placing the widgets
+        self.for_sale_sold_label.grid(row=0, column=0)
+        self.stories_label.grid(row=0, column=0)
+        self.year_built_label.grid(row=0, column=0)
+        self.home_type_label.grid(row=0, column=0)
+        self.sqft_label.grid(row=0, column=0)
+        self.sale_status_label.grid(row=0, column=0)
+        self.price_range_label.grid(row=0, column=0)
+        self.year_built_from_label.grid(row=1, column=0)
+        self.year_built_to_label.grid(row=1, column=2)
+        self.price_range_from_label.grid(row=1, column=0)
+        self.price_range_to_label.grid(row=1, column=2)
+        self.sold_within_label.grid(row=0, column=0)
+        self.sold_within_from_label.grid(row=1, column=0)
+        self.sold_within_to_label.grid(row=1, column=2)
+
+        self.for_sale_sold_om.grid(row=0, column=1)
+        self.stories_om.grid(row=0, column=1)
+        self.year_built_min_om.grid(row=1, column=1)
+        self.year_built_max_om.grid(row=1, column=3)
+        self.sqft_min_om.grid(row=1, column=1)
+        self.sqft_max_om.grid(row=1, column=3)
+        self.sold_within_om.grid(row=0, column=1)
+        self.price_range_min_om.grid(row=1, column=1)
+        self.price_range_max_om.grid(row=1, column=3)
+        self.house_type_house_switch.grid(row=1, column=0)
+        self.house_type_townhouse_switch.grid(row=1, column=1)
+        self.house_type_condo_switch.grid(row=2, column=0)
+        self.house_type_mul_fam_switch.grid(row=2, column=1)
+        self.status_coming_soon_chb.grid(row=1, column=0)
+        self.status_active_chb.grid(row=1, column=1)
+        self.status_pending_chb.grid(row=1, column=2)
+        self.reset_filters_button.grid(row=0, column=0, sticky="nesw")
+        self.apply_filters_button.grid(row=0, column=1, sticky="nesw")
+
+    def set_default_values(self):
+        self.for_sale_sold_om.set(RedfinApi.SoldStatus.SOLD)
+        self.stories_om.set(RedfinApi.Stories.ONE)
+        self.year_built_min_om.set(str(self.cur_year - 1))
+        self.year_built_max_om.set(str(self.cur_year - 1))
+        self.sold_within_om.set(self.sold_within_list[-1])
+        self.price_range_max_om.set("None")
+        self.price_range_min_om.set("None")
+        self.sqft_max_om.set("None")
+        self.sqft_min_om.set("None")
+        self.status_active_chb.deselect()
+        self.status_pending_chb.deselect()
+        self.status_coming_soon_chb.deselect()
+        self.house_type_house_switch.select()
+        self.house_type_condo_switch.deselect()
+        self.house_type_townhouse_switch.deselect()
+        self.house_type_mul_fam_switch.deselect()
+        self.status_within_activate_deactivate(self.for_sale_sold_om.get())
+
+    def status_within_activate_deactivate(self, status):
+        """Deactivates or activates the status and sold within sections, since they depend on what type of sale a house is being searched with."""
+        match self.for_sale_sold_om.get():
+            case RedfinApi.SoldStatus.FOR_SALE.value:
+                self.sale_status_label.configure(state="normal")
+                self.status_active_chb.configure(state="normal")
+                self.status_coming_soon_chb.configure(state="normal")
+                self.status_pending_chb.configure(state="normal")
+                self.sold_within_label.configure(state="disabled")
+                self.sold_within_om.configure(state="disabled")
+            case RedfinApi.SoldStatus.SOLD.value:
+                # TODO make these filters compatible with tool
+                self.sale_status_label.configure(state="disabled")
+                self.status_active_chb.configure(state="disabled")
+                self.status_coming_soon_chb.configure(state="disabled")
+                self.status_pending_chb.configure(state="disabled")
+                self.sold_within_label.configure(state="normal")
+                self.sold_within_om.configure(state="normal")
+
+    def change_to_search_page(self):
+        self.grid_remove()
+        self.search_page.grid()
+
+    def get_values(self):
+        self.for_sale_sold_om.get()
+        self.stories_om.get()
+        self.sqft_max_om.get()
+        self.sqft_min_om.get()
+        self.year_built_max_om.get()
+        self.year_built_min_om.get()
+        self.price_range_max_om.get()
+        self.price_range_min_om.get()
+        self.status_active_chb.get()
+        self.status_coming_soon_chb.get()
+        self.status_pending_chb.get()
+        self.sold_within_om.get()
+        self.house_type_house_switch.get()
+        self.house_type_townhouse_switch.get()
+        self.house_type_mul_fam_switch.get()
+        self.house_type_condo_switch.get()

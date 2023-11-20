@@ -7,6 +7,7 @@ import polars as pl
 import threading
 from backend.redfinscraper import RedfinApi
 from .datapage import DataPage
+from .filters import FiltersPage
 
 # import os
 # import sys
@@ -25,9 +26,8 @@ class SearchPage(ctk.CTkFrame):
         self.auto_complete_series = get_unique_msa_from_master()
         self.current_auto_complete_series = None
         self.prev_search_bar_len = 0
+        self.filters_page = FiltersPage(self.master, self)
         self.create_widgets()
-
-        # self.redfin_filters = RedfinFiltersWindow(takefocus=True)
 
     def create_widgets(self):
         # https://www.tutorialspoint.com/how-to-create-hyperlink-in-a-tkinter-text-widget for hyper link
@@ -43,8 +43,17 @@ class SearchPage(ctk.CTkFrame):
             message="An MSA is a census defined region that consists of a city and \nsurrounding communities that are linked by social and economic factors. \nThe core city has a population of at least 50,000",
         )
         self.redfin_filters_button = ctk.CTkButton(
-            self, corner_radius=10, height=35, text="Add Filters"
-        )  # , command=redfin_filters.launch
+            self,
+            corner_radius=10,
+            height=35,
+            text="Add Filters",
+            command=self.change_to_filters_page,
+        )
+        CTkToolTip(
+            self.redfin_filters_button,
+            delay=0.25,
+            message="Select filters for your search.",
+        )
         self.search_bar = ctk.CTkEntry(
             self, height=40, corner_radius=40, placeholder_text="Search for an MSA"
         )
@@ -132,8 +141,8 @@ class SearchPage(ctk.CTkFrame):
         if len(cur_text) == 0:
             cur_text = r"!^"
         if any(self.auto_complete_series.str.contains(rf"{cur_text}$")):
-            self.datapage = DataPage(self.master)
-            self.datapage.grid(row=0, column=0, sticky="news")
+            self.data_page = DataPage(self.master)
+            self.data_page.grid(row=0, column=0, sticky="news")
             self.search_metros_threaded(cur_text)
             self.go_to_data_page(cur_text)
         else:
@@ -145,10 +154,10 @@ class SearchPage(ctk.CTkFrame):
             )
 
     def go_to_data_page(self, msa_name: str):
-        if self.datapage is not None:
+        if self.data_page is not None:
             self.grid_remove()
-            self.datapage.grid()
-            self.datapage.set_msa_name(msa_name)
+            self.data_page.grid()
+            self.data_page.set_msa_name(msa_name)
 
     def search_metros_threaded(self, msa_name: str):
         # get filters . submit button will validate them
@@ -171,3 +180,9 @@ class SearchPage(ctk.CTkFrame):
                 ),
                 daemon=True,
             ).start()
+
+    def change_to_filters_page(self):
+        if self.filters_page is not None:
+            self.filters_page.grid(row=0, column=0, sticky="news")
+            self.grid_remove()
+            self.filters_page.grid()

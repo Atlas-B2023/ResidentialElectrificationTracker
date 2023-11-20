@@ -21,7 +21,6 @@ class DataPage(ctk.CTkFrame):
 
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
-        self.master = master
         self.msa_name = None
         self.income_df = None
         self.demog_df = None

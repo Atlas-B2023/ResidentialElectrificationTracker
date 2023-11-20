@@ -8,7 +8,7 @@ from gui import app
 
 
 if __name__ == "__main__":
-    #change logger debug mode with menu bar
+    # change logger debug mode with menu bar
     gui_app = app.App()
     gui_app.mainloop()
     # rfs = RedfinApi()

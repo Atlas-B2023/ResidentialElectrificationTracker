@@ -72,6 +72,10 @@ OUTPUT_DIR_PATH = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}outpu
 class RedfinApi:
     """Scrape redfin using their stingray api. Use this class for getting and the iterating over ZIP code level data, creating an object for each new zip code."""
 
+    class SoldStatus(StrEnum):
+        FOR_SALE = "For Sale"
+        SOLD = "Sold"
+
     class HouseType(StrEnum):
         HOUSE = "1"
         CONDO = "2"
@@ -79,6 +83,61 @@ class RedfinApi:
         MULTI_FAMILY = "4"
         LAND = "5"
         OTHER = "6"
+
+    class Price(StrEnum):
+        NONE = (
+            "None"
+        )  # make sure to check for this so it doesnt make a spot in the filters dict
+        FIFTY_THOU = "50000"
+        SEVENTY_FIVE_THOU = "75000"
+        ONE_HUN_THOU = "100000"
+        ONE_HUN_25_THOU = "125000"
+        ONE_HUN_5_THOU = "150000"
+        ONE_HUN_75_THOU = "175000"
+        TWO_HUN_THOU = "200000"
+        TWO_HUN_25_THOU = "225000"
+        TWO_HUN_5_THOU = "250000"
+        TWO_HUN_75_THOU = "275000"
+        THREE_HUN_THOU = "300000"
+        THREE_HUN_25_THOU = "325000"
+        THREE_HUN_5_THOU = "350000"
+        THREE_HUN_75_THOU = "375000"
+        FOUR_HUN_THOU = "400000"
+        FOUR_HUN_25_THOU = "425000"
+        FOUR_HUN_5_THOU = "450000"
+        FOUR_HUN_75_THOU = "475000"
+        FIVE_HUN_THOU = "500000"
+        FIVE_HUN_5_THOU = "550000"
+        SIX_HUN_THOU = "600000"
+        SIX_HUN_5_THOU = "650000"
+        SEVEN_HUN_THOU = "700000"
+        SEVEN_HUN_5_THOU = "750000"
+        EIGHT_HUN_THOU = "800000"
+        EIGHT_HUN_5_THOU = "850000"
+        NINE_HUN_THOU = "900000"
+        NINE_HUN_5_THOU = "950000"
+        ONE_MIL = "1000000"
+        ONE_MIL_25_THOU = "1250000"
+        ONE_MIL_5_THOU = "1500000"
+        ONE_MIL_75_THOU = "1750000"
+        TWO_MIL = "2000000"
+        TWO_MIL_25_THOU = "2250000"
+        TWO_MIL_5_THOU = "2500000"
+        TWO_MIL_75_THOU = "2750000"
+        THREE_MIL = "3000000"
+        THREE_MIL_25_THOU = "3250000"
+        THREE_MIL_5_THOU = "3500000"
+        THREE_MIL_75_THOU = "3750000"
+        FOUR_MIL = "4000000"
+        FOUR_MIL_25_THOU = "4250000"
+        FOUR_MIL_5_THOU = "4500000"
+        FOUR_MIL_75_THOU = "4750000"
+        FIVE_MIL = "5000000"
+        SIX_MIL = "6000000"
+        SEVEN_MIL = "7000000"
+        EIGHT_MIL = "8000000"
+        NINE_MIL = "9000000"
+        TEN_MIL = "10000000"
 
     class SortOrder(StrEnum):
         RECOMMENDED = "redfin-recommended-asc"
@@ -113,26 +172,29 @@ class RedfinApi:
     class Sqft(StrEnum):
         """Properties of the `min-sqft` and `max-sqft` filter."""
 
+        NONE = (
+            "None"
+        )  # make sure this doesnt get passed to the params when making filters
         SEVEN_FIFTY = "750"
-        THOU = "1K"
-        THOU_1 = "1.1k"
-        THOU_2 = "1.2k"
-        THOU_3 = "1.3k"
-        THOU_4 = "1.4k"
-        THOU_5 = "1.5k"
-        THOU_6 = "1.6k"
-        THOU_7 = "1.7k"
-        THOU_8 = "1.8k"
-        THOU_9 = "1.9k"
-        TWO_THOU = "2k"
-        TWO_THOU_250 = "2.25k"
-        TWO_THOU_500 = "2.5k"
-        TWO_THOU_750 = "2.75k"
-        THREE_THOU = "3k"
-        FOUR_THOU = "4k"
-        FIVE_THOU = "5k"
-        SEVEN_THOU_500 = "7.5k"
-        TEN_THOU = "10k"
+        THOU = "1000"
+        THOU_1 = "1100"
+        THOU_2 = "1200"
+        THOU_3 = "1300"
+        THOU_4 = "1400"
+        THOU_5 = "1500"
+        THOU_6 = "1600"
+        THOU_7 = "1700"
+        THOU_8 = "1800"
+        THOU_9 = "1900"
+        TWO_THOU = "2000"
+        TWO_THOU_250 = "2250"
+        TWO_THOU_500 = "2500"
+        TWO_THOU_750 = "2750"
+        THREE_THOU = "3000"
+        FOUR_THOU = "4000"
+        FIVE_THOU = "5000"
+        SEVEN_THOU_500 = "7500"
+        TEN_THOU = "10000"
 
     def __init__(self) -> None:
         self.rf = redfin.Redfin()
@@ -193,6 +255,8 @@ class RedfinApi:
             if sort_order is self.SortOrder.MOST_RECENTLY_SOLD:
                 log("Wrong sort order for sale type", "warn")
                 return None
+        # max_price, min_price, min_listing_approx_size, max_listing_approx_size, max_sqft, min_sqft, min_stories
+        # TODO make sure to fix filtering so that its not just "single family homes"
 
         try:
             market = region_info["payload"]["rootDefaults"]["market"]
