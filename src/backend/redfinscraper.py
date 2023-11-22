@@ -21,37 +21,58 @@ from backend import (
 )
 
 # TODO add notice that this program may over estimate or under estimate fuels that are common across not heating system in houses, like electricity and NG
-# listings say things like "Electric: 200+ amps" or "No: gas, electricity" not really needed tho?
-exclude_terms = re.compile(r"no\b.*electric|no\b.*gas|water", re.I)
+# How the searcher works:
+# Uses super_group_heating_related_patterns to scan over supergroups and return the super groups that likely contain heating information
+# for each of these super groups, it goes through and checks their amenity group headers.
+# For each amenity group header, it uses amenity_group_include_patterns to filter.
+# if there is no colon, it adds the result of filtering by appliance.
+# if there is a colon, it filters with group names
 
 
-utilities_group_exclude = re.compile(
-    r"electric(?=\s(heat|baseboard))", re.I
-)  # only match electric in utilities container with this matches
+# super group include
+super_group_include_patterns = re.compile(r"heat|property|interior|utilit", re.I)
 
-probable_super_group_title_strings = re.compile(r"heat|property|interior|utilit", re.I)
+# amenity group include
+amenity_group_include_patterns = re.compile(r"heat|utilit|interior", re.I)
 
+# before colon include
+amenity_name_include_patterns = re.compile(r"heat", re.I)
+# before colon exclude
+amenity_name_exclude_patterns = re.compile(
+    r"heat.*updat|has heat|heat.*efficiency|heat.*certific", re.I
+)
 
-heating_related_patterns = [
+# ==
+after_colon_fuel_and_appliance_heating_related_patterns = [
     re.compile(r"electric", re.I),
-    re.compile(r"resist(?:ive|ance)", re.I),
     re.compile(r"diesel|oil", re.I),
     re.compile(r"propane", re.I),
     re.compile(r"gas", re.I),
     re.compile(r"solar", re.I),
-    # Only match wood if it comes after fuel, or before stove or burner
-    re.compile(r"fuel\b.*\bwood|wood(en)* stove|wood(en)* burner", re.I),
+    re.compile(r"wood", re.I),
     re.compile(r"pellet", re.I),
-    re.compile(r"boiler", re.I),
-    re.compile(r"baseboard", re.I),
-    re.compile(r"furnace", re.I),
-    re.compile(r"heat\spump", re.I),
-    re.compile(r"mini[\s-]split", re.I),
-    re.compile(r"radiator", re.I),
-    re.compile(r"radiant", re.I),
 ]
+# dangling include and when the before colon word is utilities
+appliance_heating_related_patterns = [
+    re.compile(r"mini[\s-]split", re.I),
+    re.compile(r"resist(?:ive|ance)", re.I),
+    re.compile(r"\bwood(en)* stove|\bwood(en)* burner", re.I),
+    re.compile(r"heat pump", re.I),
+    re.compile(r"radiator", re.I),
+    re.compile(r"furnace", re.I),
+    re.compile(r"boiler", re.I),
+    re.compile(r"radiant", re.I),
+    re.compile(r"baseboard", re.I),
+]
+# after colon include
+after_colon_fuel_and_appliance_heating_related_patterns.extend(
+    appliance_heating_related_patterns
+)
 
-regex_category_patterns = {
+#TODO figure where this goes
+# after colon excl = re.compile(r"no\b.*electric|no\b.*gas|water", re.I)
+
+category_patterns = {
     "Electricity": re.compile(r"electric", re.I),
     "Natural Gas": re.compile(r"gas", re.I),
     "Propane": re.compile(r"propane", re.I),
@@ -59,7 +80,7 @@ regex_category_patterns = {
     "Wood/Pellet": re.compile(r"wood|pellet", re.I),
     "Solar Heating": re.compile(r"solar", re.I),
     "Heat Pump": re.compile(r"heat pump|mini[\s-]split", re.I),
-    "Baseboard": re.compile(r"baseboard", re.I),
+    "Baseboard": re.compile(r"baseboard|resist", re.I),
     "Furnace": re.compile(r"furnace", re.I),
     "Boiler": re.compile(r"boiler", re.I),
     "Radiator": re.compile(r"radiator", re.I),
@@ -208,7 +229,7 @@ class RedfinApi:
             "LONGITUDE": pl.Float32,
         }
         self.search_params = None
-        self.column_dict = {key: False for key in regex_category_patterns.keys()}
+        self.column_dict = {key: False for key in category_patterns.keys()}
 
     def set_search_params(self, zip: str, search_filters) -> None:
         """Set the parameters for searching by zip code
@@ -305,7 +326,6 @@ class RedfinApi:
 
             self.search_params["status"] = status
 
-        # max_price, min_price, min_listing_approx_size, max_listing_approx_size, uipt
         if (max_sqft := search_filters.get("max sqft")) != "None":
             self.search_params["max_sqft"] = max_sqft
         if (min_sqft := search_filters.get("min sqft")) != "None":
@@ -319,16 +339,16 @@ class RedfinApi:
         houses = ""  # figure out how to join into comma string
         if search_filters.get("house type house") is True:
             houses = houses + "1"
+        if search_filters.get("house type condo") is True:
+            houses = houses + "2"
         if search_filters.get("house type townhouse") is True:
             houses = houses + "3"
         if search_filters.get("house type mul fam") is True:
             houses = houses + "4"
-        if search_filters.get("house type condo") is True:
-            houses = houses + "2"
 
         self.search_params["uipt"] = ",".join(list(houses))
 
-    # redfin stuff
+    # redfin setup
     def meta_request_download(self, url, kwargs) -> str:
         """Method for downloading objects.
 
@@ -373,7 +393,7 @@ class RedfinApi:
     def get_gis_csv(self, params) -> str:
         return self.meta_request_download("api/gis-csv", params)
 
-    # api calls stuff
+    # calls stuff
     def get_heating_info_from_super_group(self, super_group: dict) -> list[str]:
         """Supply a probable heating group
 
@@ -413,21 +433,53 @@ class RedfinApi:
         Returns:
             list[str]: list of raw heating terms
         """
-        # for matching amenity group names on
-        group_names_include = re.compile(r"heat|utilit|interior", re.I)
-        group_names_exclude = re.compile(r"heating.*updat|has heat", re.I)
-
         raw_amenity_values = []
-        amenity_groups = super_group.get("amenityGroups", "")
-        # going through all super  and check if property detail header is a match.
-        for amenity in amenity_groups:
-            for amenity_entry in amenity.get("amenityEntries", ""):
-                amenity_name = amenity_entry.get("amenityName", "")
-                group_title = amenity.get("groupTitle", "")
+        for amenity in super_group.get("amenityGroups", ""): #
+            if not any(amenity_group_include_patterns.findall(amenity.get("groupTitle",""))):
+                continue # this is the name that is bold
+            for amenity_entry in amenity.get("amenityEntries", ""): #these are the floating or before colon after colon pairs
+                amenity_name = amenity_entry.get("amenityName", "") # if "", then item is dangling (no before colon word)
+                
+                if amenity_name and not any(re.compile("utilit", re.I).findall(amenity_name)):
+                    # filter the before colon. first if is to have stricter capture rule when amenity item is "Utilities: Natural gas, heat pump, ..."
+                    if any(amenity_name_include_patterns.findall(amenity_name)) and not any(amenity_name_exclude_patterns.findall(amenity_name)):
+                        my_list = [
+                            value
+                            for value in amenity_entry.get
+                        ]
+                        for value in amenity_entry.get("amenityValues",""):
+                            for regex in after_colon_fuel_and_appliance_heating_related_patterns:
+                                if any(regex.findall(value)):
+                                    raw_amenity_values.append(value)
+                else:
+                    #filter for appliance if dangling
+                    for value in amenity_entry.get("amenityValues",""):
+                            for regex in appliance_heating_related_patterns:
+                                if any(regex.findall(value)):
+                                    raw_amenity_values.append(value)
+                    
+
+
+
+
+
+
+
+
+
+
+
+
+                group_title = amenity.get("groupTitle", "") #should never be ""
+
+
+
+
+
 
                 if group_names_include.findall(
                     amenity_name
-                ) and not group_names_exclude.findall(amenity_name):
+                ) and not amenity_group_exclude_patterns.findall(amenity_name):
                     if any(re.compile("utilit", re.I).findall(amenity_name)):
                         # dont match things like
                         # Utilities
@@ -450,7 +502,7 @@ class RedfinApi:
                 elif (
                     amenity_name == ""
                     and group_names_include.findall(group_title)
-                    and not group_names_exclude.findall(group_title)
+                    and not amenity_group_exclude_patterns.findall(group_title)
                 ):
                     # if floating item ( empty string compare being true implicitly means that we are not rejected)...
                     if any(re.compile("utilit", re.I).findall(group_title)):
@@ -473,8 +525,11 @@ class RedfinApi:
         amenity_values = [
             string
             for string in raw_amenity_values
-            if any(regex.findall(string) for regex in heating_related_patterns)
-            and not any(exclude_terms.findall(string))
+            if any(
+                regex.findall(string)
+                for regex in after_colon_fuel_and_appliance_heating_related_patterns
+            )
+            and not any(amenity_value_exclude_patterns.findall(string))
         ]
         return amenity_values
 
@@ -539,9 +594,7 @@ class RedfinApi:
             )  # this and "There was no heating information for {address}" should be made in caller?
             return copy.deepcopy(self.column_dict)
         for super_group in super_groups:  # dict
-            if probable_super_group_title_strings.findall(
-                super_group.get("titleString", "")
-            ):
+            if any(super_group_include_patterns.findall(super_group.get("titleString", ""))):
                 terms.extend(
                     self.get_heating_info_from_super_group(super_group)
                 )  # this will be like [gas, electricity, heat pump]
@@ -554,7 +607,7 @@ class RedfinApi:
         for input_string in terms:
             log(f"{input_string = }", "debug")
             result = {}
-            for key, pattern in regex_category_patterns.items():
+            for key, pattern in category_patterns.items():
                 if bool(re.search(pattern, input_string)):
                     result[key] = True
                     log(f"Pattern matched on {key, pattern = }", "debug")
@@ -591,10 +644,25 @@ class RedfinApi:
         if self.search_params is None:
             return
         csv_text = self.get_gis_csv(self.search_params)
+
+        home_types: str = self.search_params.get("uipt", "")
+        if "1" in home_types:
+            home_types = home_types.replace("1", "Single Family Residential")
+        if "2" in home_types:
+            home_types = home_types.replace("2", "Condo/Co-op")
+        if "3" in home_types:
+            home_types = home_types.replace("3", "Townhouse")
+        if "4" in home_types:
+            home_types = home_types.replace("4", r"Multi-Family \(2-4 Unit\)")
+
         try:
             df = (
                 pl.read_csv(io.StringIO(csv_text), dtypes=self.DESIRED_CSV_SCHEMA)
-                .filter(pl.col("PROPERTY TYPE").eq("Single Family Residential"))
+                .filter(
+                    pl.col("PROPERTY TYPE").str.contains(
+                        "|".join(home_types.split(","))
+                    )
+                )
                 .select(
                     "ADDRESS",
                     "CITY",
@@ -742,5 +810,5 @@ class RedfinApi:
             zip = df_of_zip.select("ZIP OR POSTAL CODE").item(0, 0)
             df_of_zip.write_csv(f"{metro_output_dir_path}{os.sep}{zip}.csv")
 
+        # log(f"In {msa_name}, there are {} homes with Electric fuel, {} homes with Natural Gas, {} homes with Propane, {} homes with Diesel/Heating Oil, {} homes with Wood/Pellet, {} homes with Solar Heating, {} homes with Heat Pumps, {} homes with Baseboard, {} homes with Furnace, {} homes with Boiler, {} homes with Radiator, {} homes with Radiant Floor")
         log(f"Done with searching houses in {msa_name}!", "info")
-        # concat all and give final statistics?

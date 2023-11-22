@@ -14,7 +14,7 @@ class App(ctk.CTk):
         super().__init__()
         self.title("MSA Heater Searcher")
         # wxh
-        self.desired_geometry_string = "800x600"
+        self.desired_geometry_string = "800x500"
         self.geometry(self.desired_geometry_string)
         self.minsize(width=800, height=500)
         self.create_widgets()
@@ -22,5 +22,5 @@ class App(ctk.CTk):
     def create_widgets(self):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        self.searchpage_frame = SearchPage(master=self)
-        self.searchpage_frame.grid(row=0, column=0, sticky="nsew")
+        self.search_page_frame = SearchPage(master=self)
+        self.search_page_frame.grid(row=0, column=0, sticky="nsew")

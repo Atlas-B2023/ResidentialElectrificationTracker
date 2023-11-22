@@ -1,3 +1,4 @@
+import re
 import customtkinter as ctk
 from CTkToolTip import CTkToolTip
 from CTkListbox import CTkListbox
@@ -98,7 +99,7 @@ class SearchPage(ctk.CTkFrame):
         )
 
     def update_suggestions_listbox(self, x: Event | None):
-        cur_text = self.search_bar.get()
+        cur_text = re.escape(self.search_bar.get())
         if cur_text == "":
             # only gets called when all text has been deleted
             self.current_auto_complete_series = self.auto_complete_series
@@ -165,10 +166,7 @@ class SearchPage(ctk.CTkFrame):
         with lock:
             threading.Thread(
                 target=redfin_searcher.get_house_attributes_from_metro,
-                args=(
-                    msa_name,
-                    self.filters_page.get_values()
-                ),
+                args=(msa_name, self.filters_page.get_values()),
                 daemon=True,
             ).start()
 
