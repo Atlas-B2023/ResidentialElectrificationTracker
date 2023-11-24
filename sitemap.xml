@@ -2,42 +2,52 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/Helper/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/helper/</loc>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/RedfinListingScraper/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/redfinscraper/</loc>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/RedfinSearcher/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/secondarydata/</loc>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/SecondaryData/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/us/states/</loc>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/gui/test/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/backend/us/unitedstatesofamerica/</loc>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/us/states/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/gui/app/</loc>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/us/unitedstatesofamerica/</loc>
-         <lastmod>2023-11-03</lastmod>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/gui/datapage/</loc>
+         <lastmod>2023-11-24</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/gui/filterspage/</loc>
+         <lastmod>2023-11-24</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://atlas-b2023.github.io/ResidentialElectrificationTracker/gui/searchpage/</loc>
+         <lastmod>2023-11-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
