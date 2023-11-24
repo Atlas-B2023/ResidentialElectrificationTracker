@@ -47,11 +47,11 @@ replace_dict = {
 
 
 class EIADataRetriever:
-    """https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
+    """Interact with the EIA open data API.
 
-    Raises:
-        TypeError: _description_
-        NotImplementedError: _description_
+    Notes:
+        This is the "manual" for this API:
+        https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
 
     Returns:
         EIADataRetriever: EIADataRetriever object for interacting with the EIA api in regards to residential energy prices
@@ -154,7 +154,7 @@ class EIADataRetriever:
         OIL_FURNACE = 0.704
         PELLET_BOILER = 0.639
 
-    class EnergyTypes(Enum):
+    class EnergyType(Enum):
         PROPANE = 1
         HEATING_OIL = 2
         NATURAL_GAS = 3
@@ -191,26 +191,28 @@ class EIADataRetriever:
             )
             exit()
 
-    def price_per_btu_with_efficiency(
+    def price_per_mbtu_with_efficiency(
         self, energy_price_dict: dict
-    ) -> dict[str, str | EnergyTypes | float]:
+    ) -> dict[str, str | EnergyType | float]:
         """Convert an energy source's price per quantity into price per BTU with an efficiency.
+
+        Notes:
+            Efficiency data taken from https://portfoliomanager.energystar.gov/pdf/reference/Thermal%20Conversions.pdf
 
         See also:
             `EIADataRetriever.HeaterEfficiencies`
 
         Args:
-            energy_source (_type_): energy source json
+            energy_price_dict (dict): energy source json
 
         Returns:
             dict: new dictionary with btu centric pricing
         """
-        # https://portfoliomanager.energystar.gov/pdf/reference/Thermal%20Conversions.pdf
-        #! currently doesn't take into account efficiency: make new function based on burner type/ end usage type
+        #! make new function based on burner type/ end usage type
         CENTS_IN_DOLLAR = 100
         match energy_price_dict.get("type"):
-            case self.EnergyTypes.PROPANE.value:
-                # for loop is done for every case since i dont want to use `eval` or parse a string of division to keep PEMDAS
+            case self.EnergyType.PROPANE.value:
+                # for loop is done for every case since i dont want to use `eval` or parse a string of division to keep PEMDAS. this is why i dont have an efficiency func yet
                 for key, value in energy_price_dict.items():
                     if (
                         key in ["type", "state", None]
@@ -223,9 +225,9 @@ class EIADataRetriever:
                             self.FuelBTUConversion.PROPANE_BTU_PER_GAL.value
                             * self.HeaterEfficiencies.PROPANE_FURNACE.value
                         )
-                        * 1_000_000
+                        * 1_000
                     )
-            case self.EnergyTypes.NATURAL_GAS.value:
+            case self.EnergyType.NATURAL_GAS.value:
                 for key, value in energy_price_dict.items():
                     if (
                         key in ["type", "state", None]
@@ -238,9 +240,9 @@ class EIADataRetriever:
                             self.FuelBTUConversion.NG_BTU_PER_MCT.value
                             * self.HeaterEfficiencies.NG_FURNACE.value
                         )
-                        * 1_000_000
+                        * 1_000
                     )
-            case self.EnergyTypes.ELECTRICITY.value:
+            case self.EnergyType.ELECTRICITY.value:
                 for key, value in energy_price_dict.items():
                     if (
                         key in ["type", "state", None]
@@ -254,9 +256,9 @@ class EIADataRetriever:
                             self.FuelBTUConversion.ELECTRICITY_BTU_PER_KWH.value
                             * self.HeaterEfficiencies.HEAT_PUMP_DUCTED.value
                         )
-                        * 1_000_000
+                        * 1_000
                     )
-            case self.EnergyTypes.HEATING_OIL.value:
+            case self.EnergyType.HEATING_OIL.value:
                 for key, value in energy_price_dict.items():
                     if (
                         key in ["type", "state", None]
@@ -269,7 +271,7 @@ class EIADataRetriever:
                             self.FuelBTUConversion.HEATING_OIL_BTU_PER_GAL.value
                             * self.HeaterEfficiencies.OIL_BOILER.value
                         )
-                        * 1_000_000
+                        * 1_000
                     )
             case _:
                 log("Could not translate dict to btu per price.", "warn")
@@ -278,15 +280,17 @@ class EIADataRetriever:
 
     # api to dict handler Helpers
     def price_dict_to_clean_dict(
-        self, eia_json: dict, energy_type: EnergyTypes, state: str
-    ) -> dict[str, str | EnergyTypes | float]:
+        self, eia_json: dict, energy_type: EnergyType, state: str
+    ) -> dict[str, str | EnergyType | float]:
         """Clean JSON data returned by EIA's API.
 
         Args:
-            eia_json (_type_): the dirty JSON
+            eia_json (dict): the response JSON
+            energy_type (EnergyType): the energy type
+            state (str): the state
 
         Returns:
-            dict: cleaned JSON with state and energy type
+            dict[str, str | EnergyType | float]: cleaned JSON
         """
         # price key is different for electricity
         accessor = "value"
@@ -303,17 +307,17 @@ class EIADataRetriever:
         return result_dict
 
     def price_df_to_clean_dict(
-        self, eia_df: pl.DataFrame, energy_type: EnergyTypes, state: str
-    ) -> dict[str, str | EnergyTypes | float]:
+        self, eia_df: pl.DataFrame, energy_type: EnergyType, state: str
+    ) -> dict[str, str | EnergyType | float]:
         """Clean DataFrame data consisting of EIA API data.
 
         Args:
             eia_df (pl.DataFrame): the DataFrame to clean
-            energy_type (EnergyTypes): the energy type
+            energy_type (EnergyType): the energy type
             state (str): the state
 
         Returns:
-            dict[str, str|EnergyTypes|float]: the dict
+            dict[str, str|EnergyType|float]: the dict
         """
         result_dict = {}
         for row in eia_df.rows(named=True):
@@ -326,20 +330,20 @@ class EIADataRetriever:
 
     # api to dict handler
     def price_to_clean_dict(
-        self, price_struct: dict | pl.DataFrame, energy_type: EnergyTypes, state: str
-    ) -> dict[str, str | EnergyTypes | float]:
+        self, price_struct: dict | pl.DataFrame, energy_type: EnergyType, state: str
+    ) -> dict[str, str | EnergyType | float]:
         """Handle the different data types that EIA data could be stored in.
 
         Args:
             price_struct (dict | pl.DataFrame): a data structure containing the year, month, and price info
-            energy_type (EnergyTypes): the energy type
+            energy_type (EnergyType): the energy type
             state (str): the state
 
         Raises:
             TypeError: raised if the type of `price_struct` is not supported
 
         Returns:
-            dict[str, str|EnergyTypes|float]: the normalized and structured data in dict form
+            dict[str, str|EnergyType|float]: the normalized and structured data in dict form
         """
         match price_struct:
             case dict():
@@ -353,7 +357,10 @@ class EIADataRetriever:
     def monthly_electricity_price_per_kwh(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> dict[str, Any]:
-        """Get a state's average monthly energy price in cents per KWh.
+        """Get a state's average monthly energy price.
+
+        Notes:
+            Data is returned in cents/KWh.
 
         Args:
             state (str): the 2 character postal code of a state
@@ -363,7 +370,6 @@ class EIADataRetriever:
         Returns:
             dict: the dictionary in `year-month: price` form
         """
-        # cent/ kwh
         url = f"{self.eia_base_url}/electricity/retail-sales/data/?frequency=monthly&data[0]=price&facets[stateid][]={state}&facets[sectorid][]=RES&start={start_date.year}-{start_date.month:02}&end={end_date.year}-{end_date.month:02}&sort[0][column]=period&sort[0][direction]=asc&api_key={self.api_key}"
 
         eia_request = req_get_wrapper(url)
@@ -374,7 +380,10 @@ class EIADataRetriever:
     def monthly_ng_price_per_mcf(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> dict[str, Any]:
-        """Get a state's average natural gas price in dollars per MCF.
+        """Get a state's average natural gas price.
+
+        Notes:
+            Data is returned in dollars per mega cubic feet.
 
         Args:
             state (str): the 2 character postal code of a state
@@ -395,9 +404,11 @@ class EIADataRetriever:
     def monthly_heating_season_heating_oil_price_per_gal(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> pl.DataFrame:
-        """Get a participating state's average heating oil price in dollars per gal.
+        """Get a state's average heating oil price.
 
         Note:
+            Data returned is in dollars per gallon.
+
             Only these states are tracked, and only for the months October through March:
                 * CT
                 * DC
@@ -427,6 +438,7 @@ class EIADataRetriever:
                 * VT
                 * WI
         Args:
+            state (str): 2 char postal code
             start_date (datetime.date): the start date, inclusive
             end_date (datetime.date): the end date, non inclusive
 
@@ -459,7 +471,7 @@ class EIADataRetriever:
     def monthly_heating_season_propane_price_per_gal(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> pl.DataFrame:
-        """Get a participating state's average propane price in dollars per gal.
+        """Get a state's average propane price in dollars per gal.
 
         Note:
             Only these states are tracked, and only for the months October through Marc:
@@ -502,6 +514,7 @@ class EIADataRetriever:
                 * WI
 
         Args:
+            state (str): 2 character postal code
             start_date (datetime.date): the start date, inclusive
             end_date (datetime.date): the end date, non inclusive
 
@@ -532,18 +545,18 @@ class EIADataRetriever:
 
         return monthly_avg_price
 
-    def monthly_price_per_million_btu_by_energy_type(
+    def monthly_price_per_mbtu_by_energy_type(
         self,
-        energy_type: EnergyTypes,
+        energy_type: EnergyType,
         state: str,
         start_date: datetime.date,
         end_date: datetime.date,
-    ) -> dict[str, str | EnergyTypes | float]:
-        """Get the cost per BTU for the given energy type for the state, over the given period of time. Refer to EIA's documentation
+    ) -> dict[str, str | EnergyType | float]:
+        """Get the cost per MBTU for the given energy type for the state, over the given period of time. Refer to EIA's documentation
         for changes to data collection during certain years.
 
         Args:
-            energy_type (EnergyTypes): The energy type
+            energy_type (EnergyType): The energy type
             state (str): the 2 character postal abbreviation. Note that for heating oil, only certain states have this information collected
             start_date (datetime.date): the date for which to start the search. Inclusive. Not that for heating oil, only heating months will be returned
             end_date (datetime.date): the date for which to end the search. Non inclusive
@@ -557,8 +570,8 @@ class EIADataRetriever:
         if len(state) > 2:
             state = sts.lookup(state).abbr  # type: ignore
         match energy_type:
-            case self.EnergyTypes.PROPANE:
-                return self.price_per_btu_with_efficiency(
+            case self.EnergyType.PROPANE:
+                return self.price_per_mbtu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_heating_season_propane_price_per_gal(
                             state, start_date, end_date
@@ -567,16 +580,16 @@ class EIADataRetriever:
                         state,
                     )
                 )
-            case self.EnergyTypes.NATURAL_GAS:
-                return self.price_per_btu_with_efficiency(
+            case self.EnergyType.NATURAL_GAS:
+                return self.price_per_mbtu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_ng_price_per_mcf(state, start_date, end_date),
                         energy_type,
                         state,
                     )
                 )
-            case self.EnergyTypes.ELECTRICITY:
-                return self.price_per_btu_with_efficiency(
+            case self.EnergyType.ELECTRICITY:
+                return self.price_per_mbtu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_electricity_price_per_kwh(
                             state, start_date, end_date
@@ -585,8 +598,8 @@ class EIADataRetriever:
                         state,
                     )
                 )
-            case self.EnergyTypes.HEATING_OIL:
-                return self.price_per_btu_with_efficiency(
+            case self.EnergyType.HEATING_OIL:
+                return self.price_per_mbtu_with_efficiency(
                     self.price_to_clean_dict(
                         self.monthly_heating_season_heating_oil_price_per_gal(
                             state, start_date, end_date
@@ -598,10 +611,10 @@ class EIADataRetriever:
             case _:
                 raise NotImplementedError(f"Unsupported energy type: {energy_type}")
 
-    def monthly_price_per_million_btu_by_energy_type_by_state(
+    def monthly_price_per_mbtu_by_energy_type_by_state(
         self, state: str, start_date: datetime.date, end_date: datetime.date
     ) -> list[Any]:
-        """Get all available energy prices per BTU, taking efficiency into account, for a state.
+        """Get all available energy prices per MBTU, taking efficiency into account, for a state.
 
         Note:
             Please keep times to within a year. For the non oil and propane, you have to go a month past.
@@ -612,7 +625,7 @@ class EIADataRetriever:
             end_date (datetime.date): end date
 
         Returns:
-            list[Any]: _description_
+            list[Any]: list of price dicts for available energy types for a state
         """
         if len(state) > 2:
             state = sts.lookup(state).abbr  # type: ignore
@@ -620,24 +633,24 @@ class EIADataRetriever:
         dicts_to_return = []
         if state in self.HEATING_OIL_STATES_ABBR:
             dicts_to_return.append(
-                self.monthly_price_per_million_btu_by_energy_type(
-                    self.EnergyTypes.HEATING_OIL, state, start_date, end_date
+                self.monthly_price_per_mbtu_by_energy_type(
+                    self.EnergyType.HEATING_OIL, state, start_date, end_date
                 )
             )
         if state in self.PROPANE_STATES_ABBR:
             dicts_to_return.append(
-                self.monthly_price_per_million_btu_by_energy_type(
-                    self.EnergyTypes.PROPANE, state, start_date, end_date
+                self.monthly_price_per_mbtu_by_energy_type(
+                    self.EnergyType.PROPANE, state, start_date, end_date
                 )
             )
         dicts_to_return.append(
-            self.monthly_price_per_million_btu_by_energy_type(
-                self.EnergyTypes.NATURAL_GAS, state, start_date, end_date
+            self.monthly_price_per_mbtu_by_energy_type(
+                self.EnergyType.NATURAL_GAS, state, start_date, end_date
             )
         )
         dicts_to_return.append(
-            self.monthly_price_per_million_btu_by_energy_type(
-                self.EnergyTypes.ELECTRICITY, state, start_date, end_date
+            self.monthly_price_per_mbtu_by_energy_type(
+                self.EnergyType.ELECTRICITY, state, start_date, end_date
             )
         )
         log(f"{dicts_to_return = }", "debug")
@@ -645,7 +658,10 @@ class EIADataRetriever:
 
 
 class CensusDataRetriever:
-    """https://api.census.gov/data/2019/acs/acs5.html"""
+    """Interact with the Census data API.
+
+    Notes:
+        ACS5 paths can be found here: https://api.census.gov/data/2019/acs/acs5.html"""
 
     def __init__(self) -> None:
         self.base_url = "https://data.census.gov/"
@@ -659,7 +675,7 @@ class CensusDataRetriever:
             exit()
         self.MAX_COL_NAME_LENGTH = 80
 
-    def get(self, url: str) -> requests.Response | None:
+    def _get(self, url: str) -> requests.Response | None:
         r = requests.get(url, timeout=65)
         if r.status_code == 400:
             log(f"Unknown variable {r.text.split("variable ")[-1]}", "info")
@@ -669,14 +685,14 @@ class CensusDataRetriever:
     def get_and_cache_data(
         self, file_name: str, url_to_lookup_on_miss: str
     ) -> dict[str, str] | bool:
-        """Cache files
+        """Cache files.
 
         Args:
             file_name (str): file name to save/lookup
             url_to_lookup_on_miss (str): the Census url to lookup
 
         Returns:
-            bool | dict[str, str] | None | Any: the dict of tablename:label or
+            bool | dict[str, str] | None | Any: the dict of `tablename: label` or
         """
         CENSUS_DATA_DIR_PATH.mkdir(parents=True, exist_ok=True)
 
@@ -691,7 +707,7 @@ class CensusDataRetriever:
                     log("Could not decode cached file", "error")
                     return False
         except FileNotFoundError:
-            req = self.get(url_to_lookup_on_miss)
+            req = self._get(url_to_lookup_on_miss)
             if req is None:
                 log(f"Could not find census file {req = }", "error")
                 return False
@@ -703,7 +719,7 @@ class CensusDataRetriever:
         return my_json
 
     def get_race_makeup_by_zcta(self, zcta: str) -> str | None:
-        """Get race make up by zcta from
+        """Get race make up by zcta from. DO NOT USE
 
         Note:
             use `get_table_group_for_zcta_by_state_by_year`
@@ -715,7 +731,7 @@ class CensusDataRetriever:
             str | None: text or none
         """
         # get white, black, american indian/native alaskan, asian, NH/PI, other. note that these are estimates, margin of error can be had with "M"
-        req = self.get(
+        req = self._get(
             f"https://api.census.gov/data/2021/acs/acs5/profile?get=DP05_0064E,DP05_0065E,DP05_0066E,DP05_0067E,DP05_0068E,DP05_0069E&for=zip%20code%20tabulation%20area:{zcta}&key={self.api_key}"
         )
         if req is None:
@@ -767,7 +783,7 @@ class CensusDataRetriever:
     def translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
         self, headers: list[str], table: str, year: str
     ) -> None:
-        """Gets the label name for a table and row for the acs5 profile surveys.
+        """Get the label name for a table and row for the acs5 profile surveys.
 
         Args:
             table_and_row (str): the presumed table and row, along with selector at the end
@@ -813,12 +829,18 @@ class CensusDataRetriever:
     def get_acs5_profile_table_group_for_zcta_by_year(
         self, table: str, year: str
     ) -> str:
-        """csv output of a acs 5 year profile survey table
+        """CSV output of an acs 5 year profile survey table.
+
+        TODO:
+            Update func name
 
         Args:
             table (str): census demo acs5 table
             year (str): year to search
             state (str): state
+
+        Returns:
+            str: file path where output is saved
         """
         file_name = f"{year}-acs-profile-table-{table}.json"
         url = f"https://api.census.gov/data/{year}/acs/acs5/profile?get=group({table})&for=zip%20code%20tabulation%20area:*"
@@ -860,12 +882,7 @@ class CensusDataRetriever:
         """Get a JSON representation of a table's attributes.
 
         Note:
-            Tables must be:
-                * DP02
-                * DP02PR
-                * DP03
-                * DP04
-                * DP05
+            Tables can be found at: https://www.census.gov/acs/www/data/data-tables-and-tools/subject-tables/
 
             Returned object will have entries similar to:
             ```json
@@ -884,7 +901,7 @@ class CensusDataRetriever:
             year (str): which acs5 year to look up
 
         Returns:
-            str | Any: json object
+            str | Any: variables
         """
         file_name = f"{year}-acs5-subject-groups-{table}.json"
         groups_url = (
@@ -902,11 +919,9 @@ class CensusDataRetriever:
         """Gets the label name for a table and row for the acs5 profile surveys.
 
         Args:
-            table_and_row (str): the presumed table and row, along with selector at the end
-            year (str): the year
-
-        Returns:
-            None: translates the list of table_row_selector to its english label
+            headers (list[str]): headers
+            table (str): table
+            year (str): year
         """
         # is going to read the file multiple times, save last req as {"table": req_json[table]...} for this?
         groups_to_label_translation_dict = self.get_acs5_subject_table_to_group_name(
@@ -945,12 +960,11 @@ class CensusDataRetriever:
     def get_acs5_subject_table_group_for_zcta_by_year(
         self, table: str, year: str
     ) -> str:
-        """csv output of a acs 5 year subject survey table
+        """CSV output of a acs 5 year subject survey table
 
         Args:
-            table (str): census demo acs5 table
+            table (str): census acs5 table
             year (str): year to search
-            state (str): state
         """
         file_name = f"{year}-acs-subject-table-{table}.json"
         url = f"https://api.census.gov/data/{year}/acs/acs5/subject?get=group({table})&for=zip%20code%20tabulation%20area:*"

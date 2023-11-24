@@ -1,10 +1,10 @@
 import copy
 import io
-import re
+import json
 import os
 import random
+import re
 import time
-import json
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -15,7 +15,6 @@ import polars as pl
 import redfin
 import requests
 from backend import (
-    # ASCIIColors,
     log,
     metro_name_to_zip_code_list,
 )
@@ -30,30 +29,20 @@ from backend import (
 
 
 # super group include
-super_group_include_patterns = re.compile(r"heat|property|interior|utilit", re.I)
+SUPER_GROUP_INCLUDE_PATTERNS = re.compile(r"heat|property|interior|utilit", re.I)
 
 # amenity group include
-amenity_group_include_patterns = re.compile(r"heat|utilit|interior", re.I)
+AMENITY_GROUP_INCLUDE_PATTERNS = re.compile(r"heat|utilit|interior", re.I)
 
 # before colon include
-amenity_name_include_patterns = re.compile(r"heat", re.I)
+AMENITY_NAME_INCLUDE_PATTERNS = re.compile(r"heat", re.I)
 # before colon exclude
-amenity_name_exclude_patterns = re.compile(
+AMENITY_NAME_EXCLUDE_PATTERNS = re.compile(
     r"heat.*updat|has heat|heat.*efficiency|heat.*certific", re.I
 )
 
-# ==
-after_colon_fuel_and_appliance_heating_related_patterns = [
-    re.compile(r"electric", re.I),
-    re.compile(r"diesel|oil", re.I),
-    re.compile(r"propane", re.I),
-    re.compile(r"gas", re.I),
-    re.compile(r"solar", re.I),
-    re.compile(r"wood", re.I),
-    re.compile(r"pellet", re.I),
-]
 # dangling include and when the before colon word is utilities
-appliance_heating_related_patterns = [
+APPLIANCE_HEATING_RELATED_PATTERNS = [
     re.compile(r"mini[\s-]split", re.I),
     re.compile(r"resist(?:ive|ance)", re.I),
     re.compile(r"\bwood(en)* stove|\bwood(en)* burner", re.I),
@@ -64,15 +53,27 @@ appliance_heating_related_patterns = [
     re.compile(r"radiant", re.I),
     re.compile(r"baseboard", re.I),
 ]
+
+# ==
+AFTER_COLON_FUEL_AND_APPLIANCE_INCLUDE_PATTERNS = [
+    re.compile(r"electric", re.I),
+    re.compile(r"diesel|oil", re.I),
+    re.compile(r"propane", re.I),
+    re.compile(r"gas", re.I),
+    re.compile(r"solar", re.I),
+    re.compile(r"wood", re.I),
+    re.compile(r"pellet", re.I),
+]
+
 # after colon include
-after_colon_fuel_and_appliance_heating_related_patterns.extend(
-    appliance_heating_related_patterns
+AFTER_COLON_FUEL_AND_APPLIANCE_INCLUDE_PATTERNS.extend(
+    APPLIANCE_HEATING_RELATED_PATTERNS
 )
 
-#TODO figure where this goes
-# after colon excl = re.compile(r"no\b.*electric|no\b.*gas|water", re.I)
+# TODO figure where this goes
+AFTER_COLON_EXCLUDE_PATTERNS = re.compile(r"no\b.*electric|no\b.*gas|water", re.I)
 
-category_patterns = {
+CATEGORY_PATTERNS = {
     "Electricity": re.compile(r"electric", re.I),
     "Natural Gas": re.compile(r"gas", re.I),
     "Propane": re.compile(r"propane", re.I),
@@ -189,8 +190,6 @@ class RedfinApi:
         TWENTY = "20"
 
     class Sqft(StrEnum):
-        """Properties of the `min-sqft` and `max-sqft` filter."""
-
         NONE = "None"
         SEVEN_FIFTY = "750"
         THOU = "1000"
@@ -229,22 +228,14 @@ class RedfinApi:
             "LONGITUDE": pl.Float32,
         }
         self.search_params = None
-        self.column_dict = {key: False for key in category_patterns.keys()}
+        self.column_dict = {key: False for key in CATEGORY_PATTERNS.keys()}
 
-    def set_search_params(self, zip: str, search_filters) -> None:
-        """Set the parameters for searching by zip code
+    def set_search_params(self, zip: str, search_filters: dict[str, Any]) -> None:
+        """Set the parameters for searching by ZIP code.
 
         Args:
-            zip (str): _description_
-            min_year_built (str): _description_
-            max_year_built (str): _description_
-            min_stories (Stories): _description_
-            sort_order (SortOrder): _description_
-            home_types (list[HouseType]): _description_
-            sold (SoldWithinDays | None, optional): _description_. Defaults to SoldWithinDays.FIVE_YEARS.
-
-        Returns:
-            _type_: _description_
+            zip (str): the ZIP code
+            search_filters (dict[str, Any]): search filters for appending to a gis-csv path
         """
         try:
             region_info = self.get_region_info_from_zipcode(zip)
@@ -349,27 +340,34 @@ class RedfinApi:
         self.search_params["uipt"] = ",".join(list(houses))
 
     # redfin setup
-    def meta_request_download(self, url, kwargs) -> str:
-        """Method for downloading objects.
-
-        Notes:
-            Use for downloading the gis csv
+    def meta_request_download(self, url: str, search_params) -> str:
+        """Method for downloading objects from Redfin.
 
         Args:
-            url (_type_): _description_
-            kwargs (_type_): _description_
+            url (str): the Redfin URL
 
         Returns:
-            str: _description_
+            str: the unicode text response
         """
         response = requests.get(
-            self.rf.base + url, params=kwargs, headers=self.rf.user_agent_header
+            self.rf.base + url, params=search_params, headers=self.rf.user_agent_header
         )
-        log(response.request.url, "debug")  # change to debug
+        log(response.request.url, "debug")
         response.raise_for_status()
         return response.text
 
-    def working_below_the_fold(self, property_id, listing_id=False):
+    def working_below_the_fold(self, property_id: str, listing_id: str = "") -> Any:
+        """A below_the_fold method that accepts a listing ID.
+        Notes:
+            If you can get the listing ID, make sure to pass it to this function. You will possibly get incorrect data if you do not pass it
+
+        Args:
+            property_id (str): the property ID
+            listing_id (str): The listing ID. Defaults to False.
+
+        Returns:
+            Any: response
+        """
         if listing_id:
             params = {
                 "accessLevel": 1,
@@ -386,18 +384,36 @@ class RedfinApi:
         return self.rf.meta_request("/api/home/details/belowTheFold", params)
 
     def get_region_info_from_zipcode(self, zip_code: str) -> Any:
+        """Get the region ifo from a ZIP code.
+
+        Args:
+            zip_code (str): the ZIP code
+
+        Returns:
+            Any: response
+        """
         return self.rf.meta_request(
             "api/region", {"region_id": zip_code, "region_type": 2, "tz": True, "v": 8}
         )
 
-    def get_gis_csv(self, params) -> str:
-        return self.meta_request_download("api/gis-csv", params)
+    def get_gis_csv(self, params: dict[str, Any]) -> str:
+        """Get the gis-csv of an area based on the contents of `params`
+
+        Args:
+            params (dict[str, Any]): the parameters
+
+        Returns:
+            str: the CSV file as a unicode string
+        """
+        return self.meta_request_download("api/gis-csv", search_params=params)
 
     # calls stuff
     def get_heating_info_from_super_group(self, super_group: dict) -> list[str]:
-        """Supply a probable heating group
+        """Extract heating information from a super group
 
         Notes:
+            Must supply a probable heating group for accurate information
+
             Format of super group in JSON:
             {
                 types: []
@@ -428,119 +444,62 @@ class RedfinApi:
                         Heating/Cooling Updated In: 2022 -> amenityName = Heating/Cooling Updated In
 
         Args:
-            super_group (dict): _description_
+            super_group (dict): the super group to extract terms from
 
         Returns:
-            list[str]: list of raw heating terms
+            list[str]: list of heating terms
         """
-        raw_amenity_values = []
-        for amenity in super_group.get("amenityGroups", ""): #
-            if not any(amenity_group_include_patterns.findall(amenity.get("groupTitle",""))):
-                continue # this is the name that is bold
-            for amenity_entry in amenity.get("amenityEntries", ""): #these are the floating or before colon after colon pairs
-                amenity_name = amenity_entry.get("amenityName", "") # if "", then item is dangling (no before colon word)
-                
-                if amenity_name and not any(re.compile("utilit", re.I).findall(amenity_name)):
-                    # filter the before colon. first if is to have stricter capture rule when amenity item is "Utilities: Natural gas, heat pump, ..."
-                    if any(amenity_name_include_patterns.findall(amenity_name)) and not any(amenity_name_exclude_patterns.findall(amenity_name)):
-                        my_list = [
-                            value
-                            for value in amenity_entry.get
-                        ]
-                        for value in amenity_entry.get("amenityValues",""):
-                            for regex in after_colon_fuel_and_appliance_heating_related_patterns:
-                                if any(regex.findall(value)):
-                                    raw_amenity_values.append(value)
-                else:
-                    #filter for appliance if dangling
-                    for value in amenity_entry.get("amenityValues",""):
-                            for regex in appliance_heating_related_patterns:
-                                if any(regex.findall(value)):
-                                    raw_amenity_values.append(value)
-                    
+        amenity_values = []
+        for amenity in super_group.get("amenityGroups", ""):  #
+            if not any(
+                AMENITY_GROUP_INCLUDE_PATTERNS.findall(amenity.get("groupTitle", ""))
+            ):
+                continue  # this is the name that is bold
+            # these are the bulleted items.
+            for amenity_entry in amenity.get("amenityEntries", ""):
+                # if == "", then item is dangling (no word before colon). give the same treatment to "utilities: ..." as if it were ==""
+                amenity_name = amenity_entry.get("amenityName", "")
 
-
-
-
-
-
-
-
-
-
-
-
-                group_title = amenity.get("groupTitle", "") #should never be ""
-
-
-
-
-
-
-                if group_names_include.findall(
-                    amenity_name
-                ) and not amenity_group_exclude_patterns.findall(amenity_name):
-                    if any(re.compile("utilit", re.I).findall(amenity_name)):
-                        # dont match things like
-                        # Utilities
-                        #   Electricity
-                        for value in amenity_entry.get("amenityValues", ""):
-                            # TODO invert this regex. i think this would still match "internet" in utilities?
-                            # TODO have separate regex for group title and amenity name? should match differently if the details section is "heating & cooling" and amenity name is "interior"
-                            if re.search(
-                                r"^electric|^natural gas|^no.*gas|^no.*electric|water",
-                                value,
-                                re.I,
-                            ):
-                                continue
-                            else:
-                                raw_amenity_values.append(value)
-                    else:
-                        raw_amenity_values.extend(
-                            amenity_entry.get("amenityValues", "")
-                        )
-                elif (
-                    amenity_name == ""
-                    and group_names_include.findall(group_title)
-                    and not amenity_group_exclude_patterns.findall(group_title)
+                if amenity_name and not any(
+                    re.compile("utilit", re.I).findall(amenity_name)
                 ):
-                    # if floating item ( empty string compare being true implicitly means that we are not rejected)...
-                    if any(re.compile("utilit", re.I).findall(group_title)):
-                        # dont match things like
-                        # Utilities
-                        #   Electricity
-                        for value in amenity_entry.get("amenityValues", ""):
-                            if re.search(
-                                r"^electric|^natural gas|^no.*gas|^no.*electric|water",
-                                value,
-                                re.I,
-                            ):
-                                continue
-                            else:
-                                raw_amenity_values.append(value)
-                    else:
-                        raw_amenity_values.extend(
-                            amenity_entry.get("amenityValues", "")
+                    # filter the before colon. first if is to have stricter capture rule when amenity item is "Utilities: Natural gas, heat pump, ..."
+                    if any(
+                        AMENITY_NAME_INCLUDE_PATTERNS.findall(amenity_name)
+                    ) and not any(AMENITY_NAME_EXCLUDE_PATTERNS.findall(amenity_name)):
+                        amenity_values.extend(
+                            [
+                                value
+                                for value in amenity_entry.get("amenityValues", "")
+                                if any(
+                                    regex.findall(value)
+                                    for regex in AFTER_COLON_FUEL_AND_APPLIANCE_INCLUDE_PATTERNS
+                                )
+                                and not any(AFTER_COLON_EXCLUDE_PATTERNS.findall(value))
+                            ]
                         )
-        amenity_values = [
-            string
-            for string in raw_amenity_values
-            if any(
-                regex.findall(string)
-                for regex in after_colon_fuel_and_appliance_heating_related_patterns
-            )
-            and not any(amenity_value_exclude_patterns.findall(string))
-        ]
+                else:
+                    # filter for appliance if dangling or in utilities bullet item
+                    amenity_values.extend(
+                        [
+                            value
+                            for value in amenity_entry.get("amenityValues", "")
+                            if any(
+                                regex.findall(value)
+                                for regex in APPLIANCE_HEATING_RELATED_PATTERNS
+                            )
+                        ]
+                    )
         return amenity_values
 
     def get_super_groups_from_url(self, listing_url: str) -> list | None:
-        """Super group list from listing url.
+        """Get super group list from listing url.
 
         Args:
-            listing_url (str): The path to the house. This is without the "redfin.com" part
+            listing_url (str): The path part of the listing URL. This is without the "redfin.com" part. Include the first forward slash
 
         Returns:
-            list | None: List of all super groups from a redfin url. None if there an error is encountered or no super groups were found
+            list | None: List of all super groups from a Redfin Url. None if an error is encountered or if no super groups were found
         """
         if "redfin" in listing_url:
             listing_url = urlparse(listing_url).path
@@ -581,10 +540,21 @@ class RedfinApi:
         return super_groups
 
     def get_heating_terms_dict_from_listing(
-        self, address_url_list: list[str]
+        self, address_and_url_list: list[str]
     ) -> dict[str, bool]:
-        address = address_url_list[0]
-        listing_url = address_url_list[1]
+        """Generate a filled out dictionary based on `self.column_dict` and the contents of :meth:get_heating_info_from_super_group(address_url_list).
+
+        TODO:
+            Since addresses can be doubled and it is random which one gets chosen, just printing listing url so that we can see which one has been chosen
+
+        Args:
+            address_url_list (list[str]): address in the first position, and the listing URL in the second position
+
+        Returns:
+            dict[str, bool]: the filled out `self.column_dict` for the supplied address/listing URL
+        """
+        address = address_and_url_list[0]
+        listing_url = address_and_url_list[1]
         terms = []
 
         super_groups = self.get_super_groups_from_url(listing_url)
@@ -594,12 +564,17 @@ class RedfinApi:
             )  # this and "There was no heating information for {address}" should be made in caller?
             return copy.deepcopy(self.column_dict)
         for super_group in super_groups:  # dict
-            if any(super_group_include_patterns.findall(super_group.get("titleString", ""))):
+            if any(
+                SUPER_GROUP_INCLUDE_PATTERNS.findall(super_group.get("titleString", ""))
+            ):
                 terms.extend(
                     self.get_heating_info_from_super_group(super_group)
                 )  # this will be like [gas, electricity, heat pump]
         if len(terms) == 0:
-            log(f"There was no heating information for {address}", "info")
+            log(
+                f"There was no heating information for {urlparse(listing_url).path}",
+                "info",
+            )
             return copy.deepcopy(self.column_dict)
 
         # categorize the correct dict and return
@@ -607,7 +582,7 @@ class RedfinApi:
         for input_string in terms:
             log(f"{input_string = }", "debug")
             result = {}
-            for key, pattern in category_patterns.items():
+            for key, pattern in CATEGORY_PATTERNS.items():
                 if bool(re.search(pattern, input_string)):
                     result[key] = True
                     log(f"Pattern matched on {key, pattern = }", "debug")
@@ -624,22 +599,10 @@ class RedfinApi:
     def get_gis_csv_from_zip_with_filters(
         self,
     ) -> pl.DataFrame | None:
-        """Main function.
+        """Clean the GIS CSV retrieved from using the `search_params` field into the desired schema.
 
-        Args:
-            zip (str): ZIP code
-            min_year_built (str): Min year built to filter
-            max_year_built (str): Max year built to filter
-            min_stories (Stories): Min stories to filter
-            sort_order (SortOrder): How to filter results. Maximum of 350 results can be retrieved. Look into `page=1`
-            home_types (list[HouseType]): Home type
-            sold (SoldWithinDays | None, optional): If searching for sold homes, pass this argument. Defaults to SoldWithinDays.FIVE_YEARS.
-
-        TODO:
-            handle empty csv page. can try with normal filters and rural town.
-            handle None for sold if modifications are to be added to how sales are to be done?
         Returns:
-            pl.DataFrame | None: DataFrame of listings for the given ZIP code and filters
+            pl.DataFrame | None: returns the DataFrame of cleaned information. None if there was not information in the GIS CSV file.
         """
         if self.search_params is None:
             return
@@ -690,19 +653,14 @@ class RedfinApi:
     def get_gis_csv_for_zips_in_metro_with_filters(
         self, msa_name: str, search_filters: dict[str, Any]
     ) -> pl.DataFrame | None:
-        """Get DataFrame of all gis CSVs of a metro.
+        """Get a DataFrame of all GIS CSVs of a Metropolitan Statistical Area.
 
         Args:
-            metro (str): MSA name
-            min_year_built (str): min year built to filter
-            max_year_built (str): max year built to filter
-            min_stories (Stories): min stories to filter
-            sort_order (SortOrder): how to sort results. Max 350 results, suggested to sort by recent sold
-            home_types (list[HouseType]): House type
-            sold (SoldWithinDays | None, optional): Sold within days. Defaults to SoldWithinDays.FIVE_YEARS.
+            msa_name (str): a Metropolitan Statistical Area
+            search_filters (dict[str, Any]): filters to search with. generate using :meth:
 
         Returns:
-            pl.DataFrame | None: Return a dataframe of all gis CSVs in the metro . Return `None` if no houses are found in the metro
+            pl.DataFrame | None: return a DataFrame of all GIS CSVs retrieved for individual ZIP codes. None if there were no CSVs
         """
         log(f"Searching {msa_name} with filters {search_filters}.", "log")
         zip_codes = metro_name_to_zip_code_list(msa_name)
@@ -731,7 +689,21 @@ class RedfinApi:
         msa_name: str,
         search_filters: dict[str, Any],
         use_cached_gis_csv_csv: bool = False,
-    ) -> pl.DataFrame | None:
+    ) -> None:
+        """Main function. Get the heating attributes of a Metropolitan Statistical Area.
+
+        TODO:
+            statistics on metropolitan
+            Log statistics about the heating outlook of a metro.
+
+        Args:
+            msa_name (str): Metropolitan Statistical Area name
+            search_filters (dict[str, Any]): search filters
+            use_cached_gis_csv_csv (bool, optional): Whether to use an already made GIS CSV DataFrame. Defaults to False.
+
+        Returns:
+            None: None if there were no houses found in the metro
+        """
         msa_name_file_safe = msa_name.strip().replace(", ", "_").replace(" ", "_")
         metro_output_dir_path = Path(OUTPUT_DIR_PATH) / msa_name_file_safe
 
@@ -769,11 +741,13 @@ class RedfinApi:
             .and_(pl.col("ADDRESS").str.len_chars().gt(0))
             .and_(pl.col("SQUARE FEET").is_not_null())
             .and_(pl.col("YEAR BUILT").is_not_null())
-        ).unique(subset=["LATITUDE", "LONGITUDE"], maintain_order=True)
+        )
+        # .unique(subset=["LATITUDE", "LONGITUDE"], maintain_order=True)
+        # sometimes when there are two of the same listings you'll see the lot and the house. cant determine at this stage, so just leaving duplicates. hopefully this can be handled in viewer
+        # also somehow gets GIS-CSV for search pages that dont allow it
 
         log(f"Found {search_page_csvs_df.height} possible houses in {msa_name}", "info")
         os.makedirs(metro_output_dir_path, exist_ok=True)
-        # write it so that we can save for future use
         log(
             f"Writing csv for metro to {metro_output_dir_path / (msa_name_file_safe + ".csv")}",
             "debug",

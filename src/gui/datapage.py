@@ -4,6 +4,8 @@ import datetime
 from matplotlib import pyplot as plt
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
+import sys
+import subprocess
 from os import startfile
 
 # from matplotlib.backend_bases import key_press_handler
@@ -41,9 +43,9 @@ class DataPage(ctk.CTkFrame):
         self.roboto_header_font = ctk.CTkFont(family="Roboto", size=28)
         self.roboto_link_font = ctk.CTkFont(family="Roboto", underline=True, size=20)
         self.create_widgets()
-        # threading.Thread(target=self.update_state_income_figure).start()
 
-    def create_widgets(self):
+    def create_widgets(self) -> None:
+        """Create widgets."""
         # bug in sockets library wont allow you to raise keyboardinterrupt, so stopping
         # Content frame will have 4 rows. first will be header, 2nd is energy graph, 3rd will contain a frame that has censusreport.org links, 4th will have progress bar frame
         self.content_frame = ctk.CTkFrame(self, border_width=2)
@@ -128,9 +130,6 @@ class DataPage(ctk.CTkFrame):
         self.census_reporter_frame.columnconfigure(0, weight=1)
         self.log_frame.columnconfigure(0, weight=1)
 
-        # self.progress_bar_frame.columnconfigure(0, weight=50)  # bar
-        # self.progress_bar_frame.columnconfigure((1, 2), weight=1)  # text, button
-
         # row
         self.rowconfigure(0, weight=1)
 
@@ -174,16 +173,11 @@ class DataPage(ctk.CTkFrame):
         self.log_frame.grid(column=0, row=3, sticky="news")
         self.log_button.grid(column=0, row=0, pady=10)
 
-        # self.progress_bar_frame.grid(column=0, row=3, sticky="news")
-        # self.progress_bar.grid(column=0, row=0, sticky="we", padx=(20, 0))
-        # self.progress_words.grid(column=1, row=0, sticky="e", padx=(0, 20))
-        # self.stop_search_button.grid(column=2, row=0, sticky="w")
-
-    def set_msa_name(self, msa_name: str):
-        """set the msa name
+    def set_msa_name(self, msa_name: str) -> None:
+        """Set the msa name and update objects that rely on the msa name. Includes drop downs and and generating the energy plot.
 
         Args:
-            msa_name (str): msa name. This must be validated
+            msa_name (str): Metropolitan Statistical Area name. This must be validated
         """
         self.msa_name = msa_name
         self.states_in_msa = helper.get_states_in_msa(self.msa_name)
@@ -208,16 +202,16 @@ class DataPage(ctk.CTkFrame):
             daemon=True,
         ).start()
 
-    def generate_energy_plot(self, year, state):
-        """Calls the EIA API and generates a plot with the received data.
+    def generate_energy_plot(self, year: int, state: str) -> None:
+        """Call the EIA API and generate a plot with the received data.
 
         Notes:
             Call this in a thread so that it doesn't freeze the GUI
-            Update: might want to jsut get the data and plot on the main thread
+            Update: might want to just get the data and plot on the main thread
         """
         eia = EIADataRetriever()
         energy_price_per_mbtu_by_type_for_state = (
-            eia.monthly_price_per_million_btu_by_energy_type_by_state(
+            eia.monthly_price_per_mbtu_by_energy_type_by_state(
                 state, datetime.date(year, 1, 1), datetime.date(year + 1, 1, 1)
             )
         )
@@ -253,8 +247,7 @@ class DataPage(ctk.CTkFrame):
         for i in range(0, 12):
             labels[i] = month_names[i]
         ax.set_xticklabels(labels)
-        # some months may not be present, some months may be present with None. must go to NaN
-        # TODO investigate DC issues with api
+
         for energy_dict in energy_price_per_mbtu_by_type_for_state:
             if len(energy_dict) < 3:
                 log(
@@ -263,7 +256,7 @@ class DataPage(ctk.CTkFrame):
                 )
                 continue
             match energy_dict.get("type"):
-                case EIADataRetriever.EnergyTypes.PROPANE.value:
+                case EIADataRetriever.EnergyType.PROPANE.value:
                     result_list = []
                     for month in months:
                         key = f"{year}-{month:02}"
@@ -272,7 +265,7 @@ class DataPage(ctk.CTkFrame):
                             val = float("NaN")
                         result_list.append(val)
                     ax.plot(months, result_list, label="Propane Furnace")
-                case EIADataRetriever.EnergyTypes.HEATING_OIL.value:
+                case EIADataRetriever.EnergyType.HEATING_OIL.value:
                     result_list = []
                     for month in months:
                         key = f"{year}-{month:02}"
@@ -281,7 +274,7 @@ class DataPage(ctk.CTkFrame):
                             val = float("NaN")
                         result_list.append(val)
                     ax.plot(months, result_list, label="Heating Oil Boiler")
-                case EIADataRetriever.EnergyTypes.NATURAL_GAS.value:
+                case EIADataRetriever.EnergyType.NATURAL_GAS.value:
                     result_list = []
                     for month in months:
                         key = f"{year}-{month:02}"
@@ -290,7 +283,7 @@ class DataPage(ctk.CTkFrame):
                             val = float("NaN")
                         result_list.append(val)
                     ax.plot(months, result_list, label="Natural Gas Furnace")
-                case EIADataRetriever.EnergyTypes.ELECTRICITY.value:
+                case EIADataRetriever.EnergyType.ELECTRICITY.value:
                     result_list = []
                     for month in months:
                         key = f"{year}-{month:02}"
@@ -311,18 +304,26 @@ class DataPage(ctk.CTkFrame):
             # toolbar.grid(column=0, row=1, sticky="news")
             canvas.get_tk_widget().grid(column=0, row=0)
 
-    def open_census_reporter_state(self):
+    def open_census_reporter_state(self) -> None:
+        """Census reporter state label callback"""
         state_link = helper.get_census_report_url_page(
             sts.lookup(self.select_state_dropdown.get()).name  # type: ignore
         )
         webbrowser.open_new_tab(state_link)
 
-    def open_census_reporter_metro(self):
+    def open_census_reporter_metro(self) -> None:
+        """Census reporter metro label callback"""
         metro_link = helper.get_census_report_url_page(f"{self.msa_name} metro area")  # type: ignore
         webbrowser.open_new_tab(metro_link)
 
-    def state_dropdown_callback(self, state):
-        # check if thread is running with given name, and if so join it and start the new thread
+    def state_dropdown_callback(self, state: str) -> None:
+        """Banner state callback.
+        TODO:
+            check if thread is running with given name, and if so join it and start the new thread
+
+        Args:
+            state (str): the state after the change
+        """
 
         threading.Thread(
             target=self.generate_energy_plot,
@@ -334,8 +335,14 @@ class DataPage(ctk.CTkFrame):
             daemon=True,
         ).start()
 
-    def year_dropdown_callback(self, year):
-        # update energy chart, choice is year
+    def year_dropdown_callback(self, year: str) -> None:
+        """Banner year callback.
+        TODO:
+            Check if thread is running with given name, and if so join it and start the new thread
+
+        Args:
+            year (str): the year after the change
+        """
         threading.Thread(
             target=self.generate_energy_plot,
             args=(
@@ -346,10 +353,18 @@ class DataPage(ctk.CTkFrame):
             daemon=True,
         ).start()
 
-    def open_log_file(self):
-        # windows only
+    def open_log_file(self) -> None:
+        """Open logging file.
+
+        Notes:
+            Haven't tested this on mac/linux. "darwin" doesn't exist in `system.platform` on windows, so cant say for sure if this works
+        """
         try:
-            startfile(helper.LOGGING_FILE_PATH)
+            if sys.platform == "win32":
+                startfile(helper.LOGGING_FILE_PATH)
+            else:
+                opener = "open" if sys.platform == "darwin" else "xdg-open"
+                subprocess.call([opener, helper.LOGGING_FILE_PATH])
         except FileNotFoundError:
             CTkMessagebox(
                 self,

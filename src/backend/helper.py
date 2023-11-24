@@ -7,7 +7,6 @@ from pathlib import Path
 import polars as pl
 import requests
 from fake_useragent import UserAgent
-from redfin import Redfin
 
 from .us import states as sts
 
@@ -66,24 +65,6 @@ def state_city_to_zip_df(state: str, city: str) -> pl.DataFrame:
     )
 
 
-def get_redfin_url_path(location: str) -> str:
-    """Generate the URL path with the proprietary Redfin number for the given city, ZIP code, or address.
-
-    Examples:
-        >>> get_redfin_url_path("Washington D.C")
-        "/city/12839/DC/Washington-DC"
-
-    Args:
-        location (str): the location
-
-    Returns:
-        str: the path to the location
-    """
-    client = Redfin()
-    response = client.search(location)
-    return response["payload"]["sections"][0]["rows"][0]["url"]
-
-
 def is_valid_zipcode(zip: int) -> bool:
     """Check if the given ZIP code is valid based on a local file.
 
@@ -93,19 +74,19 @@ def is_valid_zipcode(zip: int) -> bool:
     Returns:
         bool: if ZIP code is valid
     """
-    # zip codes are stored as numbers in the csv as of 10/28/23
     if isinstance(zip, str):
         zip = int(zip)
     return zip in master_df["ZIP"]
 
-def req_get_wrapper(url:str) -> requests.Response:
+
+def req_get_wrapper(url: str) -> requests.Response:
     time.sleep(0.3)
     req = requests.get(url=url)
     req.raise_for_status()
     req.encoding = "utf-8"
     return req
 
-# when making class, init the csv and have it open in memory. not too much and saves on making the df every call
+
 def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
     """Return the constituent ZIP codes for the given Metropolitan Statistical Area.
 
@@ -118,15 +99,10 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
     if msa_name == "TEST":
         # return [20814]  # good and small
         # return [22067, 55424]  # nulls in sqft
-        return [85131]  # nulls in sqft and large
-    # path = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}uszips.csv"
+        return [20015, 20018, 20017]  # nulls in sqft and large
 
     df = master_df.select("ZIP", "METRO_NAME", "LSAD")
-    # pl.read_csv(
-    #     "./augmenting_data/master.csv", columns=["ZIP", "METRO_NAME", "LSAD"]
-    # )
 
-    # MSAs are what were looking for in this project.
     return (
         df.filter(
             (pl.col("METRO_NAME").eq(msa_name))

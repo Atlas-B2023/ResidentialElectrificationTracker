@@ -30,7 +30,8 @@ class FiltersPage(ctk.CTkFrame):
         self.create_widgets()
         self.set_default_values()
 
-    def create_widgets(self):
+    def create_widgets(self) -> None:
+        """Create widgets."""
         # frames
         self.content_frame = ctk.CTkFrame(self)
         self.for_sale_sold_frame = ctk.CTkFrame(
@@ -230,7 +231,11 @@ class FiltersPage(ctk.CTkFrame):
         self.reset_filters_button.grid(row=0, column=0, sticky="nesw")
         self.apply_filters_button.grid(row=0, column=1, sticky="nesw")
 
-    def set_default_values(self):
+    def set_default_values(self) -> None:
+        """Set the default values for all widgets.
+        Notes:
+            Should be called after init and when clicking reset button.
+        """
         self.for_sale_sold_om.set(RedfinApi.SoldStatus.SOLD.value)
         self.min_stories_om.set(RedfinApi.Stories.ONE.value)
         self.min_year_built_om.set(str(self.cur_year - 1))
@@ -249,8 +254,12 @@ class FiltersPage(ctk.CTkFrame):
         self.house_type_mul_fam_switch.deselect()
         self.status_within_activate_deactivate(self.for_sale_sold_om.get())
 
-    def status_within_activate_deactivate(self, status):
-        """Deactivates or activates the status and sold within sections, since they depend on what type of sale a house is being searched with."""
+    def status_within_activate_deactivate(self, status) -> None:
+        """Deactivate or activate the status and sold within sections, since they depend on what type of sale a house is being searched with.
+
+        Args:
+            status (Event): ignored
+        """
         match self.for_sale_sold_om.get():
             case RedfinApi.SoldStatus.FOR_SALE.value:
                 self.sale_status_label.configure(state="normal")
@@ -267,7 +276,8 @@ class FiltersPage(ctk.CTkFrame):
                 self.sold_within_label.configure(state="normal")
                 self.sold_within_om.configure(state="normal")
 
-    def change_to_search_page(self):
+    def change_to_search_page(self) -> None:
+        """Change to search page."""
         self.grid_remove()
         self.search_page.grid()
 
@@ -281,13 +291,13 @@ class FiltersPage(ctk.CTkFrame):
         if int(self.max_price_om.get()) < int(self.min_price_om.get()):
             self.max_price_om.set(self.min_price_om.get())
 
-    def year_validation(self):
-        """Called when year drop down gets changed"""
+    def year_validation(self) -> None:
+        """Year drop down callback"""
         if int(self.max_year_built_om.get()) < int(self.min_year_built_om.get()):
             self.max_year_built_om.set(self.min_year_built_om.get())
 
-    def sqft_validation(self):
-        """Called when sqft drop down gets changed"""
+    def sqft_validation(self) -> None:
+        """Sqft dropdown callback"""
         if (
             self.max_sqft_om.get() == RedfinApi.Sqft.NONE.value
             or self.min_sqft_om.get() == RedfinApi.Sqft.NONE.value
@@ -296,8 +306,8 @@ class FiltersPage(ctk.CTkFrame):
         if int(self.max_sqft_om.get()) < int(self.min_sqft_om.get()):
             self.max_sqft_om.set(self.min_sqft_om.get())
 
-    def house_type_validation(self):
-        """Make sure that the house type switches have at least one active switch"""
+    def house_type_validation(self) -> None:
+        """House type switch validation to make sure at lest house is selected."""
         if not any(
             [
                 self.house_type_house_switch.get(),
@@ -309,6 +319,11 @@ class FiltersPage(ctk.CTkFrame):
             self.house_type_house_switch.select()
 
     def get_values(self) -> dict[str, Any]:
+        """Get the values of all widgets on this page.
+
+        Returns:
+            dict[str, Any]: dict of values
+        """
         match self.sold_within_om.get():
             case "Last 1 week":
                 sold_within_days = RedfinApi.SoldWithinDays.ONE_WEEK

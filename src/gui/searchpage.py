@@ -1,20 +1,17 @@
 import re
+import threading
+from tkinter import Event
+
 import customtkinter as ctk
-from CTkToolTip import CTkToolTip
+import polars as pl
+from backend.helper import get_unique_msa_from_master
+from backend.redfinscraper import RedfinApi
 from CTkListbox import CTkListbox
 from CTkMessagebox import CTkMessagebox
-from tkinter import Event
-import polars as pl
-import threading
-from backend.redfinscraper import RedfinApi
+from CTkToolTip import CTkToolTip
+
 from .datapage import DataPage
 from .filterspage import FiltersPage
-
-# import os
-# import sys
-
-from backend.helper import get_unique_msa_from_master
-# from filters import RedfinFiltersWindow
 
 
 class SearchPage(ctk.CTkFrame):
@@ -30,8 +27,8 @@ class SearchPage(ctk.CTkFrame):
         self.filters_page = FiltersPage(self.master, self)
         self.create_widgets()
 
-    def create_widgets(self):
-        # https://www.tutorialspoint.com/how-to-create-hyperlink-in-a-tkinter-text-widget for hyper link
+    def create_widgets(self) -> None:
+        """Create widgets."""
         self.top_text = ctk.CTkLabel(
             self,
             text="Residential Heating Search For Metropolitan Statistical Areas",
@@ -75,14 +72,12 @@ class SearchPage(ctk.CTkFrame):
             command=self.validate_entry_box_and_search,
         )
 
-        # make 2 rows, 3 cols
         self.columnconfigure((0, 2), weight=1)
         self.columnconfigure(1, weight=4)
         self.rowconfigure(0, weight=10)
         self.rowconfigure(1, weight=4)
         self.rowconfigure(2, weight=10)
 
-        # put widgets in grid
         self.top_text.grid(column=0, row=0, columnspan=3)
 
         self.redfin_filters_button.grid(column=0, row=1, padx=(0, 40), sticky="e")
@@ -98,7 +93,12 @@ class SearchPage(ctk.CTkFrame):
             "<KeyRelease>", command=lambda x: self.update_suggestions_listbox(x)
         )
 
-    def update_suggestions_listbox(self, x: Event | None):
+    def update_suggestions_listbox(self, x: Event | None) -> None:
+        """Update the suggestions box based on the contents of 'self.search_bar'.
+
+        Args:
+            x (Event | None): ignored
+        """
         cur_text = re.escape(self.search_bar.get())
         if cur_text == "":
             # only gets called when all text has been deleted
@@ -132,12 +132,14 @@ class SearchPage(ctk.CTkFrame):
             )
         self.prev_search_bar_len = len(cur_text)
 
-    def update_entry_on_autocomplete_select(self, x: Event):
+    def update_entry_on_autocomplete_select(self, x: Event) -> None:
+        """Suggestions list box callback for when a button in the list box is selected."""
         self.search_bar.delete(0, ctk.END)
         self.search_bar.insert(0, x)
         self.update_suggestions_listbox(None)
 
-    def validate_entry_box_and_search(self):
+    def validate_entry_box_and_search(self) -> None:
+        """Validate `self.search_bar` contents and search if the contents are an MSA name."""
         cur_text = self.search_bar.get()
         if len(cur_text) == 0:
             cur_text = r"!^"
@@ -154,13 +156,23 @@ class SearchPage(ctk.CTkFrame):
                 icon="warning",
             )
 
-    def go_to_data_page(self, msa_name: str):
+    def go_to_data_page(self, msa_name: str) -> None:
+        """Switch to data page.
+
+        Args:
+            msa_name (str): Metropolitan Statistical Area name
+        """
         if self.data_page is not None:
             self.grid_remove()
             self.data_page.grid()
             self.data_page.set_msa_name(msa_name)
 
-    def search_metros_threaded(self, msa_name: str):
+    def search_metros_threaded(self, msa_name: str) -> None:
+        """Search the given Metropolitan Statistical Area name for housing attributes.
+
+        Args:
+            msa_name (str): Metropolitan Statistical Area name
+        """
         redfin_searcher = RedfinApi()
         lock = threading.Lock()
         with lock:
@@ -170,7 +182,8 @@ class SearchPage(ctk.CTkFrame):
                 daemon=True,
             ).start()
 
-    def change_to_filters_page(self):
+    def change_to_filters_page(self) -> None:
+        """Change to filters page."""
         if self.filters_page is not None:
             self.filters_page.grid(row=0, column=0, sticky="news")
             self.grid_remove()
