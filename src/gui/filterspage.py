@@ -233,7 +233,7 @@ class FiltersPage(ctk.CTkFrame):
 
     def set_default_values(self) -> None:
         """Set the default values for all widgets.
-        Notes:
+        Note:
             Should be called after init and when clicking reset button.
         """
         self.for_sale_sold_om.set(RedfinApi.SoldStatus.SOLD.value)

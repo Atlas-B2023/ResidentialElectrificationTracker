@@ -358,7 +358,7 @@ class RedfinApi:
 
     def working_below_the_fold(self, property_id: str, listing_id: str = "") -> Any:
         """A below_the_fold method that accepts a listing ID.
-        Notes:
+        Note:
             If you can get the listing ID, make sure to pass it to this function. You will possibly get incorrect data if you do not pass it
 
         Args:
@@ -411,7 +411,7 @@ class RedfinApi:
     def get_heating_info_from_super_group(self, super_group: dict) -> list[str]:
         """Extract heating information from a super group
 
-        Notes:
+        :
             Must supply a probable heating group for accurate information
 
             Format of super group in JSON:
@@ -548,7 +548,7 @@ class RedfinApi:
             Since addresses can be doubled and it is random which one gets chosen, just printing listing url so that we can see which one has been chosen
 
         Args:
-            address_url_list (list[str]): address in the first position, and the listing URL in the second position
+            address_and_url_list (list[str]): address in the first position, and the listing URL in the second position
 
         Returns:
             dict[str, bool]: the filled out `self.column_dict` for the supplied address/listing URL

@@ -49,12 +49,9 @@ replace_dict = {
 class EIADataRetriever:
     """Interact with the EIA open data API.
 
-    Notes:
+    Note:
         This is the "manual" for this API:
         https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
-
-    Returns:
-        EIADataRetriever: EIADataRetriever object for interacting with the EIA api in regards to residential energy prices
     """
 
     HEATING_OIL_STATES_ABBR = {
@@ -130,11 +127,8 @@ class EIADataRetriever:
     class HeaterEfficiencies(Enum):
         """Combination of system efficiency and distribution efficiency.
 
-        Notes:
+        Note:
             Numbers taken from https://www.efficiencymaine.com/at-home/heating-cost-comparison/
-
-        Args:
-            Enum (HeaterEfficiencies): Enum
         """
 
         HEAT_PUMP_GEOTHERMAL = 3.69
@@ -196,7 +190,7 @@ class EIADataRetriever:
     ) -> dict[str, str | EnergyType | float]:
         """Convert an energy source's price per quantity into price per BTU with an efficiency.
 
-        Notes:
+        Note:
             Efficiency data taken from https://portfoliomanager.energystar.gov/pdf/reference/Thermal%20Conversions.pdf
 
         See also:
@@ -359,7 +353,7 @@ class EIADataRetriever:
     ) -> dict[str, Any]:
         """Get a state's average monthly energy price.
 
-        Notes:
+        Note:
             Data is returned in cents/KWh.
 
         Args:
@@ -382,7 +376,7 @@ class EIADataRetriever:
     ) -> dict[str, Any]:
         """Get a state's average natural gas price.
 
-        Notes:
+        Note:
             Data is returned in dollars per mega cubic feet.
 
         Args:
@@ -660,7 +654,7 @@ class EIADataRetriever:
 class CensusDataRetriever:
     """Interact with the Census data API.
 
-    Notes:
+    Note:
         ACS5 paths can be found here: https://api.census.gov/data/2019/acs/acs5.html"""
 
     def __init__(self) -> None:
@@ -786,7 +780,8 @@ class CensusDataRetriever:
         """Get the label name for a table and row for the acs5 profile surveys.
 
         Args:
-            table_and_row (str): the presumed table and row, along with selector at the end
+            headers (list[str]): header row
+            table (str): have to look again
             year (str): the year
 
         Returns:
@@ -837,7 +832,6 @@ class CensusDataRetriever:
         Args:
             table (str): census demo acs5 table
             year (str): year to search
-            state (str): state
 
         Returns:
             str: file path where output is saved

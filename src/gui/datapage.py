@@ -205,7 +205,7 @@ class DataPage(ctk.CTkFrame):
     def generate_energy_plot(self, year: int, state: str) -> None:
         """Call the EIA API and generate a plot with the received data.
 
-        Notes:
+        Note:
             Call this in a thread so that it doesn't freeze the GUI
             Update: might want to just get the data and plot on the main thread
         """
@@ -356,7 +356,7 @@ class DataPage(ctk.CTkFrame):
     def open_log_file(self) -> None:
         """Open logging file.
 
-        Notes:
+        Note:
             Haven't tested this on mac/linux. "darwin" doesn't exist in `system.platform` on windows, so cant say for sure if this works
         """
         try:
