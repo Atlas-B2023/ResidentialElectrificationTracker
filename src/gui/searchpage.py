@@ -61,8 +61,9 @@ class SearchPage(ctk.CTkFrame):
             border_width=2,
             command=lambda x: self.update_entry_on_autocomplete_select(x),
         )
+        self.search_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.search_button = ctk.CTkButton(
-            self,
+            self.search_frame,
             text="Search",
             fg_color="transparent",
             height=35,
@@ -71,6 +72,7 @@ class SearchPage(ctk.CTkFrame):
             text_color=("gray10", "#DCE4EE"),
             command=self.validate_entry_box_and_search,
         )
+        self.cache_chb = ctk.CTkCheckBox(self.search_frame, text="Use cache")
 
         self.columnconfigure((0, 2), weight=1)
         self.columnconfigure(1, weight=4)
@@ -86,7 +88,12 @@ class SearchPage(ctk.CTkFrame):
 
         self.suggestion_list_box.grid(column=1, row=2, sticky="new", pady=(10, 0))
 
-        self.search_button.grid(column=2, row=1, padx=(40, 0), sticky="w")
+        self.search_frame.columnconfigure(0, weight=1)
+        self.search_frame.rowconfigure((0, 1), weight=1)
+        # pady is hacky but whatever
+        self.search_frame.grid(column=2, row=1, padx=(40, 0), pady=(46, 0))
+        self.search_button.grid(column=0, row=0, sticky="w")
+        self.cache_chb.grid(column=0, row=1, pady=(20, 0), sticky="w")
 
         self.suggestion_list_box.grid_remove()
         self.search_bar.bind(
@@ -178,7 +185,11 @@ class SearchPage(ctk.CTkFrame):
         with lock:
             threading.Thread(
                 target=redfin_searcher.get_house_attributes_from_metro,
-                args=(msa_name, self.filters_page.get_values()),
+                args=(
+                    msa_name,
+                    self.filters_page.get_values(),
+                    bool(self.cache_chb.get()),
+                ),
                 daemon=True,
             ).start()
 
