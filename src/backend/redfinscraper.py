@@ -88,7 +88,7 @@ CATEGORY_PATTERNS = {
     "Radiant Floor": re.compile(r"radiant", re.I),
 }
 
-OUTPUT_DIR_PATH = f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}output"
+OUTPUT_DIR_PATH = Path(os.path.dirname(__file__)).parent.parent / "output" / "metro_data"
 
 
 class RedfinApi:
@@ -704,23 +704,23 @@ class RedfinApi:
         Returns:
             None: None if there were no houses found in the metro
         """
-        msa_name_file_safe = msa_name.strip().replace(", ", "_").replace(" ", "_")
-        metro_output_dir_path = Path(OUTPUT_DIR_PATH) / msa_name_file_safe
+        file_safe_msa_name = msa_name.strip().replace(", ", "_").replace(" ", "_")
+        METRO_OUTPUT_DIR_PATH = OUTPUT_DIR_PATH / file_safe_msa_name
 
         if use_cached_gis_csv_csv:
             log("Loading csv from cache.", "info")
             try:
                 search_page_csvs_df = pl.read_csv(
-                    metro_output_dir_path / (msa_name_file_safe + ".csv"),
+                    METRO_OUTPUT_DIR_PATH / (file_safe_msa_name + ".csv"),
                     dtypes=self.DESIRED_CSV_SCHEMA,
                 )
                 log(
-                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} is complete.",
+                    f"Loading csv from {METRO_OUTPUT_DIR_PATH / (file_safe_msa_name + ".csv")} is complete.",
                     "info",
                 )
             except FileNotFoundError:
                 log(
-                    f"Loading csv from {metro_output_dir_path / (msa_name_file_safe + ".csv")} has failed, continuing with API search.",
+                    f"Loading csv from {METRO_OUTPUT_DIR_PATH / (file_safe_msa_name + ".csv")} has failed, continuing with API search.",
                     "info",
                 )
                 search_page_csvs_df = self.get_gis_csv_for_zips_in_metro_with_filters(
@@ -747,13 +747,13 @@ class RedfinApi:
         # also somehow gets GIS-CSV for search pages that dont allow it
 
         log(f"Found {search_page_csvs_df.height} possible houses in {msa_name}", "info")
-        os.makedirs(metro_output_dir_path, exist_ok=True)
+        os.makedirs(METRO_OUTPUT_DIR_PATH, exist_ok=True)
         log(
-            f"Writing csv for metro to {metro_output_dir_path / (msa_name_file_safe + ".csv")}",
+            f"Writing csv for metro to {METRO_OUTPUT_DIR_PATH / (file_safe_msa_name + ".csv")}",
             "debug",
         )
         search_page_csvs_df.write_csv(
-            metro_output_dir_path / (msa_name_file_safe + ".csv")
+            METRO_OUTPUT_DIR_PATH / (file_safe_msa_name + ".csv")
         )
 
         # go through whole csv and get the house attributes for each house. then partition the dataframe by ZIP and save files
@@ -764,7 +764,7 @@ class RedfinApi:
             "info",
         )
         log(
-            f"Estimated completion time: {search_page_csvs_df.height * 3.58} seconds",
+            f"Estimated completion time: {search_page_csvs_df.height * 4.66} seconds",
             "info",
         )
 
@@ -782,7 +782,12 @@ class RedfinApi:
             )
 
             zip = df_of_zip.select("ZIP OR POSTAL CODE").item(0, 0)
-            df_of_zip.write_csv(f"{metro_output_dir_path}{os.sep}{zip}.csv")
-
-        # log(f"In {msa_name}, there are {} homes with Electric fuel, {} homes with Natural Gas, {} homes with Propane, {} homes with Diesel/Heating Oil, {} homes with Wood/Pellet, {} homes with Solar Heating, {} homes with Heat Pumps, {} homes with Baseboard, {} homes with Furnace, {} homes with Boiler, {} homes with Radiator, {} homes with Radiant Floor")
+            df_of_zip.write_csv(f"{METRO_OUTPUT_DIR_PATH}{os.sep}{zip}.csv")
+        if len(list_of_dfs_by_zip) > 0:
+            concat_df = pl.concat(list_of_dfs_by_zip)
+            # log(f"In {msa_name}, there are {concat.select(pl.col("Electricity").sum())} homes with Electric fuel, {concat.select(pl.col("Natural Gas").sum())} homes with Natural Gas, {concat.select(pl.col("Propane").sum())} homes with Propane, {concat.select(pl.col("Diesel/Heating Oil").sum())} homes with Diesel/Heating Oil, {concat.select(pl.col("Wood/Pellet").sum())} homes with Wood/Pellet, {concat.select(pl.col("Solar Heating").sum())} homes with Solar Heating, {concat.select(pl.col("Heat Pump").sum())} homes with Heat Pumps, {concat.select(pl.col("Baseboard").sum())} homes with Baseboard, {concat.select(pl.col("Furnace").sum())} homes with Furnace, {concat.select(pl.col("Boiler").sum())} homes with Boiler, {concat.select(pl.col("Radiator").sum())} homes with Radiator, {concat.select(pl.col("Radiant Floor").sum())} homes with Radiant Floor", "info")
+            #save for future use until i figure out why above line is borking
+            concat_df.write_csv(METRO_OUTPUT_DIR_PATH / "full_metro_df.csv")
+            #determine if these partitions are done in place or create new dfs
+            log(f"{search_page_csvs_df.height = }, {concat_df.height = }, {search_page_csvs_df[0,0] = }, {concat_df[0,0] = }", "info")
         log(f"Done with searching houses in {msa_name}!", "info")
