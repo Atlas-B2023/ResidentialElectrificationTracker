@@ -6,7 +6,6 @@ from pathlib import Path
 
 import polars as pl
 import requests
-from fake_useragent import UserAgent
 
 from .us import states as sts
 
@@ -225,9 +224,8 @@ def _set_up_logger(level: int) -> logging.Logger:
 
 
 def get_census_report_url_page(search_term: str):
-    ua = UserAgent(min_percentage=0.1)
     census_reporter_headers = {
-        "User-Agent": ua.random,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Encoding": "gzip, deflate, br",
         "Accept-Language": "en-US,en;q=0.7",
