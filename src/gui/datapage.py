@@ -16,6 +16,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from backend.helper import log
+from backend.secondarydata import CensusDataRetriever
 
 plt.style.use("fivethirtyeight")
 
@@ -105,6 +106,11 @@ class DataPage(ctk.CTkFrame):
         self.log_button = ctk.CTkButton(
             self.log_frame, text="Open Log File", command=self.open_log_file
         )
+        self.census_button = ctk.CTkButton(
+            self.log_frame,
+            text="Generate Census data",
+            command=self.generate_census_reports,
+        )
         self.census_reporter_state_label.bind(
             "<Button-1>", lambda x: self.open_census_reporter_state()
         )
@@ -128,7 +134,7 @@ class DataPage(ctk.CTkFrame):
         )
         self.energy_graph_frame.columnconfigure(0, weight=1)
         self.census_reporter_frame.columnconfigure(0, weight=1)
-        self.log_frame.columnconfigure(0, weight=1)
+        self.log_frame.columnconfigure((0, 1), weight=1)
 
         # row
         self.rowconfigure(0, weight=1)
@@ -171,7 +177,8 @@ class DataPage(ctk.CTkFrame):
         self.census_reporter_metro_label.grid(column=0, row=1)
 
         self.log_frame.grid(column=0, row=3, sticky="news")
-        self.log_button.grid(column=0, row=0, pady=10)
+        self.census_button.grid(column=0, row=0, pady=10, padx=(0, 10))
+        self.log_button.grid(column=1, row=0, pady=10, padx=(10, 0))
 
     def set_msa_name(self, msa_name: str) -> None:
         """Set the msa name and update objects that rely on the msa name. Includes drop downs and and generating the energy plot.
@@ -372,3 +379,21 @@ class DataPage(ctk.CTkFrame):
                 message="Logging file doesn't exist! Try rerunning the program or creating a logger.log file in /output/logging/",
                 icon="warning",
             )
+
+    def generate_census_reports(self) -> None:
+        log("Fetching census reports...", "info")
+        c = CensusDataRetriever()
+        threading.Thread(
+            target=c.generate_acs5_subject_table_group_for_zcta_by_year,
+            args=(
+                "S1901",
+                "2019",
+            ),
+        ).start()
+        threading.Thread(
+            target=c.generate_acs5_profile_table_group_for_zcta_by_year,
+            args=(
+                "DP05",
+                "2019",
+            ),
+        ).start()

@@ -12,11 +12,10 @@ ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("MSA Heater Searcher")
+        self.title("MSA Residential Heating Searcher")
         # wxh
-        self.desired_geometry_string = "800x500"
-        self.geometry(self.desired_geometry_string)
-        self.minsize(width=800, height=500)
+        self.geometry("800x550")
+        self.minsize(width=800, height=550)
         self.create_widgets()
 
     def create_widgets(self):

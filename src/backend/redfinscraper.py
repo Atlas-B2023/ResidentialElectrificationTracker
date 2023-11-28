@@ -1,7 +1,6 @@
 import copy
 import io
 import json
-import os
 import random
 import re
 import time
@@ -88,7 +87,7 @@ CATEGORY_PATTERNS = {
     "Radiant Floor": re.compile(r"radiant", re.I),
 }
 
-OUTPUT_DIR_PATH = Path(os.path.dirname(__file__)).parent.parent / "output" / "metro_data"
+OUTPUT_DIR_PATH = Path(__file__).parent.parent.parent / "output" / "metro_data"
 
 
 class RedfinApi:
@@ -559,17 +558,13 @@ class RedfinApi:
 
         super_groups = self.get_super_groups_from_url(listing_url)
         if super_groups is None:
-            log(
-                "No amenities found", "info"
-            )  # this and "There was no heating information for {address}" should be made in caller?
+            log("No amenities found", "info")
             return copy.deepcopy(self.column_dict)
         for super_group in super_groups:  # dict
             if any(
                 SUPER_GROUP_INCLUDE_PATTERNS.findall(super_group.get("titleString", ""))
             ):
-                terms.extend(
-                    self.get_heating_info_from_super_group(super_group)
-                )  # this will be like [gas, electricity, heat pump]
+                terms.extend(self.get_heating_info_from_super_group(super_group))
         if len(terms) == 0:
             log(
                 f"There was no heating information for {urlparse(listing_url).path}",
@@ -742,12 +737,18 @@ class RedfinApi:
             .and_(pl.col("SQUARE FEET").is_not_null())
             .and_(pl.col("YEAR BUILT").is_not_null())
         )
+        # doing this twice so that the search page does not have nulls in the year built column.
+        search_page_csvs_df = search_page_csvs_df.filter(
+            pl.col("YEAR BUILT")
+            .ge(search_filters.get("min year built"))
+            .and_(pl.col("YEAR BUILT").le(search_filters.get("max year built")))
+        )
         # .unique(subset=["LATITUDE", "LONGITUDE"], maintain_order=True)
         # sometimes when there are two of the same listings you'll see the lot and the house. cant determine at this stage, so just leaving duplicates. hopefully this can be handled in viewer
         # also somehow gets GIS-CSV for search pages that dont allow it
 
         log(f"Found {search_page_csvs_df.height} possible houses in {msa_name}", "info")
-        os.makedirs(METRO_OUTPUT_DIR_PATH, exist_ok=True)
+        METRO_OUTPUT_DIR_PATH.mkdir(parents=True, exist_ok=True)
         log(
             f"Writing csv for metro to {METRO_OUTPUT_DIR_PATH / (file_safe_msa_name + ".csv")}",
             "debug",
@@ -770,24 +771,28 @@ class RedfinApi:
 
         list_of_dfs_by_zip = search_page_csvs_df.partition_by("ZIP OR POSTAL CODE")
 
-        for df_of_zip in list_of_dfs_by_zip:
-            df_of_zip = (
-                df_of_zip.with_columns(
-                    pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)])
-                    .map_elements(self.get_heating_terms_dict_from_listing)
-                    .alias("nest")
+        for i, _ in enumerate(list_of_dfs_by_zip):
+            # groupby is to get the max value of the heating type columns.
+            list_of_dfs_by_zip[i] = (
+                (
+                    list_of_dfs_by_zip[i]
+                    .with_columns(
+                        pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)])
+                        .map_elements(self.get_heating_terms_dict_from_listing)
+                        .alias("nest")
+                    )
+                    .drop(url_col_name)
+                    .unnest("nest")
                 )
-                .drop(url_col_name)
-                .unnest("nest")
+                .group_by(by=["LATITUDE", "LONGITUDE"])
+                .max()
             )
 
-            zip = df_of_zip.select("ZIP OR POSTAL CODE").item(0, 0)
-            df_of_zip.write_csv(f"{METRO_OUTPUT_DIR_PATH}{os.sep}{zip}.csv")
-        if len(list_of_dfs_by_zip) > 0:
-            concat_df = pl.concat(list_of_dfs_by_zip)
-            # log(f"In {msa_name}, there are {concat.select(pl.col("Electricity").sum())} homes with Electric fuel, {concat.select(pl.col("Natural Gas").sum())} homes with Natural Gas, {concat.select(pl.col("Propane").sum())} homes with Propane, {concat.select(pl.col("Diesel/Heating Oil").sum())} homes with Diesel/Heating Oil, {concat.select(pl.col("Wood/Pellet").sum())} homes with Wood/Pellet, {concat.select(pl.col("Solar Heating").sum())} homes with Solar Heating, {concat.select(pl.col("Heat Pump").sum())} homes with Heat Pumps, {concat.select(pl.col("Baseboard").sum())} homes with Baseboard, {concat.select(pl.col("Furnace").sum())} homes with Furnace, {concat.select(pl.col("Boiler").sum())} homes with Boiler, {concat.select(pl.col("Radiator").sum())} homes with Radiator, {concat.select(pl.col("Radiant Floor").sum())} homes with Radiant Floor", "info")
-            #save for future use until i figure out why above line is borking
-            concat_df.write_csv(METRO_OUTPUT_DIR_PATH / "full_metro_df.csv")
-            #determine if these partitions are done in place or create new dfs
-            log(f"{search_page_csvs_df.height = }, {concat_df.height = }, {search_page_csvs_df[0,0] = }, {concat_df[0,0] = }", "info")
+            zip = list_of_dfs_by_zip[i].select("ZIP OR POSTAL CODE").item(0, 0)
+            list_of_dfs_by_zip[i].write_csv(f"{METRO_OUTPUT_DIR_PATH / zip}.csv")
+
+            if len(list_of_dfs_by_zip) > 0:
+                concat_df = pl.concat(list_of_dfs_by_zip)
+                concat_df.write_csv("{METRO_OUTPUT_DIR_PATH}/full_info.csv")
+
         log(f"Done with searching houses in {msa_name}!", "info")

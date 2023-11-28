@@ -13,8 +13,8 @@ LOGGING_DIR = Path(__file__).parent.parent.parent / "output" / "logging"
 LOGGING_FILE_PATH = LOGGING_DIR / "logging.log"
 OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
 
-master_df = pl.read_csv(
-    f"{Path(os.path.dirname(__file__)).parent.parent}{os.sep}augmenting_data{os.sep}master.csv"
+MASTER_DF = pl.read_csv(
+    Path(__file__).parent.parent.parent / "augmenting_data" / "master.csv"
 )
 CENSUS_REPORTER_API_BASE_URL = "https://api.censusreporter.org"
 CENSUS_REPORTER_BASE_URL = "https://censusreporter.org"
@@ -75,7 +75,7 @@ def is_valid_zipcode(zip: int) -> bool:
     """
     if isinstance(zip, str):
         zip = int(zip)
-    return zip in master_df["ZIP"]
+    return zip in MASTER_DF["ZIP"]
 
 
 def req_get_wrapper(url: str) -> requests.Response:
@@ -100,7 +100,7 @@ def metro_name_to_zip_code_list(msa_name: str) -> list[int]:
         # return [22067, 55424]  # nulls in sqft
         return [20015, 20018, 20017]  # nulls in sqft and large
 
-    df = master_df.select("ZIP", "METRO_NAME", "LSAD")
+    df = MASTER_DF.select("ZIP", "METRO_NAME", "LSAD")
 
     return (
         df.filter(
@@ -121,7 +121,7 @@ def zip_to_metro(zip: int) -> str:
     Returns:
         str: the Metropolitan name. Is empty if the ZIP code is not a part of a Metropolitan Statistical Area
     """
-    result = master_df.filter(master_df["ZIP"] == zip)["METRO_NAME"]
+    result = MASTER_DF.filter(MASTER_DF["ZIP"] == zip)["METRO_NAME"]
 
     if len(result) > 0:
         log("Zip has multiple codes. Only giving first one", "debug")
@@ -157,7 +157,7 @@ def df_to_file(df: pl.DataFrame):
 
 def get_unique_msa_from_master() -> pl.Series:
     return (
-        master_df.filter(pl.col("LSAD").eq("Metropolitan Statistical Area"))
+        MASTER_DF.filter(pl.col("LSAD").eq("Metropolitan Statistical Area"))
         .select("METRO_NAME")
         .unique()
         .to_series()
@@ -166,7 +166,7 @@ def get_unique_msa_from_master() -> pl.Series:
 
 def get_states_in_msa(msa_name: str) -> list[str]:
     return (
-        master_df.select("STATE_ID", "METRO_NAME", "LSAD")
+        MASTER_DF.select("STATE_ID", "METRO_NAME", "LSAD")
         .filter(
             (
                 pl.col("METRO_NAME").eq(msa_name)
@@ -186,7 +186,7 @@ def get_zip_codes_in_state(state: str) -> list[str]:
     else:
         return []
     return (
-        master_df.select("STATE_ID", "ZIP")
+        MASTER_DF.select("STATE_ID", "ZIP")
         .filter(pl.col("STATE_ID").eq(state_code))
         .get_column("ZIP")
         .unique()

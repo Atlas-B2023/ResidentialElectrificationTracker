@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 CENSUS_DATA_DIR_PATH = Path(__file__).parent.parent.parent / "output" / "census_data"
-
+CENSUS_DATA_CACHE_PATH = CENSUS_DATA_DIR_PATH / "cache"
 
 # https://www.dcf.ks.gov/services/PPS/Documents/PPM_Forms/Section_5000_Forms/PPS5460_Instr.pdf
 replace_dict = {
@@ -688,26 +688,27 @@ class CensusDataRetriever:
         Returns:
             bool | dict[str, str] | None | Any: the dict of `tablename: label` or
         """
-        CENSUS_DATA_DIR_PATH.mkdir(parents=True, exist_ok=True)
+        CENSUS_DATA_CACHE_PATH.mkdir(parents=True, exist_ok=True)
 
         my_json = None
 
         try:
-            with open(CENSUS_DATA_DIR_PATH / file_name, mode="r") as f:
+            with open(CENSUS_DATA_CACHE_PATH / file_name, mode="r") as f:
                 log(f"Reading {file_name}", "debug")
                 try:
                     my_json = json.load(f)
                 except json.JSONDecodeError:
-                    log("Could not decode cached file", "error")
+                    log("Could not decode cached census file", "error")
                     return False
         except FileNotFoundError:
             req = self._get(url_to_lookup_on_miss)
+            log(f"Getting {url_to_lookup_on_miss}...", "info")
             if req is None:
-                log(f"Could not find census file {req = }", "error")
+                log(f"Could not get census file {file_name}.", "error")
                 return False
             req.raise_for_status()
             my_json = req.json()
-            with open(CENSUS_DATA_DIR_PATH / file_name, "w") as f:
+            with open(CENSUS_DATA_CACHE_PATH / file_name, "w") as f:
                 json.dump(my_json, f)
 
         return my_json
@@ -732,7 +733,7 @@ class CensusDataRetriever:
             return None
         return req.text
 
-    def get_acs5_profile_table_to_group_name(
+    def _get_acs5_profile_table_to_group_name(
         self, table: str, year: str
     ) -> dict[str, Any] | None:
         """Get a JSON representation of a table's attributes.
@@ -774,7 +775,7 @@ class CensusDataRetriever:
             return None
         return groups_to_label_translation["variables"]  # type: ignore
 
-    def translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
+    def _translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
         self, headers: list[str], table: str, year: str
     ) -> None:
         """Get the label name for a table and row for the acs5 profile surveys.
@@ -788,7 +789,7 @@ class CensusDataRetriever:
             None: translates the list of table_row_selector to its english label
         """
         # is going to read the file multiple times, save last req as {"table": req_json[table]...} for this?
-        groups_to_label_translation_dict = self.get_acs5_profile_table_to_group_name(
+        groups_to_label_translation_dict = self._get_acs5_profile_table_to_group_name(
             table, year
         )
         if groups_to_label_translation_dict is None:
@@ -821,7 +822,7 @@ class CensusDataRetriever:
             if new_col_name not in headers[:idx]:
                 headers[idx] = new_col_name
 
-    def get_acs5_profile_table_group_for_zcta_by_year(
+    def generate_acs5_profile_table_group_for_zcta_by_year(
         self, table: str, year: str
     ) -> str:
         """CSV output of an acs 5 year profile survey table.
@@ -847,7 +848,7 @@ class CensusDataRetriever:
             )
             return ""
 
-        self.translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
+        self._translate_and_truncate_unique_acs5_profile_groups_to_labels_for_header_list(
             list_of_list_table_json[0],  # type: ignore
             table,
             year,  # type: ignore
@@ -866,11 +867,11 @@ class CensusDataRetriever:
                 }
             )
         )
-        file_path = CENSUS_DATA_DIR_PATH / "acs5-profile-group-{table}-zcta.csv"
-        df.write_csv(file_path)
-        return str(file_path)
+        table_file_name = CENSUS_DATA_DIR_PATH / f"acs5-profile-group-{table}-zcta.csv"
+        df.write_csv(table_file_name)
+        return str(table_file_name)
 
-    def get_acs5_subject_table_to_group_name(
+    def _get_acs5_subject_table_to_group_name(
         self, table: str, year: str
     ) -> dict[str, Any] | None:
         """Get a JSON representation of a table's attributes.
@@ -907,7 +908,7 @@ class CensusDataRetriever:
             return None
         return groups_to_label_translation["variables"]  # type: ignore
 
-    def translate_and_truncate_unique_acs5_subject_groups_to_labels_for_header_list(
+    def _translate_and_truncate_unique_acs5_subject_groups_to_labels_for_header_list(
         self, headers: list[str], table: str, year: str
     ) -> None:
         """Gets the label name for a table and row for the acs5 profile surveys.
@@ -918,7 +919,7 @@ class CensusDataRetriever:
             year (str): year
         """
         # is going to read the file multiple times, save last req as {"table": req_json[table]...} for this?
-        groups_to_label_translation_dict = self.get_acs5_subject_table_to_group_name(
+        groups_to_label_translation_dict = self._get_acs5_subject_table_to_group_name(
             table, year
         )
         if groups_to_label_translation_dict is None:
@@ -951,7 +952,7 @@ class CensusDataRetriever:
             if new_col_name not in headers[:idx]:
                 headers[idx] = new_col_name
 
-    def get_acs5_subject_table_group_for_zcta_by_year(
+    def generate_acs5_subject_table_group_for_zcta_by_year(
         self, table: str, year: str
     ) -> str:
         """CSV output of a acs 5 year subject survey table
@@ -963,7 +964,6 @@ class CensusDataRetriever:
         file_name = f"{year}-acs-subject-table-{table}.json"
         url = f"https://api.census.gov/data/{year}/acs/acs5/subject?get=group({table})&for=zip%20code%20tabulation%20area:*"
         list_of_list_table_json = self.get_and_cache_data(file_name, url)
-
         if list_of_list_table_json is False:
             log(
                 f"Could not load table {table}. Perhaps the api is down or there was an error saving/reading the file.",
@@ -971,7 +971,7 @@ class CensusDataRetriever:
             )
             return ""
 
-        self.translate_and_truncate_unique_acs5_subject_groups_to_labels_for_header_list(
+        self._translate_and_truncate_unique_acs5_subject_groups_to_labels_for_header_list(
             list_of_list_table_json[0],  # type: ignore
             table,
             year,  # type: ignore
@@ -990,7 +990,7 @@ class CensusDataRetriever:
                 }
             )
         )
-        file_path = CENSUS_DATA_DIR_PATH / "acs5-subject-group-{table}-zcta.csv"
+        table_file_name = CENSUS_DATA_DIR_PATH / f"acs5-subject-group-{table}-zcta.csv"
         # may not have to write. but cache func doesn't return whether it hits or not
-        df.write_csv(file_path)
-        return str(file_path)
+        df.write_csv(table_file_name)
+        return str(table_file_name)
