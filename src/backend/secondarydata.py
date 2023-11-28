@@ -804,8 +804,10 @@ class CensusDataRetriever:
             new_col_name = new_col_name_dict["label"]
             # qgis doesnt allow field names of 80+ chars. massage into form, then cut off
             # delimiter for table subsection
-            new_col_name = re.sub("!!", " ", new_col_name)
+            new_col_name = new_col_name.replace("$", "D")
+            new_col_name = new_col_name.replace(",", "")
             new_col_name = re.sub(r"\s+", " ", new_col_name)
+            new_col_name = new_col_name.replace("!!", " ")
             # easier to read
             new_col_name_parts = new_col_name.split(" ")
             for idy, no_format in enumerate(new_col_name_parts):
@@ -934,8 +936,10 @@ class CensusDataRetriever:
             new_col_name = new_col_name_dict["label"]
             # qgis doesnt allow field names of 80+ chars. massage into form, then cut off
             # delimiter for table subsection
-            new_col_name = re.sub("!!", " ", new_col_name)
+            new_col_name = new_col_name.replace("$", "D")
+            new_col_name = new_col_name.replace(",", "")
             new_col_name = re.sub(r"\s+", " ", new_col_name)
+            new_col_name = new_col_name.replace("!!", " ")
             # easier to read
             new_col_name_parts = new_col_name.split(" ")
             for idy, no_format in enumerate(new_col_name_parts):
