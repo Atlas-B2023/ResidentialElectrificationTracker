@@ -19,7 +19,7 @@ class FiltersPage(ctk.CTkFrame):
             "Last 1 week",
             "Last 1 month",
             "Last 3 months",
-            "Last 6 months",
+            "Last 6 months",P
             "Last 1 year",
             "Last 2 years",
             "Last 3 years",
