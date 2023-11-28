@@ -6,7 +6,7 @@ import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 import sys
 import subprocess
-from os import startfile
+
 
 # from matplotlib.backend_bases import key_press_handler
 from backend import helper, EIADataRetriever
@@ -368,6 +368,7 @@ class DataPage(ctk.CTkFrame):
         """
         try:
             if sys.platform == "win32":
+                from os import startfile
                 startfile(helper.LOGGING_FILE_PATH)
             else:
                 opener = "open" if sys.platform == "darwin" else "xdg-open"
