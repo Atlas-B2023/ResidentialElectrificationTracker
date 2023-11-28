@@ -19,7 +19,7 @@ class FiltersPage(ctk.CTkFrame):
             "Last 1 week",
             "Last 1 month",
             "Last 3 months",
-            "Last 6 months",P
+            "Last 6 months",
             "Last 1 year",
             "Last 2 years",
             "Last 3 years",
@@ -60,8 +60,7 @@ class FiltersPage(ctk.CTkFrame):
         self.price_range_frame.columnconfigure((0, 1, 2, 3), weight=1)
         self.reset_apply_frame.columnconfigure((0, 1), weight=1)
 
-        self.rowconfigure((0, 2), weight=1)
-        self.rowconfigure(1, weight=30)
+        self.rowconfigure(0, weight=1)
         self.content_frame.rowconfigure(
             (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10), weight=1, uniform="a"
         )
@@ -76,7 +75,7 @@ class FiltersPage(ctk.CTkFrame):
         self.reset_apply_frame.rowconfigure(0, weight=1)
 
         # placing the frames
-        self.content_frame.grid(row=1, column=1)
+        self.content_frame.grid(row=0, column=1, sticky="ns")
         self.for_sale_sold_frame.grid(row=0, column=0, sticky="nsew")
         self.stories_frame.grid(row=1, column=0, sticky="nesw")
         self.year_built_frame.grid(row=2, column=0, sticky="nesw")
