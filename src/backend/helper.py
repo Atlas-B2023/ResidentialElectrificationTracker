@@ -203,7 +203,7 @@ def _set_up_logger(level: int) -> logging.Logger:
     Returns:
         logging.Logger: logger object
     """
-    LOGGING_DIR.mkdir(exist_ok=True)
+    LOGGING_DIR.mkdir(parents=True, exist_ok=True)
 
     logger = logging.getLogger(__name__)
     logger.setLevel(level)
