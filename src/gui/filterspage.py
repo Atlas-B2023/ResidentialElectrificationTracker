@@ -49,7 +49,7 @@ class FiltersPage(ctk.CTkFrame):
         # make more grid
         self.columnconfigure((0, 2), weight=1)
         self.columnconfigure(1, weight=30)
-        self.content_frame.columnconfigure((0), weight=1, uniform="a")  # uniform
+        self.content_frame.columnconfigure(0, weight=1, uniform="a")  # uniform
         self.for_sale_sold_frame.columnconfigure((0, 1), weight=1)
         self.stories_frame.columnconfigure((0, 1), weight=1)
         self.year_built_frame.columnconfigure((0, 1, 2, 3), weight=1)

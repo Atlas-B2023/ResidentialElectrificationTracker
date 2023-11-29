@@ -20,7 +20,7 @@ CENSUS_DATA_DIR_PATH = Path(__file__).parent.parent.parent / "output" / "census_
 CENSUS_DATA_CACHE_PATH = CENSUS_DATA_DIR_PATH / "cache"
 
 # https://www.dcf.ks.gov/services/PPS/Documents/PPM_Forms/Section_5000_Forms/PPS5460_Instr.pdf
-replace_dict = {
+REPLACEMENT_DICT = {
     "PercentMarginOfError": "PME",
     "Estimate": "EST",
     "Percent": "PCT",
@@ -38,6 +38,8 @@ replace_dict = {
     "(?<!Not)HispanicOrLatino": "_H_",
     "NotHispanicOrLatino": "_N_",
     "TotalPopulation": "TPOP",
+    "Population": "Pop",  # this MUST come after TPOP, since replacements are done in order
+    "EducationalAttainment": "EduAttain",
     "OrMore": "plus",
     "AndOver": "plus",
     "One": "1",
@@ -806,6 +808,7 @@ class CensusDataRetriever:
             # delimiter for table subsection
             new_col_name = new_col_name.replace("$", "D")
             new_col_name = new_col_name.replace(",", "")
+            new_col_name = new_col_name.replace("'", "")
             new_col_name = re.sub(r"\s+", " ", new_col_name)
             new_col_name = new_col_name.replace("!!", " ")
             # easier to read
@@ -814,7 +817,7 @@ class CensusDataRetriever:
                 new_col_name_parts[idy] = no_format.capitalize()
             new_col_name = "".join(new_col_name_parts)
             # shortenings to fit length requirement
-            for key, value in replace_dict.items():
+            for key, value in REPLACEMENT_DICT.items():
                 new_col_name = re.sub(key, value, new_col_name)
             # limiter
             new_col_name = new_col_name[
@@ -938,6 +941,7 @@ class CensusDataRetriever:
             # delimiter for table subsection
             new_col_name = new_col_name.replace("$", "D")
             new_col_name = new_col_name.replace(",", "")
+            new_col_name = new_col_name.replace("'", "")
             new_col_name = re.sub(r"\s+", " ", new_col_name)
             new_col_name = new_col_name.replace("!!", " ")
             # easier to read
@@ -946,7 +950,7 @@ class CensusDataRetriever:
                 new_col_name_parts[idy] = no_format.capitalize()
             new_col_name = "".join(new_col_name_parts)
             # shortenings to fit length requirement
-            for key, value in replace_dict.items():
+            for key, value in REPLACEMENT_DICT.items():
                 new_col_name = re.sub(key, value, new_col_name)
             # limiter
             new_col_name = new_col_name[
