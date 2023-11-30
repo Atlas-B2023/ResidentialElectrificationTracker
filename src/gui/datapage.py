@@ -223,7 +223,7 @@ class DataPage(ctk.CTkFrame):
             )
         )
 
-        fig = Figure(layout="compressed", facecolor="blue")
+        fig = Figure(layout="compressed", facecolor="#dbdbdb")
         ax = fig.add_subplot()
         ax.set_xlabel("Time (Months)")
         ax.set_ylabel("Cost per Effective MBTU ($/MBTU)")
@@ -369,6 +369,7 @@ class DataPage(ctk.CTkFrame):
         try:
             if sys.platform == "win32":
                 from os import startfile
+
                 startfile(helper.LOGGING_FILE_PATH)
             else:
                 opener = "open" if sys.platform == "darwin" else "xdg-open"
