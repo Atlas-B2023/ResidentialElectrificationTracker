@@ -1,14 +1,27 @@
 # DISCLAIMER
 
-Utilizing Redfin's data for commercial use is prohibited. MLS data may be protected by copyright laws. Program authors do not take responsibility for any action Redfin or its MLS brokers take against users of this software.
+Utilizing Redfin's data for commercial use is prohibited. MLS data may be protected by copyright laws. Program authors do not take responsibility for any action Redfin or its MLS brokers take against users of this software. Redfin data is not prepackaged in this repository. 
 
-# Installation
+(Not sure if we need a license file? Consider as source available, and free to modify, and not free to sell)
 
-Installation is done by cloning this repository and installing all of the requirements. Python 3.12 is needed.
+# Installation Directions
 
-Creation of a virtual environment is recommended. After you have cloned the repository, open a terminal in the root directory. Run `python -m venv .venv`. Next, activate the virtual environment. After, run `pip install -r requirements.txt`.
+1. Download Python 3.12 from the [official website](https://www.python.org/downloads/) (the big button usually works).
+2. Download this repository, either by cloning or by downloading the ZIP file.
+3. Run the included `setup.bat`.
+4. Thats it!
 
-The installation steps are covered in the YouTube video series on the documentation page.
+The installation steps are covered in the YouTube video series on the documentation page as well.
+
+# How to Run the program
+
+In order to run this program, two API keys are required. The instructions on how to get these are listed in the [Energy](#energy) and [Census](census) sections.
+
+Once these have been acquired, create a file named `.env` in the `src\` folder.
+
+In this file, write `CENSUS_API_KEY=` and `EIA_API_KEY=` on the first two lines, and after the equals sign paste in your key for each entry.
+
+To start the application, double click on the `run.bat` file. This should start the application, and now you can use it!
 
 # Paid APIS
 

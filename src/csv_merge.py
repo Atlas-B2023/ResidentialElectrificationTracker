@@ -1,7 +1,6 @@
 import polars as pl
 
-# create master sheet for use in program
-# TODO looks like error on zip cbsa is raised for now found
+#Helper file to create the master.csv in ../augmenting_data/
 zip_cbsa_092023_df = pl.read_excel("../augmenting_data/ZIP_CBSA_092023.xlsx")
 cbsa_est_df = pl.read_csv("../augmenting_data/cbsa-est2022.csv")
 
