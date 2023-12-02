@@ -129,14 +129,18 @@ class SearchPage(ctk.CTkFrame):
                     )
                 )
             self.suggestion_list_box.grid()
-            self.current_auto_complete_series.head(
-                self.MATCHES_TO_DISPLAY
-            ).map_elements(
-                lambda msa: self.suggestion_list_box.insert(
-                    "end", msa, border_width=2, border_color="gray"
-                ),
-                return_dtype=pl.Utf8,
-            )
+            try:
+                self.current_auto_complete_series.head(
+                    self.MATCHES_TO_DISPLAY
+                ).map_elements(
+                    lambda msa: self.suggestion_list_box.insert(
+                        "end", msa, border_width=2, border_color="gray"
+                    ),
+                    return_dtype=pl.Utf8,
+                )
+            except KeyError:
+                # always throws a key error, doesnt matter to us, just pollutes logs
+                pass
         self.prev_search_bar_len = len(cur_text)
 
     def update_entry_on_autocomplete_select(self, x: Event) -> None:

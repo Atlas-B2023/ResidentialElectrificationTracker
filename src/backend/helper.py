@@ -6,7 +6,7 @@ from pathlib import Path
 
 import polars as pl
 import requests
-
+import sys
 from .us import states as sts
 
 LOGGING_DIR = Path(__file__).parent.parent.parent / "output" / "logging"
@@ -193,6 +193,29 @@ def get_zip_codes_in_state(state: str) -> list[str]:
         .to_list()
     )
 
+def get_census_report_url_page(search_term: str):
+    census_reporter_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.7",
+        "Cache-Control": "max-age=0",
+        "Dnt": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-GPC": "1",
+        "Upgrade-Insecure-Requests": "1",
+    }
+    req = requests.get(
+        f"{CENSUS_REPORTER_API_BASE_URL}/2.1/full-text/search?q={search_term}",
+        headers=census_reporter_headers,
+    )
+    req.raise_for_status()
+    req_json = req.json()
+    profile_url = req_json["results"][0].get("url")
+
+    return f"{profile_url}"
 
 def _set_up_logger(level: int) -> logging.Logger:
     """Setup a logger that prints to a file.
@@ -222,30 +245,21 @@ def _set_up_logger(level: int) -> logging.Logger:
 
     return logger
 
+class LoggerWriter:
+    def __init__(self, logfct):
+        self.logfct = logfct
+        self.buf = []
 
-def get_census_report_url_page(search_term: str):
-    census_reporter_headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Accept-Language": "en-US,en;q=0.7",
-        "Cache-Control": "max-age=0",
-        "Dnt": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-GPC": "1",
-        "Upgrade-Insecure-Requests": "1",
-    }
-    req = requests.get(
-        f"{CENSUS_REPORTER_API_BASE_URL}/2.1/full-text/search?q={search_term}",
-        headers=census_reporter_headers,
-    )
-    req.raise_for_status()
-    req_json = req.json()
-    profile_url = req_json["results"][0].get("url")
+    def write(self, msg):
+        if msg.endswith('\n'):
+            self.buf.append(msg.removesuffix('\n'))
+            self.logfct(''.join(self.buf))
+            self.buf = []
+        else:
+            self.buf.append(msg)
 
-    return f"{profile_url}"
+    def flush(self):
+        pass
 
 
 def log(msg, level):
@@ -283,3 +297,6 @@ def log(msg, level):
 
 
 _logger = _set_up_logger(logging.INFO)
+
+sys.stdout = LoggerWriter(_logger.info)
+sys.stderr = LoggerWriter(_logger.error)

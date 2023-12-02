@@ -1,9 +1,6 @@
 import customtkinter as ctk
 
 from .searchpage import SearchPage
-# from filters import RedfinFiltersWindow
-# from datapage import Datapage
-
 
 ctk.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"

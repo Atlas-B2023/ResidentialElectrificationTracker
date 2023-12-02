@@ -1,6 +1,7 @@
-from typing import Any
-import customtkinter as ctk
 import datetime
+from typing import Any
+
+import customtkinter as ctk
 from backend.redfinscraper import RedfinApi
 
 
@@ -38,13 +39,21 @@ class FiltersPage(ctk.CTkFrame):
             self.content_frame, width=300, height=100, fg_color="transparent"
         )
         self.stories_frame = ctk.CTkFrame(self.content_frame, corner_radius=0)
-        self.year_built_frame = ctk.CTkFrame(self.content_frame, corner_radius=0,fg_color="transparent")
+        self.year_built_frame = ctk.CTkFrame(
+            self.content_frame, corner_radius=0, fg_color="transparent"
+        )
         self.home_type_frame = ctk.CTkFrame(self.content_frame, corner_radius=0)
-        self.square_feet_frame = ctk.CTkFrame(self.content_frame, corner_radius=0,fg_color="transparent")
+        self.square_feet_frame = ctk.CTkFrame(
+            self.content_frame, corner_radius=0, fg_color="transparent"
+        )
         self.status_frame = ctk.CTkFrame(self.content_frame, corner_radius=0)
-        self.sold_within_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent", corner_radius=0)
+        self.sold_within_frame = ctk.CTkFrame(
+            self.content_frame, fg_color="transparent", corner_radius=0
+        )
         self.price_range_frame = ctk.CTkFrame(self.content_frame, corner_radius=0)
-        self.reset_apply_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent", corner_radius=0)
+        self.reset_apply_frame = ctk.CTkFrame(
+            self.content_frame, fg_color="transparent", corner_radius=0
+        )
 
         # make more grid
         self.columnconfigure((0, 2), weight=1)
@@ -89,7 +98,6 @@ class FiltersPage(ctk.CTkFrame):
         # Create the labels
         self.for_sale_sold_label = ctk.CTkLabel(
             self.for_sale_sold_frame, text="For Sale/Sold"
-            
         )
         self.stories_label = ctk.CTkLabel(self.stories_frame, text="Stories")
         self.year_built_label = ctk.CTkLabel(self.year_built_frame, text="Year Built")

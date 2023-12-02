@@ -13,19 +13,11 @@ from urllib.parse import urlparse
 import polars as pl
 import redfin
 import requests
+
 from backend import (
     log,
     metro_name_to_zip_code_list,
 )
-
-# TODO add notice that this program may over estimate or under estimate fuels that are common across not heating system in houses, like electricity and NG
-# How the searcher works:
-# Uses super_group_heating_related_patterns to scan over supergroups and return the super groups that likely contain heating information
-# for each of these super groups, it goes through and checks their amenity group headers.
-# For each amenity group header, it uses amenity_group_include_patterns to filter.
-# if there is no colon, it adds the result of filtering by appliance.
-# if there is a colon, it filters with group names
-
 
 # super group include
 SUPER_GROUP_INCLUDE_PATTERNS = re.compile(r"heat|property|interior|utilit", re.I)
@@ -226,6 +218,19 @@ class RedfinApi:
             "LATITUDE": pl.Float32,
             "LONGITUDE": pl.Float32,
         }
+        self.STRING_ZIP_CSV_SCHEMA = {
+            "ADDRESS": str,
+            "CITY": str,
+            "PROPERTY TYPE": str,
+            "STATE OR PROVINCE": str,
+            "YEAR BUILT": pl.UInt16,
+            "ZIP OR POSTAL CODE": pl.Utf8,
+            "PRICE": pl.UInt32,
+            "SQUARE FEET": pl.UInt32,
+            "URL (SEE https://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING)": str,
+            "LATITUDE": pl.Float32,
+            "LONGITUDE": pl.Float32,
+        }
         self.search_params = None
         self.column_dict = {key: False for key in CATEGORY_PATTERNS.keys()}
 
@@ -406,6 +411,9 @@ class RedfinApi:
         """
         return self.meta_request_download("api/gis-csv", search_params=params)
 
+    def _rate_limit(self) -> None:
+        time.sleep(random.uniform(0.9, 1.6))
+
     # calls stuff
     def get_heating_info_from_super_group(self, super_group: dict) -> list[str]:
         """Extract heating information from a super group
@@ -449,19 +457,18 @@ class RedfinApi:
             list[str]: list of heating terms
         """
         amenity_values = []
-        for amenity in super_group.get("amenityGroups", ""):  #
-            if not any(
-                AMENITY_GROUP_INCLUDE_PATTERNS.findall(amenity.get("groupTitle", ""))
-            ):
+        utility_regex = re.compile("utilit", re.I)
+        heating_and_cooling_regex = re.compile("heat")
+        for amenity in super_group.get("amenityGroups", ""):
+            group_title = amenity.get("groupTitle", "")
+            if not any(AMENITY_GROUP_INCLUDE_PATTERNS.findall(group_title)):
                 continue  # this is the name that is bold
             # these are the bulleted items.
             for amenity_entry in amenity.get("amenityEntries", ""):
                 # if == "", then item is dangling (no word before colon). give the same treatment to "utilities: ..." as if it were ==""
                 amenity_name = amenity_entry.get("amenityName", "")
 
-                if amenity_name and not any(
-                    re.compile("utilit", re.I).findall(amenity_name)
-                ):
+                if amenity_name and not any(utility_regex.findall(amenity_name)):
                     # filter the before colon. first if is to have stricter capture rule when amenity item is "Utilities: Natural gas, heat pump, ..."
                     if any(
                         AMENITY_NAME_INCLUDE_PATTERNS.findall(amenity_name)
@@ -477,8 +484,21 @@ class RedfinApi:
                                 and not any(AFTER_COLON_EXCLUDE_PATTERNS.findall(value))
                             ]
                         )
+                elif any(heating_and_cooling_regex.findall(group_title)):
+                    # if we are in "heating & cooling" and we are a dangling element
+                    amenity_values.extend(
+                        [
+                            value
+                            for value in amenity_entry.get("amenityValues", "")
+                            if any(
+                                regex.findall(value)
+                                for regex in AFTER_COLON_FUEL_AND_APPLIANCE_INCLUDE_PATTERNS
+                            )
+                            and not any(AFTER_COLON_EXCLUDE_PATTERNS.findall(value))
+                        ]
+                    )
                 else:
-                    # filter for appliance if dangling or in utilities bullet item
+                    # filter for appliance only if we are a dangling element or in the utilities bullet item
                     amenity_values.extend(
                         [
                             value
@@ -504,7 +524,7 @@ class RedfinApi:
             listing_url = urlparse(listing_url).path
 
         try:
-            time.sleep(random.uniform(1.2, 2.1))
+            self._rate_limit()
             initial_info = self.rf.initial_info(listing_url)
         except json.JSONDecodeError:
             log(f"Could not get initial info for {listing_url =}", "warn")
@@ -523,7 +543,7 @@ class RedfinApi:
                 "warn",
             )
         try:
-            time.sleep(random.uniform(1.1, 2.1))
+            self._rate_limit()
             if listing_id is None:
                 mls_data = self.working_below_the_fold(property_id)
             else:
@@ -611,11 +631,18 @@ class RedfinApi:
         if "3" in home_types:
             home_types = home_types.replace("3", "Townhouse")
         if "4" in home_types:
-            home_types = home_types.replace("4", r"Multi-Family \(2-4 Unit\)")
+            home_types = home_types.replace("4", "Multi-Family (2-4 Unit)")
 
         try:
             df = (
-                pl.read_csv(io.StringIO(csv_text), dtypes=self.DESIRED_CSV_SCHEMA)
+                pl.read_csv(
+                    io.StringIO(csv_text),
+                    dtypes=self.STRING_ZIP_CSV_SCHEMA,
+                )
+                .with_columns(
+                    pl.col("ZIP OR POSTAL CODE").str.extract(r"([0-9]{5})", 1)
+                )
+                .cast({"ZIP OR POSTAL CODE": pl.UInt32})
                 .filter(
                     pl.col("PROPERTY TYPE").str.contains(
                         "|".join(home_types.split(","))
@@ -661,12 +688,12 @@ class RedfinApi:
         zip_codes = metro_name_to_zip_code_list(msa_name)
         formatted_zip_codes = [f"{zip_code:0{5}}" for zip_code in zip_codes]
         log(
-            f"Estimated search time: {len(formatted_zip_codes) * (1.75+1.5)}",
+            f"Estimated search time: {len(formatted_zip_codes) * 2.36}",
             "info",
         )
         list_of_csv_dfs = []
         for zip in formatted_zip_codes:
-            time.sleep(random.uniform(1.5, 2))
+            self._rate_limit()
             self.set_search_params(zip, search_filters)
             temp = self.get_gis_csv_from_zip_with_filters()
             if temp is None:
@@ -738,10 +765,14 @@ class RedfinApi:
             .and_(pl.col("YEAR BUILT").is_not_null())
         )
         # doing this twice so that the search page does not have nulls in the year built column.
+        min_year_built = search_filters.get("min year built")
+        max_year_built = search_filters.get("max year built")
+        assert min_year_built is not None and max_year_built is not None
+
         search_page_csvs_df = search_page_csvs_df.filter(
             pl.col("YEAR BUILT")
-            .ge(search_filters.get("min year built"))
-            .and_(pl.col("YEAR BUILT").le(search_filters.get("max year built")))
+            .ge(int(min_year_built))
+            .and_(pl.col("YEAR BUILT").le(int(max_year_built)))
         )
         # .unique(subset=["LATITUDE", "LONGITUDE"], maintain_order=True)
         # sometimes when there are two of the same listings you'll see the lot and the house. cant determine at this stage, so just leaving duplicates. hopefully this can be handled in viewer
@@ -765,7 +796,7 @@ class RedfinApi:
             "info",
         )
         log(
-            f"Estimated completion time: {search_page_csvs_df.height * 4.66} seconds",
+            f"Estimated completion time: {search_page_csvs_df.height * 2.36} seconds",
             "info",
         )
 
@@ -786,13 +817,18 @@ class RedfinApi:
                 )
                 .group_by(by=["LATITUDE", "LONGITUDE"])
                 .max()
+                # this max acts like a boolean OR for our heating attributes. other attributes should stay the same.
             )
 
             zip = list_of_dfs_by_zip[i].select("ZIP OR POSTAL CODE").item(0, 0)
-            list_of_dfs_by_zip[i].write_csv(f"{METRO_OUTPUT_DIR_PATH / zip}.csv")
+            list_of_dfs_by_zip[i].write_csv(f"{METRO_OUTPUT_DIR_PATH / str(zip)}.csv")
 
-            if len(list_of_dfs_by_zip) > 0:
-                concat_df = pl.concat(list_of_dfs_by_zip)
-                concat_df.write_csv("{METRO_OUTPUT_DIR_PATH}/full_info.csv")
+        if len(list_of_dfs_by_zip) > 0:
+            concat_df = pl.concat(list_of_dfs_by_zip)
+            log(
+                f"Information on {msa_name}:\nnum entries: {concat_df.height}, avg. house price: ${concat_df.get_column("PRICE").mean():,.2f}, electric houses: {concat_df.get_column("Electricity").sum()}, gas houses: {concat_df.get_column("Natural Gas").sum()}, propane houses: {concat_df.get_column("Propane").sum()}, oil-fed houses: {concat_df.get_column("Diesel/Heating Oil").sum()}, wood-fed houses: {concat_df.get_column("Wood/Pellet").sum()}, solar-heated houses: {concat_df.get_column("Solar Heating").sum()}, heat pump houses: {concat_df.get_column("Heat Pump").sum()}, baseboard houses: {concat_df.get_column("Baseboard").sum()}, furnace houses: {concat_df.get_column("Furnace").sum()}, boiler houses: {concat_df.get_column("Boiler").sum()}, radiator houses: {concat_df.get_column("Radiator").sum()}, houses with radiant floors: {concat_df.get_column("Radiant Floor").sum()}",
+                "info",
+            )
+            concat_df.write_csv(f"{METRO_OUTPUT_DIR_PATH}/full_info.csv")
 
         log(f"Done with searching houses in {msa_name}!", "info")

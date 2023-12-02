@@ -1,22 +1,22 @@
+import datetime
+import subprocess
+import sys
 import threading
 import webbrowser
-import datetime
-from matplotlib import pyplot as plt
-import customtkinter as ctk
-from CTkMessagebox import CTkMessagebox
-import sys
-import subprocess
 
+import customtkinter as ctk
 
 # from matplotlib.backend_bases import key_press_handler
-from backend import helper, EIADataRetriever
+from backend import EIADataRetriever, helper
+from backend.helper import log
+from backend.secondarydata import CensusDataRetriever
 from backend.us import states as sts
+from CTkMessagebox import CTkMessagebox
+from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 from matplotlib.figure import Figure
-from backend.helper import log
-from backend.secondarydata import CensusDataRetriever
 
 plt.style.use("fivethirtyeight")
 
