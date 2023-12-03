@@ -1,4 +1,0 @@
-house information:
-Latitude,Longitude,Address,State_or_Province,ZIP_Code,Price,Year_Build,Heating_info
-sample:
-32.8773949, -96.8550976, 3722 Valley Ridge Rd, TX, 75220, 1350000, 2022, {'Cooling': 'Ceiling Fan(s), Central Air, Electric', 'Heating': 'Central, Natural Gas'}
