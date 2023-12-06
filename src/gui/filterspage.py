@@ -283,6 +283,9 @@ class FiltersPage(ctk.CTkFrame):
                 self.status_pending_chb.configure(state="disabled")
                 self.sold_within_label.configure(state="normal")
                 self.sold_within_om.configure(state="normal")
+                self.status_active_chb.deselect()
+                self.status_pending_chb.deselect()
+                self.status_coming_soon_chb.deselect()
 
     def change_to_search_page(self) -> None:
         """Change to search page."""

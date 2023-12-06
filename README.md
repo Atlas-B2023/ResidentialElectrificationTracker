@@ -15,7 +15,7 @@ The installation steps are covered in the YouTube video series on the documentat
 
 # How to Run the program
 
-In order to run this program, two API keys are required. The instructions on how to get these are listed in the [Energy](#energy) and [Census](census) sections.
+In order to run this program, two API keys are required. The instructions on how to get these are listed in the [Energy](#energy) and [Census](#census) sections.
 
 Once these have been acquired, create a file named `.env` in the `src\` folder.
 
@@ -42,6 +42,8 @@ There are many paid APIs allow commercial use.
 
 Energy prices are through the EIA's open data API.
 
+Get your API key here: https://www.eia.gov/opendata/register.php
+
 https://www.eia.gov/opendata/pdf/EIA-APIv2-HandsOn-Webinar-11-Jan-23.pdf
 https://www.eia.gov/opendata/?category=0
 https://www.eia.gov/opendata/documentation.php
@@ -51,6 +53,8 @@ https://www.eia.gov/opendata/documentation.php
 Census data is collected through their API. We use the ACS 5 year profile and subject tables DP05 and S1901, respectively.
 
 > If specified criteria are met, a metropolitan statistical area containing a single core with a population of 2.5 million or more may be subdivided to form smaller groupings of counties referred to as "metropolitan divisions."
+
+Get your API key here: https://api.census.gov/data/key_signup.html
 
 https://www.census.gov/programs-surveys/metro-micro/about/glossary.html
 

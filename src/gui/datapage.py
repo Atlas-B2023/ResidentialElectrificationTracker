@@ -49,13 +49,13 @@ class DataPage(ctk.CTkFrame):
         """Create widgets."""
         # bug in sockets library wont allow you to raise keyboardinterrupt, so stopping
         # Content frame will have 4 rows. first will be header, 2nd is energy graph, 3rd will contain a frame that has censusreport.org links, 4th will have progress bar frame
-        self.content_frame = ctk.CTkFrame(self, border_width=2)
-        self.content_banner_frame = ctk.CTkFrame(self.content_frame, border_width=2)
+        self.content_frame = ctk.CTkFrame(self)
+        self.content_banner_frame = ctk.CTkFrame(self.content_frame)
         self.state_and_year_content_banner_dropdown_frame = ctk.CTkFrame(
-            self.content_banner_frame, border_width=2
+            self.content_banner_frame
         )
-        self.census_reporter_frame = ctk.CTkFrame(self.content_frame, border_width=2)
-        self.log_frame = ctk.CTkFrame(self.content_frame, border_width=2)
+        self.census_reporter_frame = ctk.CTkFrame(self.content_frame)
+        self.log_frame = ctk.CTkFrame(self.content_frame)
 
         self.content_banner_main_text = ctk.CTkLabel(
             self.content_banner_frame,
@@ -93,7 +93,7 @@ class DataPage(ctk.CTkFrame):
             command=self.year_dropdown_callback,
         )
 
-        self.energy_graph_frame = ctk.CTkFrame(self.content_frame, border_width=2)
+        self.energy_graph_frame = ctk.CTkFrame(self.content_frame)
 
         self.census_reporter_state_label = ctk.CTkLabel(
             self.census_reporter_frame,

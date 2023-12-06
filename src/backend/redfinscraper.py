@@ -412,7 +412,7 @@ class RedfinApi:
         return self.meta_request_download("api/gis-csv", search_params=params)
 
     def _rate_limit(self) -> None:
-        time.sleep(random.uniform(0.9, 1.6))
+        time.sleep(random.uniform(1, 1.6))
 
     # calls stuff
     def get_heating_info_from_super_group(self, super_group: dict) -> list[str]:
@@ -527,7 +527,7 @@ class RedfinApi:
             self._rate_limit()
             initial_info = self.rf.initial_info(listing_url)
         except json.JSONDecodeError:
-            log(f"Could not get initial info for {listing_url =}", "warn")
+            log(f"Could not get initial info for {listing_url =}", "critical")
             return None
         try:
             property_id = initial_info["payload"]["propertyId"]
@@ -540,7 +540,7 @@ class RedfinApi:
             listing_id = None
             log(
                 "Could not find listing id. Will try to continue. if errors in final zip csv, this might be the issue",
-                "warn",
+                "debug",
             )
         try:
             self._rate_limit()
@@ -688,7 +688,7 @@ class RedfinApi:
         zip_codes = metro_name_to_zip_code_list(msa_name)
         formatted_zip_codes = [f"{zip_code:0{5}}" for zip_code in zip_codes]
         log(
-            f"Estimated search time: {len(formatted_zip_codes) * 2.36}",
+            f"Estimated search time: {len(formatted_zip_codes) * 4.5}",
             "info",
         )
         list_of_csv_dfs = []
@@ -769,14 +769,16 @@ class RedfinApi:
         max_year_built = search_filters.get("max year built")
         assert min_year_built is not None and max_year_built is not None
 
-        search_page_csvs_df = search_page_csvs_df.filter(
-            pl.col("YEAR BUILT")
-            .ge(int(min_year_built))
-            .and_(pl.col("YEAR BUILT").le(int(max_year_built)))
+        # max() Acts like a Boolean OR
+        search_page_csvs_df = (
+            search_page_csvs_df.filter(
+                pl.col("YEAR BUILT")
+                .ge(int(min_year_built))
+                .and_(pl.col("YEAR BUILT").le(int(max_year_built)))
+            )
+            .group_by(by=["LATITUDE", "LONGITUDE"])
+            .max()
         )
-        # .unique(subset=["LATITUDE", "LONGITUDE"], maintain_order=True)
-        # sometimes when there are two of the same listings you'll see the lot and the house. cant determine at this stage, so just leaving duplicates. hopefully this can be handled in viewer
-        # also somehow gets GIS-CSV for search pages that dont allow it
 
         log(f"Found {search_page_csvs_df.height} possible houses in {msa_name}", "info")
         METRO_OUTPUT_DIR_PATH.mkdir(parents=True, exist_ok=True)
@@ -796,28 +798,22 @@ class RedfinApi:
             "info",
         )
         log(
-            f"Estimated completion time: {search_page_csvs_df.height * 2.36} seconds",
+            f"Estimated completion time: {search_page_csvs_df.height * 4.5} seconds",
             "info",
         )
 
         list_of_dfs_by_zip = search_page_csvs_df.partition_by("ZIP OR POSTAL CODE")
 
         for i, _ in enumerate(list_of_dfs_by_zip):
-            # groupby is to get the max value of the heating type columns.
             list_of_dfs_by_zip[i] = (
-                (
-                    list_of_dfs_by_zip[i]
-                    .with_columns(
-                        pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)])
-                        .map_elements(self.get_heating_terms_dict_from_listing)
-                        .alias("nest")
-                    )
-                    .drop(url_col_name)
-                    .unnest("nest")
+                list_of_dfs_by_zip[i]
+                .with_columns(
+                    pl.concat_list([pl.col("ADDRESS"), pl.col(url_col_name)])
+                    .map_elements(self.get_heating_terms_dict_from_listing)
+                    .alias("nest")
                 )
-                .group_by(by=["LATITUDE", "LONGITUDE"])
-                .max()
-                # this max acts like a boolean OR for our heating attributes. other attributes should stay the same.
+                .drop(url_col_name)
+                .unnest("nest")
             )
 
             zip = list_of_dfs_by_zip[i].select("ZIP OR POSTAL CODE").item(0, 0)
@@ -825,10 +821,12 @@ class RedfinApi:
 
         if len(list_of_dfs_by_zip) > 0:
             concat_df = pl.concat(list_of_dfs_by_zip)
+            log(f"Information on {msa_name}:", "info")
             log(
-                f"Information on {msa_name}:\nnum entries: {concat_df.height}, avg. house price: ${concat_df.get_column("PRICE").mean():,.2f}, electric houses: {concat_df.get_column("Electricity").sum()}, gas houses: {concat_df.get_column("Natural Gas").sum()}, propane houses: {concat_df.get_column("Propane").sum()}, oil-fed houses: {concat_df.get_column("Diesel/Heating Oil").sum()}, wood-fed houses: {concat_df.get_column("Wood/Pellet").sum()}, solar-heated houses: {concat_df.get_column("Solar Heating").sum()}, heat pump houses: {concat_df.get_column("Heat Pump").sum()}, baseboard houses: {concat_df.get_column("Baseboard").sum()}, furnace houses: {concat_df.get_column("Furnace").sum()}, boiler houses: {concat_df.get_column("Boiler").sum()}, radiator houses: {concat_df.get_column("Radiator").sum()}, houses with radiant floors: {concat_df.get_column("Radiant Floor").sum()}",
+                f"num entries: {concat_df.height}, avg. house price: ${concat_df.get_column("PRICE").mean():,.2f}, electric houses: {concat_df.get_column("Electricity").sum()}, gas houses: {concat_df.get_column("Natural Gas").sum()}, propane houses: {concat_df.get_column("Propane").sum()}, oil-fed houses: {concat_df.get_column("Diesel/Heating Oil").sum()}, wood-fed houses: {concat_df.get_column("Wood/Pellet").sum()}, solar-heated houses: {concat_df.get_column("Solar Heating").sum()}, heat pump houses: {concat_df.get_column("Heat Pump").sum()}, baseboard houses: {concat_df.get_column("Baseboard").sum()}, furnace houses: {concat_df.get_column("Furnace").sum()}, boiler houses: {concat_df.get_column("Boiler").sum()}, radiator houses: {concat_df.get_column("Radiator").sum()}, houses with radiant floors: {concat_df.get_column("Radiant Floor").sum()}",
                 "info",
             )
+
             concat_df.write_csv(f"{METRO_OUTPUT_DIR_PATH}/full_info.csv")
 
         log(f"Done with searching houses in {msa_name}!", "info")
