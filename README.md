@@ -119,8 +119,8 @@ Create a fully python app. Plotly has native python support for all things spaci
 
 Add tool bar for graphs. Use mplcursors for hover on the graph.
 
-Use census library from python: acs5dp and acs5st
+Use census library from python: table prefixes for DP and S tables are acs5dp and acs5st in the code. This relies on a library that has not been updated to python 3.12, so we didn't use it.
 
 Use database to store information, and implement caching/purging (if TOS allows)
 
-Remove duplicate zip code placements due to zip codes being in multiple metropolitan areas
+The [State Energy Data System](https://www.eia.gov/state/seds/seds-data-fuel.php?sid=US#DataFiles) might provide a more complete dataset for energy price data. It is recommended to switch to this API for calculating heating costs. Note that this data is about 1 year behind as it is annual and takes additional time to process. The direct download link for preliminary 2022 data (this means only up to 2021) is [here](https://www.eia.gov/state/seds/sep_update/pr_all_update.xlsx). The navigate here from the [main page](https://www.eia.gov/state/seds/seds-data-fuel.php?sid=US#DataFiles), click "Data Files" and navigate to "Prices and expenditures" > "All price and expenditure estimates" > "Prices" > select download format
